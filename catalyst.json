@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "targets": [
+      "orbit_funtion"
+    ],
+    "ignore": [],
+    "source": "functions"
+  },
+  "client": {
+    "source": "orbit-web",
+    "plugin": "zcatalyst-cli-plugin-react"
+  }
+}

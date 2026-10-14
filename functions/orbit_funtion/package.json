@@ -1,0 +1,12 @@
+{
+	"name": "orbit_funtion",
+	"version": "1.0.0",
+	"main": "index.js",
+	"author": "suryatechie63@gmail.com",
+	"dependencies": {
+		"zcatalyst-sdk-node": "latest"
+	},
+	"scripts": {
+		"test": "node --test src/tests/"
+	}
+}

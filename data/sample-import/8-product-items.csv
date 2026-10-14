@@ -1,0 +1,25 @@
+source_record_id,item_type,title,project_code,status,priority,due_date,completed_date,estimated_hours
+PI-001,feature,Build item 1,PRJ-ORION,in_progress,medium,2026-09-04,,8
+PI-002,bug,Review item 2,PRJ-LYRA,done,high,2026-10-07,2026-10-07,12
+PI-003,task,Plan item 3,PRJ-HELIOS,open,critical,2026-09-10,,16
+PI-004,bug,Ship item 4,PRJ-ATLAS,in_progress,low,2026-10-13,,20
+PI-005,milestone,Fix item 5,PRJ-ORION,done,medium,2026-09-16,2026-09-16,24
+PI-006,release,Build item 6,PRJ-LYRA,open,high,2026-10-19,,4
+PI-007,task,Review item 7,PRJ-HELIOS,in_progress,critical,2026-09-22,,8
+PI-008,feature,Plan item 8,PRJ-ATLAS,done,low,2026-10-25,2026-10-25,12
+PI-009,bug,Ship item 9,PRJ-ORION,open,medium,2026-09-01,,16
+PI-010,task,Fix item 10,PRJ-LYRA,in_progress,high,2026-10-04,,20
+PI-011,bug,Build item 11,PRJ-HELIOS,done,critical,2026-09-07,2026-09-07,24
+PI-012,milestone,Review item 12,PRJ-ATLAS,open,low,2026-10-10,,4
+PI-013,release,Plan item 13,PRJ-ORION,in_progress,medium,2026-09-13,,8
+PI-014,task,Ship item 14,PRJ-LYRA,done,high,2026-10-16,2026-10-16,12
+PI-015,feature,Fix item 15,PRJ-HELIOS,open,critical,2026-09-19,,16
+PI-016,bug,Build item 16,PRJ-ATLAS,in_progress,low,2026-10-22,,20
+PI-017,task,Review item 17,PRJ-ORION,done,medium,2026-09-25,2026-09-25,24
+PI-018,bug,Plan item 18,PRJ-LYRA,open,high,2026-10-01,,4
+PI-019,milestone,Ship item 19,PRJ-HELIOS,in_progress,critical,2026-09-04,,8
+PI-020,release,Fix item 20,PRJ-ATLAS,done,low,2026-10-07,2026-10-07,12
+PI-021,task,Build item 21,PRJ-ORION,open,medium,2026-09-10,,16
+PI-022,feature,Review item 22,PRJ-LYRA,in_progress,high,2026-10-13,,20
+PI-023,bug,Plan item 23,PRJ-HELIOS,done,critical,2026-09-16,2026-09-16,24
+PI-024,task,Ship item 24,PRJ-ATLAS,open,low,2026-10-19,,4

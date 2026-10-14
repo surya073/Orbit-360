@@ -1,0 +1,2957 @@
+{
+  "project_id": "46135000000311001",
+  "timezone": "Asia/Kolkata",
+  "schema_version": "1.0.0",
+  "generated_by": "build.py",
+  "catalyst_notes": [
+    "Every table has system columns ROWID (PK), CREATORID, CREATEDTIME, MODIFIEDTIME - do not recreate; use as created_at/updated_at.",
+    "Tables/columns must be created in the Catalyst Console (no DDL in ZCQL; verify CLI before assuming).",
+    "Uniqueness is per single column; composite uniqueness uses the dedupe_key column.",
+    "Max 100 columns per table (dev). Varchar max 255.",
+    "Foreign key stores parent ROWID; on-delete null|cascade."
+  ],
+  "derived_not_tables": [
+    "employee project count",
+    "project billable/non-billable totals",
+    "dashboard KPIs",
+    "late-check-in rate"
+  ],
+  "tables": [
+    {
+      "name": "teams",
+      "purpose": "Team master. Scope boundary for manager access.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "team_code",
+          "type": "varchar(60)",
+          "required": true,
+          "unique": true,
+          "note": ""
+        },
+        {
+          "name": "name",
+          "type": "varchar(150)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "users",
+      "purpose": "Application-user mapping (Catalyst auth user -> app role + team). users.team_id is single-valued, so a manager cannot belong to two teams.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "catalyst_user_id",
+          "type": "varchar(40)",
+          "required": true,
+          "unique": true,
+          "note": "Catalyst Authentication user ID"
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "required": true,
+          "unique": true,
+          "note": "Normalized lowercase"
+        },
+        {
+          "name": "display_name",
+          "type": "varchar(150)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "app_role",
+          "type": "varchar(20)",
+          "required": true,
+          "unique": false,
+          "note": "admin | manager"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Required for manager (server-validated); NULL for admin",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "employee_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Optional link to employee master",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "app_role",
+            "team_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "employees",
+      "purpose": "Employee identity and employment details. Project counts are derived from project_assignments.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "employee_code",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": true,
+          "note": "Business code; source S.NO is NOT used as identity"
+        },
+        {
+          "name": "source_sno",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": "Source `S.NO` (display order only)"
+        },
+        {
+          "name": "full_name",
+          "type": "varchar(200)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "email_normalized",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "lower(trim(Email ID)); unique when present"
+        },
+        {
+          "name": "job_role",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Source `Role`"
+        },
+        {
+          "name": "joining_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "reports_to_employee_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Resolved from `Reports To`",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "reports_to_raw",
+          "type": "varchar(200)",
+          "required": false,
+          "unique": false,
+          "note": "Unresolved source text kept for review"
+        },
+        {
+          "name": "employment_status",
+          "type": "varchar(30)",
+          "required": false,
+          "unique": false,
+          "note": "Source `Status`: active|inactive|on_leave|unknown (validated against settings)"
+        },
+        {
+          "name": "primary_team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Denormalized current team for fast scoping; kept in sync with team_memberships",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "source_extra",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Bounded JSON of unmapped source columns (<=5 KB)"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "primary_team_id",
+            "employment_status"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "source_system",
+            "source_record_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "team_memberships",
+      "purpose": "Employee<->team history. One active row per employee/team enforced via dedupe_key.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "cascade"
+        },
+        {
+          "name": "employee_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "cascade"
+        },
+        {
+          "name": "membership_role",
+          "type": "varchar(30)",
+          "required": false,
+          "unique": false,
+          "note": "member|lead"
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "team_id|employee_id|start_date"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "team_id",
+            "employee_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "projects",
+      "purpose": "Project master. *_reported hour fields are source snapshots; authoritative actuals come from approved time_entries.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "project_code",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": true,
+          "note": "Business code if exists"
+        },
+        {
+          "name": "source_sno",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": "Source `S.NO`"
+        },
+        {
+          "name": "project_name",
+          "type": "varchar(255)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Owning team; drives manager scope",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "project_type",
+          "type": "varchar(80)",
+          "required": false,
+          "unique": false,
+          "note": "`Type`"
+        },
+        {
+          "name": "plan_type",
+          "type": "varchar(80)",
+          "required": false,
+          "unique": false,
+          "note": "`Plan Type`"
+        },
+        {
+          "name": "region",
+          "type": "varchar(80)",
+          "required": false,
+          "unique": false,
+          "note": "`Region`"
+        },
+        {
+          "name": "current_status",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "Source `Current Status` (col 6): delivery/lifecycle status"
+        },
+        {
+          "name": "contract_status",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "Source 1st `Status` (after `End Date`): ASSUMED contract/plan validity - CONFIRM"
+        },
+        {
+          "name": "completion_status",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "Source 2nd `Status` (after `Completed Date`): ASSUMED delivery completion - CONFIRM"
+        },
+        {
+          "name": "meeting_schedule",
+          "type": "varchar(150)",
+          "required": false,
+          "unique": false,
+          "note": "`Internal Meeting Day and Timing`"
+        },
+        {
+          "name": "second_host_raw",
+          "type": "varchar(200)",
+          "required": false,
+          "unique": false,
+          "note": "`2nd Host` raw"
+        },
+        {
+          "name": "second_host_employee_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "first_start_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "current_start_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "internal_due_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "client_due_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "completed_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "total_renewals",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "hours_purchased_past",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "`Total Hrs Purchased(Past)`"
+        },
+        {
+          "name": "hours_purchased_current",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "`Current Hrs Purchased`"
+        },
+        {
+          "name": "hours_used_reported",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "`Total Hrs used till now` (snapshot)"
+        },
+        {
+          "name": "estimated_hours",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "actual_hours_reported",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "`Actual Hours` (snapshot)"
+        },
+        {
+          "name": "hours_reconciled",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "Cached SUM(approved time_entries)/60; refreshed server-side"
+        },
+        {
+          "name": "hours_reconciled_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "comments",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "delay_reason",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "`Client Side /Zoho Side delay reason`"
+        },
+        {
+          "name": "consumption_report_url",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "bandwidth",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "source_extra",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Bounded JSON of unmapped columns"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "team_id",
+            "current_status"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "source_system",
+            "source_record_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "project_assignments",
+      "purpose": "Employee<->project. N employees on a project = N rows; hours live in time_entries.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "project_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "projects",
+          "on_delete": "cascade"
+        },
+        {
+          "name": "employee_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "cascade"
+        },
+        {
+          "name": "role_in_project",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "`Role in Project`"
+        },
+        {
+          "name": "is_second_host",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "allocation_percent",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "`Bandwidth`/allocation if per-person"
+        },
+        {
+          "name": "contribution_percent_reported",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "`% Contribution Towards the Project` (reported, not verified)"
+        },
+        {
+          "name": "is_working",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "From `Team Members Working`"
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "project_id|employee_id"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "employee_id"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "project_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "time_entries",
+      "purpose": "One row per employee per project per work block. Durations in minutes.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "employee_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "project_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "projects",
+          "on_delete": "null"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Snapshot of project team at entry time; set server-side",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "work_date",
+          "type": "date",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "start_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "end_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "duration_minutes",
+          "type": "int",
+          "required": true,
+          "unique": false,
+          "note": ">=0; zero is a valid value, missing is not stored as 0"
+        },
+        {
+          "name": "is_billable",
+          "type": "boolean",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "work_category",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "billable|non_billable|internal|support|..."
+        },
+        {
+          "name": "work_description",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "approval_status",
+          "type": "varchar(20)",
+          "required": true,
+          "unique": false,
+          "note": "pending|approved|rejected"
+        },
+        {
+          "name": "approved_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "approved_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "source_record_id, else employee|project|work_date|start|duration|hash"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "project_id",
+            "work_date"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "employee_id",
+            "work_date"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "team_id",
+            "work_date",
+            "approval_status"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "attendance_records",
+      "purpose": "Daily check-in. Source combined column is split into late_status + check_in_time_local.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "employee_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "attendance_date",
+          "type": "date",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "reporting_month",
+          "type": "varchar(7)",
+          "required": false,
+          "unique": false,
+          "note": "YYYY-MM"
+        },
+        {
+          "name": "check_in_time_local",
+          "type": "varchar(8)",
+          "required": false,
+          "unique": false,
+          "note": "HH:mm[:ss] in Asia/Kolkata; empty = not recorded"
+        },
+        {
+          "name": "late_status",
+          "type": "varchar(10)",
+          "required": true,
+          "unique": false,
+          "note": "yes|no|unknown (unknown != no)"
+        },
+        {
+          "name": "late_reason",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "late_checkin_raw",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Verbatim `Late Check-in (Yes/No) - Check-In Time`"
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "employee_id|attendance_date"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "team_id",
+            "attendance_date"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "employee_id",
+            "attendance_date"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "leave_records",
+      "purpose": "Leave with distinguishable lifecycle status.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "employee_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "leave_type",
+          "type": "varchar(60)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "units",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "unit_type",
+          "type": "varchar(10)",
+          "required": false,
+          "unique": false,
+          "note": "days|hours"
+        },
+        {
+          "name": "status",
+          "type": "varchar(20)",
+          "required": true,
+          "unique": false,
+          "note": "requested|approved|rejected|cancelled"
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Privacy-restricted: admin + owning manager only"
+        },
+        {
+          "name": "approver_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "decided_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "employee_id|leave_type|start_date|end_date"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "employee_id",
+            "start_date"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "team_id",
+            "status"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "metric_definitions",
+      "purpose": "Configured metrics/weights. Aggregate scores may only use rows here.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "metric_code",
+          "type": "varchar(80)",
+          "required": true,
+          "unique": true,
+          "note": ""
+        },
+        {
+          "name": "name",
+          "type": "varchar(150)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "module",
+          "type": "varchar(40)",
+          "required": true,
+          "unique": false,
+          "note": "performance|product|usage|..."
+        },
+        {
+          "name": "value_type",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": "numeric|rating|text|boolean"
+        },
+        {
+          "name": "scale_min",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "scale_max",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "weight",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "NULL = excluded from aggregates"
+        },
+        {
+          "name": "aggregation",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": "avg|sum|latest"
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "performance_records",
+      "purpose": "Metric-level performance; no built-in score.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "employee_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "review_cycle",
+          "type": "varchar(60)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "period_start",
+          "type": "date",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "period_end",
+          "type": "date",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "metric_definition_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "metric_definitions",
+          "on_delete": "null"
+        },
+        {
+          "name": "metric_value",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "metric_text",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "metric_scale",
+          "type": "varchar(40)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "reviewer_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "reviewer_employee_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "review_status",
+          "type": "varchar(20)",
+          "required": true,
+          "unique": false,
+          "note": "draft|submitted|finalized"
+        },
+        {
+          "name": "comments",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "evidence_ref",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "employee_id|review_cycle|metric_definition_id"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "employee_id",
+            "review_cycle"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "team_id",
+            "period_start"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "ai_usage_records",
+      "purpose": "Tool usage as reported. One row per employee x tool (x project) x period.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "employee_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "project_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "projects",
+          "on_delete": "null"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "tool_name",
+          "type": "varchar(100)",
+          "required": true,
+          "unique": false,
+          "note": "Free text/provider; new tools need no schema change"
+        },
+        {
+          "name": "tool_category",
+          "type": "varchar(30)",
+          "required": true,
+          "unique": false,
+          "note": "ai|github|other"
+        },
+        {
+          "name": "access_type",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "is_shared_access",
+          "type": "varchar(10)",
+          "required": false,
+          "unique": false,
+          "note": "yes|no|unknown"
+        },
+        {
+          "name": "shared_access_raw",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "`Users who using other's Access`"
+        },
+        {
+          "name": "usage_percent_reported",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": "`Percentage % Using` as REPORTED; not billable/productivity"
+        },
+        {
+          "name": "usage_purpose",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "`Using for`"
+        },
+        {
+          "name": "projects_raw",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "`Used for which Projects` raw"
+        },
+        {
+          "name": "reporting_period",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. 2026-10; required when known"
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "employee_id|tool_name|project_id|reporting_period"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "employee_id",
+            "tool_category"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "team_id",
+            "reporting_period"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "product_items",
+      "purpose": "Tasks/features/bugs/releases/milestones. Type-specific fields nullable.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "item_type",
+          "type": "varchar(20)",
+          "required": true,
+          "unique": false,
+          "note": "task|feature|bug|release|milestone"
+        },
+        {
+          "name": "title",
+          "type": "varchar(255)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "project_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "projects",
+          "on_delete": "null"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "status",
+          "type": "varchar(40)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "priority",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "assignee_employee_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "reporter_employee_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "employees",
+          "on_delete": "null"
+        },
+        {
+          "name": "parent_item_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "product_items",
+          "on_delete": "null"
+        },
+        {
+          "name": "release_item_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Release/milestone this item targets",
+          "parent": "product_items",
+          "on_delete": "null"
+        },
+        {
+          "name": "created_on",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": "Source created date (system CREATEDTIME is import time)"
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "completed_date",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "estimated_hours",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "actual_hours",
+          "type": "double",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "source_system|source_record_id"
+        },
+        {
+          "name": "source_system",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": "e.g. company360_export, manual"
+        },
+        {
+          "name": "source_record_id",
+          "type": "varchar(120)",
+          "required": false,
+          "unique": false,
+          "note": "Stable ID from source file/app when present"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "Last import job that wrote this row",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "project_id",
+            "item_type",
+            "status"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "assignee_employee_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "product_item_links",
+      "purpose": "Many-to-many item relations (blocks, relates_to, fixed_in).",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "item_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "product_items",
+          "on_delete": "cascade"
+        },
+        {
+          "name": "linked_item_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "product_items",
+          "on_delete": "cascade"
+        },
+        {
+          "name": "link_type",
+          "type": "varchar(30)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "item_id|linked_item_id|link_type"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "import_templates",
+      "purpose": "Per-module reusable templates (system or team-owned).",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "module",
+          "type": "varchar(40)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "name",
+          "type": "varchar(150)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "version",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "file_type",
+          "type": "varchar(10)",
+          "required": false,
+          "unique": false,
+          "note": "csv|xlsx|both"
+        },
+        {
+          "name": "header_row",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": "1-based"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "NULL = global",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "is_system",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "module|name|version|team_id"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "import_mappings",
+      "purpose": "Source column -> target field with transforms.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "template_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "import_templates",
+          "on_delete": "cascade"
+        },
+        {
+          "name": "source_column",
+          "type": "varchar(200)",
+          "required": true,
+          "unique": false,
+          "note": "Header text"
+        },
+        {
+          "name": "source_index",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": "0-based; disambiguates duplicate headers"
+        },
+        {
+          "name": "target_field",
+          "type": "varchar(100)",
+          "required": false,
+          "unique": false,
+          "note": "NULL = preserve into source_extra"
+        },
+        {
+          "name": "transform",
+          "type": "varchar(40)",
+          "required": false,
+          "unique": false,
+          "note": "direct|date|number|boolean|split_yes_no_time|split_list|unpivot|lookup"
+        },
+        {
+          "name": "transform_options",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "JSON"
+        },
+        {
+          "name": "is_required",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "sort_order",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "template_id",
+            "sort_order"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "import_jobs",
+      "purpose": "One row per upload/commit run.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "module",
+          "type": "varchar(40)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "template_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "import_templates",
+          "on_delete": "null"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "file_name",
+          "type": "varchar(255)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "file_type",
+          "type": "varchar(10)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "file_store_file_id",
+          "type": "bigint",
+          "required": false,
+          "unique": false,
+          "note": "Catalyst File Store ID of source file"
+        },
+        {
+          "name": "file_sha256",
+          "type": "varchar(64)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "uploaded_by_user_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "status",
+          "type": "varchar(30)",
+          "required": true,
+          "unique": false,
+          "note": "uploaded|mapped|validating|validated|committing|completed|completed_with_errors|failed|cancelled|expired"
+        },
+        {
+          "name": "default_conflict_policy",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": "update|keep_existing|skip|ask"
+        },
+        {
+          "name": "total_rows",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "valid_rows",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "invalid_rows",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "conflict_rows",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "created_rows",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "updated_rows",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "skipped_rows",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "failed_rows",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "started_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "finished_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "error_summary",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "mapping_snapshot",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "JSON of mappings used (bounded)"
+        },
+        {
+          "name": "file_expires_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "commit_cursor",
+          "type": "int",
+          "required": false,
+          "unique": false,
+          "note": "Last committed row_number for safe resume"
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": false,
+          "note": "team|module|file_sha256 - warns on re-upload"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "team_id",
+            "module",
+            "status"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "file_sha256"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "import_rows",
+      "purpose": "Per-row validation/commit result. NO raw payload; payload lives in File Store (ndjson).",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "import_jobs",
+          "on_delete": "cascade"
+        },
+        {
+          "name": "row_number",
+          "type": "int",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "status",
+          "type": "varchar(20)",
+          "required": true,
+          "unique": false,
+          "note": "valid|invalid|conflict|skipped|committed|failed"
+        },
+        {
+          "name": "business_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": false,
+          "note": "Matching key used (not raw PII where avoidable)"
+        },
+        {
+          "name": "conflict_target_row_id",
+          "type": "bigint",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "resolution",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": "update|keep_existing|skip"
+        },
+        {
+          "name": "resolved_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "resolved_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "error_codes",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": false,
+          "note": "Comma list e.g. MISSING_REQUIRED,INVALID_DATE"
+        },
+        {
+          "name": "error_detail",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Field names + reason only, no sensitive values"
+        },
+        {
+          "name": "row_hash",
+          "type": "varchar(64)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "import_job_id|row_number"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "import_job_id",
+            "status"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "report_snapshots",
+      "purpose": "Frozen dashboard/report outputs. Retention default 365 days; source records are never deleted by expiry.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "report_type",
+          "type": "varchar(60)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "period_start",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "period_end",
+          "type": "date",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "reporting_period",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "parameters",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "JSON filters"
+        },
+        {
+          "name": "summary_json",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Small summaries only"
+        },
+        {
+          "name": "data_file_id",
+          "type": "bigint",
+          "required": false,
+          "unique": false,
+          "note": "File Store ID for large payloads"
+        },
+        {
+          "name": "data_version",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "status",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "generated_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "generated_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "expires_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": "generated_at + retention setting"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "report_type",
+            "reporting_period",
+            "team_id"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "expires_at"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "saved_presentations",
+      "purpose": "Full-screen presentation definitions. Visible to all managers of team_id; admins see all.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "title",
+          "type": "varchar(200)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "NULL only for admin-created cross-team decks",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "created_by_user_id",
+          "type": "foreignkey",
+          "required": true,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "slides_config",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "JSON; references snapshot IDs"
+        },
+        {
+          "name": "status",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "last_presented_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "is_deleted",
+          "type": "boolean",
+          "required": false,
+          "unique": false,
+          "note": "Soft delete; default false"
+        },
+        {
+          "name": "deleted_at",
+          "type": "datetime",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "deleted_by_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "team_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "audit_logs",
+      "purpose": "Append-only. Written server-side only.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "actor_user_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "users",
+          "on_delete": "null"
+        },
+        {
+          "name": "action",
+          "type": "varchar(40)",
+          "required": true,
+          "unique": false,
+          "note": "create|update|delete|import_commit|conflict_resolve|login|..."
+        },
+        {
+          "name": "entity_table",
+          "type": "varchar(60)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "entity_row_id",
+          "type": "bigint",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "import_job_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "import_jobs",
+          "on_delete": "null"
+        },
+        {
+          "name": "before_json",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Redacted"
+        },
+        {
+          "name": "after_json",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Redacted"
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "request_id",
+          "type": "varchar(60)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": [
+        {
+          "cols": [
+            "entity_table",
+            "entity_row_id"
+          ],
+          "unique": false
+        },
+        {
+          "cols": [
+            "actor_user_id"
+          ],
+          "unique": false
+        }
+      ]
+    },
+    {
+      "name": "application_settings",
+      "purpose": "Configuration key/values.",
+      "kind": "physical",
+      "columns": [
+        {
+          "name": "setting_key",
+          "type": "varchar(100)",
+          "required": true,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "scope",
+          "type": "varchar(10)",
+          "required": false,
+          "unique": false,
+          "note": "global|team"
+        },
+        {
+          "name": "team_id",
+          "type": "foreignkey",
+          "required": false,
+          "unique": false,
+          "note": "",
+          "parent": "teams",
+          "on_delete": "null"
+        },
+        {
+          "name": "setting_value",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "value_type",
+          "type": "varchar(20)",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": ""
+        },
+        {
+          "name": "dedupe_key",
+          "type": "varchar(255)",
+          "required": false,
+          "unique": true,
+          "note": "scope|team_id|setting_key"
+        },
+        {
+          "name": "more_details",
+          "type": "text",
+          "required": false,
+          "unique": false,
+          "note": "Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit)"
+        }
+      ],
+      "indexes": []
+    }
+  ]
+}

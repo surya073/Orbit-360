@@ -1,0 +1,8 @@
+employee_code,leave_type,start_date,end_date,units,unit_type,status,reason
+EMP002,Annual,2026-10-05,2026-10-07,3,days,approved,Family event
+EMP004,Sick,2026-10-08,2026-10-08,1,days,approved,Fever
+EMP006,Casual,2026-10-12,2026-10-12,4,hours,approved,Personal
+EMP007,Annual,2026-10-19,2026-10-23,5,days,requested,Vacation
+EMP008,Annual,2026-09-21,2026-09-22,2,days,rejected,Release week
+EMP011,Medical,2026-09-28,2026-10-16,14,days,approved,Medical leave
+EMP003,Casual,2026-10-09,2026-10-09,,,approved,Units not recorded (shows a partial metric)

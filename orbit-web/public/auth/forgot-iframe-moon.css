@@ -1,0 +1,106 @@
+@import url("/__catalyst/auth/static-file?file_name=embedded_password_reset.css");
+
+/*
+ * Forgot-password flow - theme: moon. GENERATED from src/styles/themes.css by scripts/generate-login-css.js; do not edit.
+ * Regenerate with `npm run gen:login-css` (src/tests/login.test.js fails if these drift).
+ */
+
+/* ---- fit the hosted reset flow into our card ---- */
+.bg_one { display: none !important; }
+.recovery_container {
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+.recovery_box {
+  width: 100% !important;
+  min-height: 0 !important;
+  float: none !important;
+  display: block !important;
+  padding: 4px 2px 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+.titlename, .service_logo { display: none !important; }
+.fieldcontainer { margin-bottom: 18px !important; }
+
+/* ---- theme colors ---- */
+.info_head, .head_info { color: #e5ecf8 !important; }
+.info_head { font-size: 18px !important; margin-bottom: 8px !important; }
+.head_info { font-size: 14px !important; line-height: 22px !important; color: #9fb1cf !important; margin: 0 0 18px !important; }
+.pass_policy, .hellouser, .textbox_label, .menutext { color: #9fb1cf !important; }
+.user_info {
+  background: #0c1220 !important;
+  border: 1px solid #26344f !important;
+  border-radius: 8px !important;
+}
+.user_info .menutext { color: #e5ecf8 !important; }
+.optionstry:hover, .optionstry { background: transparent !important; }
+.optionstry:hover { background: #1b2740 !important; }
+.Alert, .Errormsg {
+  background: #1b2740 !important;
+  color: #e5ecf8 !important;
+  border: 1px solid #26344f !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+.tryanother, .extra_options { color: #6db3ff !important; }
+
+html, body {
+  background: #131c2e !important;
+  color: #e5ecf8 !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden !important; /* the card is sized to this content (useIframeHeight): no inner scrollbar */
+  height: auto !important; /* never stretch to fill the iframe: the card follows the content, not the reverse */
+  min-height: 0 !important;
+}
+.textbox_div { margin-bottom: 18px !important; }
+.textbox {
+  background: #0c1220 !important;
+  color: #e5ecf8 !important;
+  border: 1px solid #3a4c70 !important;
+  border-radius: 8px !important;
+  height: 42px !important;
+  text-indent: 0 !important;
+  padding: 0 12px !important;
+  font-size: 14px !important;
+  transition: border-color .15s ease, box-shadow .15s ease !important;
+}
+.textbox:hover { border-color: #9fb1cf !important; }
+.textbox:focus {
+  border-color: #9ccaff !important;
+  box-shadow: 0 0 0 1px #9ccaff !important;
+}
+.textbox::placeholder { color: #9fb1cf !important; opacity: 1 !important; }
+.textbox:-webkit-autofill, .textbox:-webkit-autofill:hover, .textbox:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e5ecf8 !important;
+  -webkit-box-shadow: 0 0 0 100px #0c1220 inset !important;
+  background-color: #0c1220 !important;
+}
+.errorborder, .textbox.errorborder { border-color: #ff94a0 !important; }
+.btn.blue, .blue {
+  background: #6db3ff !important;
+  color: #07121f !important;
+  box-shadow: none !important;
+  height: 42px !important;
+  border-radius: 8px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 14px !important;
+  margin-bottom: 14px !important;
+  transition: background-color .15s ease, transform .1s ease !important;
+}
+.btn.blue:hover, .blue:hover { background: #93c6ff !important; box-shadow: none !important; }
+.btn.blue:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid #9ccaff !important; outline-offset: 2px !important; }
+.loadwithbtn { border-color: #07121f !important; border-left-color: transparent !important; }
+a, a:visited, .bluetext_action, .bluetext_action a, .change_user, .fielderror a { color: #6db3ff !important; text-decoration: none !important; }
+a:hover, .bluetext_action:hover { text-decoration: underline !important; }
+.fielderror, .error_icon, .error_message { color: #ff94a0 !important; }
+.backoption { color: #9fb1cf !important; }
+.backoption:hover { background: #1b2740 !important; }

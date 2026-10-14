@@ -1,0 +1,13 @@
+employee_code,full_name,email_normalized,job_role,joining_date,employment_status
+EMP001,Asha Rao,asha.rao@example.com,Engineering Manager,2020-01-10,active
+EMP002,Bala Iyer,bala.iyer@example.com,Senior Engineer,2021-02-11,active
+EMP003,Chitra Nair,chitra.nair@example.com,Engineer,2022-03-12,active
+EMP004,Dev Patel,dev.patel@example.com,Engineer,2023-04-13,active
+EMP005,Esha Kapoor,esha.kapoor@example.com,Product Designer,2024-05-14,active
+EMP006,Farid Khan,farid.khan@example.com,QA Analyst,2020-06-15,active
+EMP007,Gita Menon,gita.menon@example.com,Business Analyst,2021-07-16,active
+EMP008,Hari Das,hari.das@example.com,Engineer,2022-08-17,active
+EMP009,Indu Sharma,indu.sharma@example.com,Support Lead,2023-09-18,active
+EMP010,Jai Verma,jai.verma@example.com,Support Engineer,2024-01-10,active
+EMP011,Kavya Reddy,kavya.reddy@example.com,Data Analyst,2020-02-11,on_leave
+EMP012,Lakshman Pillai,lakshman.pillai@example.com,Engineer,2021-03-12,inactive

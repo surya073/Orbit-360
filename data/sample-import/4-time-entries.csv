@@ -1,0 +1,85 @@
+employee_code,project_code,work_date,duration_minutes,is_billable,work_category,work_description,approval_status,source_record_id
+EMP001,PRJ-ATLAS,2026-09-14,90,false,internal,Internal meetings and planning,approved,TE-0001
+EMP004,PRJ-ATLAS,2026-09-14,120,false,internal,Internal meetings and planning,approved,TE-0002
+EMP006,PRJ-ORION,2026-09-14,180,true,billable,Sprint delivery work,approved,TE-0003
+EMP010,PRJ-HELIOS,2026-09-14,240,true,billable,Sprint delivery work,approved,TE-0004
+EMP001,PRJ-ORION,2026-09-15,300,true,billable,Sprint delivery work,approved,TE-0005
+EMP008,PRJ-ORION,2026-09-15,480,true,billable,Sprint delivery work,approved,TE-0006
+EMP003,PRJ-HELIOS,2026-09-15,60,true,billable,Sprint delivery work,approved,TE-0007
+EMP005,PRJ-LYRA,2026-09-15,90,true,billable,Sprint delivery work,approved,TE-0008
+EMP007,PRJ-HELIOS,2026-09-16,120,true,billable,Sprint delivery work,approved,TE-0009
+EMP009,PRJ-NIMBUS,2026-09-16,180,false,internal,Internal meetings and planning,approved,TE-0010
+EMP008,PRJ-LYRA,2026-09-16,240,false,internal,Internal meetings and planning,approved,TE-0011
+EMP001,PRJ-ATLAS,2026-09-16,300,false,internal,Internal meetings and planning,approved,TE-0012
+EMP010,PRJ-NIMBUS,2026-09-17,480,true,billable,Sprint delivery work,approved,TE-0013
+EMP004,PRJ-LYRA,2026-09-17,60,true,billable,Sprint delivery work,approved,TE-0014
+EMP002,PRJ-ATLAS,2026-09-17,90,true,billable,Sprint delivery work,approved,TE-0015
+EMP001,PRJ-ORION,2026-09-17,120,true,billable,Sprint delivery work,approved,TE-0016
+EMP006,PRJ-LYRA,2026-09-18,180,true,billable,Sprint delivery work,approved,TE-0017
+EMP003,PRJ-ATLAS,2026-09-18,240,true,billable,Sprint delivery work,approved,TE-0018
+EMP005,PRJ-ORION,2026-09-18,300,true,billable,Sprint delivery work,approved,TE-0019
+EMP007,PRJ-HELIOS,2026-09-18,480,false,internal,Internal meetings and planning,approved,TE-0020
+EMP004,PRJ-ATLAS,2026-09-21,60,false,internal,Internal meetings and planning,approved,TE-0021
+EMP006,PRJ-ORION,2026-09-21,90,false,internal,Internal meetings and planning,approved,TE-0022
+EMP010,PRJ-HELIOS,2026-09-21,120,true,billable,Sprint delivery work,approved,TE-0023
+EMP010,PRJ-NIMBUS,2026-09-21,180,true,billable,Sprint delivery work,approved,TE-0024
+EMP008,PRJ-ORION,2026-09-22,240,true,billable,Sprint delivery work,approved,TE-0025
+EMP003,PRJ-HELIOS,2026-09-22,300,true,billable,Sprint delivery work,approved,TE-0026
+EMP005,PRJ-LYRA,2026-09-22,480,true,billable,Sprint delivery work,approved,TE-0027
+EMP006,PRJ-LYRA,2026-09-22,60,true,billable,Sprint delivery work,approved,TE-0028
+EMP009,PRJ-NIMBUS,2026-09-23,90,true,billable,Sprint delivery work,approved,TE-0029
+EMP008,PRJ-LYRA,2026-09-23,120,false,internal,Internal meetings and planning,approved,TE-0030
+EMP001,PRJ-ATLAS,2026-09-23,180,false,internal,Internal meetings and planning,approved,TE-0031
+EMP004,PRJ-ATLAS,2026-09-23,240,false,internal,Internal meetings and planning,approved,TE-0032
+EMP004,PRJ-LYRA,2026-09-24,300,true,billable,Sprint delivery work,approved,TE-0033
+EMP002,PRJ-ATLAS,2026-09-24,480,true,billable,Sprint delivery work,approved,TE-0034
+EMP001,PRJ-ORION,2026-09-24,60,true,billable,Sprint delivery work,approved,TE-0035
+EMP008,PRJ-ORION,2026-09-24,90,true,billable,Sprint delivery work,approved,TE-0036
+EMP003,PRJ-ATLAS,2026-09-25,120,true,billable,Sprint delivery work,approved,TE-0037
+EMP005,PRJ-ORION,2026-09-25,180,true,billable,Sprint delivery work,approved,TE-0038
+EMP007,PRJ-HELIOS,2026-09-25,240,true,billable,Sprint delivery work,approved,TE-0039
+EMP009,PRJ-NIMBUS,2026-09-25,300,false,internal,Internal meetings and planning,approved,TE-0040
+EMP006,PRJ-ORION,2026-09-28,480,false,internal,Internal meetings and planning,approved,TE-0041
+EMP010,PRJ-HELIOS,2026-09-28,60,false,internal,Internal meetings and planning,approved,TE-0042
+EMP010,PRJ-NIMBUS,2026-09-28,90,true,billable,Sprint delivery work,approved,TE-0043
+EMP004,PRJ-LYRA,2026-09-28,120,true,billable,Sprint delivery work,approved,TE-0044
+EMP003,PRJ-HELIOS,2026-09-29,180,true,billable,Sprint delivery work,approved,TE-0045
+EMP005,PRJ-LYRA,2026-09-29,240,true,billable,Sprint delivery work,approved,TE-0046
+EMP006,PRJ-LYRA,2026-09-29,300,true,billable,Sprint delivery work,approved,TE-0047
+EMP003,PRJ-ATLAS,2026-09-29,480,true,billable,Sprint delivery work,approved,TE-0048
+EMP008,PRJ-LYRA,2026-09-30,60,true,billable,Sprint delivery work,approved,TE-0049
+EMP001,PRJ-ATLAS,2026-09-30,90,false,internal,Internal meetings and planning,approved,TE-0050
+EMP004,PRJ-ATLAS,2026-09-30,120,false,internal,Internal meetings and planning,approved,TE-0051
+EMP006,PRJ-ORION,2026-09-30,180,false,internal,Internal meetings and planning,approved,TE-0052
+EMP002,PRJ-ATLAS,2026-10-01,240,true,billable,Sprint delivery work,approved,TE-0053
+EMP001,PRJ-ORION,2026-10-01,300,true,billable,Sprint delivery work,approved,TE-0054
+EMP008,PRJ-ORION,2026-10-01,480,true,billable,Sprint delivery work,approved,TE-0055
+EMP003,PRJ-HELIOS,2026-10-01,60,true,billable,Sprint delivery work,approved,TE-0056
+EMP005,PRJ-ORION,2026-10-02,90,true,billable,Sprint delivery work,approved,TE-0057
+EMP007,PRJ-HELIOS,2026-10-02,120,true,billable,Sprint delivery work,approved,TE-0058
+EMP009,PRJ-NIMBUS,2026-10-02,180,true,billable,Sprint delivery work,approved,TE-0059
+EMP008,PRJ-LYRA,2026-10-02,240,false,internal,Internal meetings and planning,approved,TE-0060
+EMP010,PRJ-HELIOS,2026-10-05,300,false,internal,Internal meetings and planning,approved,TE-0061
+EMP010,PRJ-NIMBUS,2026-10-05,480,false,internal,Internal meetings and planning,approved,TE-0062
+EMP004,PRJ-LYRA,2026-10-05,60,true,billable,Sprint delivery work,approved,TE-0063
+EMP002,PRJ-ATLAS,2026-10-05,90,true,billable,Sprint delivery work,approved,TE-0064
+EMP005,PRJ-LYRA,2026-10-06,120,true,billable,Sprint delivery work,pending,TE-0065
+EMP006,PRJ-LYRA,2026-10-06,180,true,billable,Sprint delivery work,approved,TE-0066
+EMP003,PRJ-ATLAS,2026-10-06,240,true,billable,Sprint delivery work,pending,TE-0067
+EMP005,PRJ-ORION,2026-10-06,300,true,billable,Sprint delivery work,rejected,TE-0068
+EMP001,PRJ-ATLAS,2026-10-07,480,true,billable,Sprint delivery work,approved,TE-0069
+EMP004,PRJ-ATLAS,2026-10-07,60,false,internal,Internal meetings and planning,pending,TE-0070
+EMP006,PRJ-ORION,2026-10-07,90,false,internal,Internal meetings and planning,approved,TE-0071
+EMP010,PRJ-HELIOS,2026-10-07,120,false,internal,Internal meetings and planning,pending,TE-0072
+EMP001,PRJ-ORION,2026-10-08,180,true,billable,Sprint delivery work,rejected,TE-0073
+EMP008,PRJ-ORION,2026-10-08,240,true,billable,Sprint delivery work,approved,TE-0074
+EMP003,PRJ-HELIOS,2026-10-08,300,true,billable,Sprint delivery work,pending,TE-0075
+EMP005,PRJ-LYRA,2026-10-08,480,true,billable,Sprint delivery work,approved,TE-0076
+EMP007,PRJ-HELIOS,2026-10-09,60,true,billable,Sprint delivery work,pending,TE-0077
+EMP009,PRJ-NIMBUS,2026-10-09,90,true,billable,Sprint delivery work,rejected,TE-0078
+EMP008,PRJ-LYRA,2026-10-09,120,true,billable,Sprint delivery work,approved,TE-0079
+EMP001,PRJ-ATLAS,2026-10-09,180,false,internal,Internal meetings and planning,pending,TE-0080
+EMP010,PRJ-NIMBUS,2026-10-12,240,false,internal,Internal meetings and planning,approved,TE-0081
+EMP004,PRJ-LYRA,2026-10-12,300,false,internal,Internal meetings and planning,pending,TE-0082
+EMP002,PRJ-ATLAS,2026-10-12,480,true,billable,Sprint delivery work,rejected,TE-0083
+EMP001,PRJ-ORION,2026-10-12,60,true,billable,Sprint delivery work,approved,TE-0084

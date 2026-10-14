@@ -1,0 +1,22 @@
+employee_code,project_code,tool_name,tool_category,access_type,is_shared_access,usage_percent_reported,usage_purpose,reporting_period
+EMP001,PRJ-ATLAS,ChatGPT,ai,licensed,no,36,Code assistance and reviews,2026-10
+EMP001,,Claude,ai,licensed,no,21,Drafting and research,2026-09
+EMP002,PRJ-ATLAS,Claude,ai,licensed,no,42,Code assistance and reviews,2026-10
+EMP002,,Figma AI,other,licensed,no,22,Drafting and research,2026-09
+EMP003,PRJ-ATLAS,Figma AI,other,licensed,no,18,Code assistance and reviews,2026-10
+EMP003,,Cursor,ai,licensed,no,,Drafting and research,2026-09
+EMP004,PRJ-ATLAS,Cursor,ai,licensed,no,49,Code assistance and reviews,2026-10
+EMP004,,GitHub Copilot,github,licensed,yes,24,Drafting and research,2026-09
+EMP005,PRJ-ORION,GitHub Copilot,github,licensed,no,60,Code assistance and reviews,2026-10
+EMP005,,ChatGPT,ai,licensed,no,25,Drafting and research,2026-09
+EMP006,PRJ-ORION,ChatGPT,ai,licensed,no,41,Code assistance and reviews,2026-10
+EMP006,,Claude,ai,licensed,no,,Drafting and research,2026-09
+EMP007,PRJ-HELIOS,Claude,ai,licensed,no,47,Code assistance and reviews,2026-10
+EMP007,,Figma AI,other,licensed,no,27,Drafting and research,2026-09
+EMP008,PRJ-ORION,Figma AI,other,licensed,no,23,Code assistance and reviews,2026-10
+EMP008,,Cursor,ai,licensed,yes,28,Drafting and research,2026-09
+EMP009,PRJ-NIMBUS,Cursor,ai,licensed,no,54,Code assistance and reviews,2026-10
+EMP009,,GitHub Copilot,github,licensed,no,,Drafting and research,2026-09
+EMP010,PRJ-HELIOS,GitHub Copilot,github,licensed,no,65,Code assistance and reviews,2026-10
+EMP010,,ChatGPT,ai,licensed,no,30,Drafting and research,2026-09
+EMP005,,Midjourney,other,personal,unknown,10,Mockups,

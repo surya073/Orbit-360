@@ -1,0 +1,7 @@
+employee_code,full_name,email_normalized,job_role,joining_date,employment_status
+EMP001,Asha Rao,asha.rao@example.com,Director of Engineering,2020-01-10,active
+EMP002,Bala Iyer,bala.iyer@example.com,Principal Engineer,2021-02-11,active
+EMP013,Meera Joshi,meera.joshi@example.com,Engineer,2026-10-01,active
+EMP014,Nikhil Rao,nikhil.rao@example.com,Engineer,2026-13-45,active
+EMP015,,blank.name@example.com,Engineer,2026-10-01,active
+EMP016,Omar Sheikh,omar.sheikh@example.com,Engineer,2026-10-01,retired

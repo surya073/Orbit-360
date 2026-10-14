@@ -95,7 +95,8 @@ async function write(method, path, opts) {
 export const api = {
 	get(path, opts = {}) {
 		const key = `${path}${toQuery(opts.params)}`;
-		const hit = cache.get(key);
+		// `fresh: true` (e.g. the spreadsheet's pre-save conflict check) must never see cached data.
+		const hit = opts.fresh ? null : cache.get(key);
 		if (hit && hit.until > Date.now()) return Promise.resolve(hit.value);
 		cache.delete(key);
 		const run = () =>
@@ -105,6 +106,7 @@ export const api = {
 			});
 		// Requests with a signal are caller-owned (abortable); only unsignalled GETs are shared.
 		if (opts.signal) return run();
+		if (opts.fresh) return run();
 		if (!inflight.has(key)) inflight.set(key, run().finally(() => inflight.delete(key)));
 		return inflight.get(key);
 	},

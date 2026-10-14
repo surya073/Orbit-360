@@ -228,7 +228,7 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 				const current = new Map();
 				if (ids.length) {
 					for (const part of chunk(ids, 100)) {
-						const out = await resourceService.list(resource, { ids: part.join(','), pageSize: 100 });
+						const out = await resourceService.list(resource, { ids: part.join(','), pageSize: 100 }, { fresh: true });
 						out.data.forEach((r) => current.set(String(r.ROWID), r));
 					}
 				}

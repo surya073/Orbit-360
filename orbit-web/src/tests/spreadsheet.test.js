@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { __clearLookupCache } from '../hooks/useLookup';
 import { __resetTemplateCache } from '../hooks/useTemplates';
-import { buildColumns, columnLetter, normalizeCell, parseTsv, rowsToCsv, sortRows, toTsv } from '../features/spreadsheet/gridModel';
+import { buildColumns, columnLetter, jumpTarget, normalizeCell, parseTsv, rangeLabel, rowsToCsv, sortRows, toTsv } from '../features/spreadsheet/gridModel';
 import SpreadsheetPage from '../features/spreadsheet/SpreadsheetPage';
 import { admin, errBody, manager, mockFetch, okBody, renderWithProviders } from './helpers';
 
@@ -84,6 +84,23 @@ describe('grid model', () => {
 		expect(sortRows(list, cols[1], null, get)).toBe(list);
 	});
 
+	test('Ctrl+Arrow jumps to the edge of a data run, then to the next data, then to the sheet edge', () => {
+		const data = ['a', 'b', '', '', 'c', 'd', '', 'e'];
+		const down = (r) => jumpTarget((rr) => data[rr] !== '', r, 0, 1, 0, data.length, 1)[0];
+		expect(down(0)).toBe(1); // inside a run: to its last cell
+		expect(down(1)).toBe(4); // at the end of a run: to the next data
+		expect(down(4)).toBe(5);
+		expect(down(5)).toBe(7); // end of a run: next data
+		expect(down(7)).toBe(7); // already at the edge
+		expect(jumpTarget(() => false, 0, 0, 1, 0, 5, 1)).toEqual([4, 0]); // nothing below: sheet edge
+		expect(jumpTarget((r) => r === 0, 3, 0, -1, 0, 5, 1)).toEqual([0, 0]);
+	});
+
+	test('range labels read like a name box', () => {
+		expect(rangeLabel({ r0: 0, c0: 0, r1: 0, c1: 0 })).toBe('A1');
+		expect(rangeLabel({ r0: 4, c0: 2, r1: 1, c1: 0 })).toBe('A2:C5');
+	});
+
 	test('CSV export uses the real field names as headers', () => {
 		const cols = buildColumns(template, null).slice(0, 2);
 		expect(rowsToCsv(cols, rows().slice(0, 1), (r, f) => r[f])).toBe('full_name,job_role\r\nAsha Rao,Engineer');
@@ -121,6 +138,7 @@ describe('Spreadsheet editor page', () => {
 		const modes = screen.getByRole('navigation', { name: 'Data entry options' });
 		expect(within(modes).getAllByRole('link').map((l) => l.textContent)).toEqual([expect.stringContaining('Add form'), expect.stringContaining('Sheet import'), expect.stringContaining('Spreadsheet editor')]);
 		expect(within(modes).getByRole('link', { name: /Add form/ })).toHaveAttribute('href', '/employees?new=1');
+		await userEvent.click(screen.getByRole('button', { name: 'About the spreadsheet editor' }));
 		expect(screen.getByText(/new columns cannot be added/)).toBeInTheDocument();
 	});
 
@@ -136,7 +154,7 @@ describe('Spreadsheet editor page', () => {
 		const call = writes('PATCH')[0];
 		expect(call.line).toBe('PATCH /employees/1');
 		expect(JSON.parse(call.init.body)).toEqual({ job_role: 'Principal' });
-		await waitFor(() => expect(screen.getByText(/All changes saved/)).toBeInTheDocument());
+		await waitFor(() => expect(screen.getByText(/^Saved \d/)).toBeInTheDocument());
 	});
 
 	test('a failed save keeps the edit, flags the row, and a retry succeeds', async () => {
@@ -189,7 +207,7 @@ describe('Spreadsheet editor page', () => {
 		await userEvent.click(screen.getByRole('button', { name: /Save changes/ }));
 		await waitFor(() => expect(writes('POST')).toHaveLength(1));
 		expect(JSON.parse(writes('POST')[0].init.body)).toEqual({ full_name: 'Nina New', job_role: 'Tester' });
-		await waitFor(() => expect(screen.getByText(/No unsaved changes|All changes saved/)).toBeInTheDocument());
+		await waitFor(() => expect(screen.getByText(/^Saved \d/)).toBeInTheDocument());
 		expect(writes('POST')).toHaveLength(1);
 	});
 
@@ -212,7 +230,7 @@ describe('Spreadsheet editor page', () => {
 		await editCell(0, 1, 'Temp');
 		await userEvent.click(screen.getByRole('button', { name: /Undo/ }));
 		expect(gridcell(0, 1)).toHaveTextContent('Engineer');
-		expect(screen.getByText('No unsaved changes')).toBeInTheDocument();
+		expect(screen.getByText('Saved')).toBeInTheDocument();
 		await userEvent.click(screen.getByRole('button', { name: /Redo/ }));
 		expect(gridcell(0, 1)).toHaveTextContent('Temp');
 		expect(writes('PATCH')).toHaveLength(0);
@@ -252,6 +270,7 @@ describe('Spreadsheet editor page', () => {
 		expect(screen.getByText('Read-only')).toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: /Save changes/ })).not.toBeInTheDocument();
 		expect(screen.getByRole('grid')).toHaveAttribute('aria-readonly', 'true');
+		await userEvent.click(screen.getByRole('button', { name: 'About the spreadsheet editor' }));
 		expect(screen.getByText(/Only administrators can change this record type/)).toBeInTheDocument();
 	});
 
@@ -264,5 +283,127 @@ describe('Spreadsheet editor page', () => {
 		expect(await screen.findByText('Delivery')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: /Save changes/ })).toBeDisabled();
 		expect(screen.getByRole('button', { name: 'Add row' })).toBeEnabled();
+	});
+
+	describe('workspace interactions', () => {
+		const grid = () => screen.getByRole('grid');
+		const selectedCells = () => screen.getAllByRole('gridcell').filter((c) => c.getAttribute('aria-selected') === 'true');
+
+		test('typing on a selected cell starts an edit that replaces its text (and arrow keys never edit)', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.click(gridcell(0, 1));
+			await userEvent.keyboard('{ArrowRight}{ArrowLeft}{ArrowDown}{ArrowUp}');
+			expect(gridcell(0, 1)).toHaveTextContent('Engineer'); // navigation did not touch the value
+			expect(screen.queryByRole('textbox', { name: 'Job role' })).not.toBeInTheDocument();
+			await userEvent.keyboard('Z');
+			expect(await screen.findByRole('textbox', { name: 'Job role' })).toHaveValue('Z');
+		});
+
+		test('Shift+Arrow extends the range and the status bar names it', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.click(gridcell(0, 0));
+			await userEvent.keyboard('{Shift>}{ArrowDown}{ArrowRight}{/Shift}');
+			expect(selectedCells()).toHaveLength(4);
+			expect(screen.getByText('A1:B2')).toBeInTheDocument();
+			expect(screen.getByText(/4 cells/)).toBeInTheDocument();
+		});
+
+		test('Ctrl+Shift+Arrow extends to the edge of the data and Ctrl+End / Ctrl+Home jump to the corners', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.click(gridcell(0, 1)); // Engineer, Designer, then a blank
+			await userEvent.keyboard('{Control>}{Shift>}{ArrowDown}{/Shift}{/Control}');
+			expect(screen.getByText('B1:B2')).toBeInTheDocument();
+			await userEvent.keyboard('{Control>}{End}{/Control}');
+			expect(screen.getByText('E3')).toBeInTheDocument();
+			await userEvent.keyboard('{Control>}{Home}{/Control}');
+			expect(screen.getByText('A1')).toBeInTheDocument();
+		});
+
+		test('Shift+Enter moves up, Tab and Shift+Tab move across', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.click(gridcell(1, 1));
+			await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+			expect(screen.getByText('B1')).toBeInTheDocument();
+			await userEvent.keyboard('{Tab}{Tab}');
+			expect(screen.getByText('D1')).toBeInTheDocument();
+			await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+			expect(screen.getByText('C1')).toBeInTheDocument();
+		});
+
+		test('Ctrl+C and Ctrl+X put the selection on the clipboard as tab-separated text; nothing is saved', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.click(gridcell(0, 0));
+			await userEvent.keyboard('{Shift>}{ArrowDown}{ArrowRight}{/Shift}');
+			const setData = jest.fn();
+			fireEvent.copy(grid(), { clipboardData: { setData } });
+			expect(setData).toHaveBeenCalledWith('text/plain', 'Asha Rao\tEngineer\nBala Iyer\tDesigner');
+			const cutData = jest.fn();
+			fireEvent.cut(grid(), { clipboardData: { setData: cutData } });
+			expect(cutData).toHaveBeenCalledWith('text/plain', 'Asha Rao\tEngineer\nBala Iyer\tDesigner');
+			expect(writes('PATCH')).toHaveLength(0);
+		});
+
+		test('Ctrl+F focuses the sheet search instead of the browser find bar; Escape clears it', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.click(gridcell(0, 0));
+			await userEvent.keyboard('{Control>}f{/Control}');
+			const search = screen.getByRole('searchbox', { name: /Search employees/ });
+			expect(search).toHaveFocus();
+			await userEvent.type(search, 'abc');
+			await userEvent.keyboard('{Escape}');
+			expect(search).toHaveValue('');
+		});
+
+		test('search on a server-searchable sheet waits for a pause, then asks the server once', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			const before = global.fetch.calls.length;
+			await userEvent.type(screen.getByRole('searchbox', { name: /Search employees/ }), 'bala');
+			await waitFor(() => expect(global.fetch.calls.filter((c) => /q=bala/.test(c.line))).toHaveLength(1));
+			expect(global.fetch.calls.slice(before).filter((c) => /q=(b|ba|bal)(&|$)/.test(c.line))).toHaveLength(0); // no request per keystroke
+		});
+
+		test('search in "Loaded rows" mode filters every visible column without any request', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.selectOptions(screen.getByLabelText('Where to search'), 'loaded');
+			const before = global.fetch.calls.length;
+			await userEvent.type(screen.getByRole('searchbox', { name: 'Search loaded rows' }), 'designer');
+			await waitFor(() => expect(screen.getByText(/1 row shown of 3/)).toBeInTheDocument());
+			expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument();
+			expect(screen.getByText('Bala Iyer')).toBeInTheDocument();
+			expect(global.fetch.calls.length).toBe(before);
+			await userEvent.clear(screen.getByRole('searchbox'));
+			expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+		});
+
+		test('Ctrl+S saves pending edits; the save status pill follows the state', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await editCell(0, 1, 'Architect');
+			expect(screen.getByText('1 unsaved change')).toBeInTheDocument();
+			await userEvent.click(gridcell(0, 0));
+			await userEvent.keyboard('{Control>}s{/Control}');
+			await waitFor(() => expect(writes('PATCH')).toHaveLength(1));
+			await waitFor(() => expect(screen.getByText(/^Saved \d/)).toBeInTheDocument());
+		});
+
+		test('right-click offers cell actions and the shortcuts reference opens', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			fireEvent.contextMenu(gridcell(0, 1));
+			const menu = await screen.findByRole('menu', { name: 'Cell actions' });
+			expect(within(menu).getAllByRole('menuitem').map((m) => m.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Cut'), expect.stringContaining('Copy'), expect.stringContaining('Paste'), expect.stringContaining('Clear contents')]));
+			await userEvent.keyboard('{Escape}');
+			await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+			await userEvent.click(screen.getByRole('button', { name: 'Keyboard shortcuts' }));
+			expect(await screen.findByRole('dialog', { name: 'Keyboard shortcuts' })).toBeInTheDocument();
+		});
 	});
 });

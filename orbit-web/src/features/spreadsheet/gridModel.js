@@ -194,3 +194,37 @@ export function matchesFilter(col, filter, value, labelOf) {
 export function rowsToCsv(columns, rows, getValue) {
 	return toCsv([columns.map((c) => c.field), ...rows.map((r) => columns.map((c) => toText(getValue(r, c.field))))]);
 }
+
+// ---- navigation helpers ----------------------------------------------------------------------
+
+/**
+ * Where Ctrl+Arrow lands, like a spreadsheet: from a cell with data whose neighbour also has data,
+ * the last cell of that run; otherwise the next cell with data in that direction; otherwise the edge.
+ * `filled(r, c)` says whether a cell holds a value. Stable for any shape: it only walks one line.
+ */
+export function jumpTarget(filled, r, c, dr, dc, rowCount, colCount) {
+	const inside = (a, b) => a >= 0 && b >= 0 && a < rowCount && b < colCount;
+	let nr = r + dr;
+	let nc = c + dc;
+	if (!inside(nr, nc)) return [r, c];
+	if (filled(r, c) && filled(nr, nc)) {
+		while (inside(nr + dr, nc + dc) && filled(nr + dr, nc + dc)) {
+			nr += dr;
+			nc += dc;
+		}
+		return [nr, nc];
+	}
+	while (inside(nr, nc) && !filled(nr, nc)) {
+		nr += dr;
+		nc += dc;
+	}
+	if (inside(nr, nc)) return [nr, nc];
+	return [dr > 0 ? rowCount - 1 : dr < 0 ? 0 : r, dc > 0 ? colCount - 1 : dc < 0 ? 0 : c];
+}
+
+/** "B3" / "B3:D9" label for a selection, like a spreadsheet's name box. */
+export function rangeLabel(sel) {
+	const a = `${columnLetter(Math.min(sel.c0, sel.c1))}${Math.min(sel.r0, sel.r1) + 1}`;
+	const b = `${columnLetter(Math.max(sel.c0, sel.c1))}${Math.max(sel.r0, sel.r1) + 1}`;
+	return a === b ? a : `${a}:${b}`;
+}

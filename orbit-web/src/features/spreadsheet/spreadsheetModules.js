@@ -18,3 +18,6 @@ export const SHEET_MODULES = [
 ];
 
 export const sheetModule = (resource) => SHEET_MODULES.find((m) => m.resource === resource);
+
+/** The sheet record type for a module page path (e.g. /projects -> projects), so navigation can carry the context. */
+export const moduleForPath = (pathname) => (SHEET_MODULES.find((m) => pathname === m.route || pathname.startsWith(`${m.route}/`)) || {}).resource || null;

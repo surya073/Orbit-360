@@ -1,17 +1,38 @@
-import React, { memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, memo, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from '../../components/common/Icon';
 import CellEditor from './CellEditor';
-import { columnLetter, displayText, parseTsv, toTsv } from './gridModel';
+import { columnLetter, displayText, jumpTarget, parseTsv, rangeLabel, toTsv } from './gridModel';
 
 const WIDTHS = { text: 240, str: 170, enum: 130, bool: 90, date: 120, datetime: 170, int: 110, num: 110, id: 190 };
 const MIN_WIDTH = 60;
 const MAX_PASTE_ROWS = 500;
 const defaultWidth = (c) => (c.fk ? 200 : WIDTHS[c.type] || 160);
+const ROW_HEIGHT = { compact: 28, comfortable: 38 };
 
-const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, activeC, editingC, readOnly, handlers }) {
+const widthsKey = (k) => `company360.sheetWidths.${k}`;
+function loadWidths(k) {
+	if (!k) return {};
+	try {
+		const v = JSON.parse(window.localStorage.getItem(widthsKey(k)) || '{}');
+		return v && typeof v === 'object' ? v : {};
+	} catch {
+		return {};
+	}
+}
+function saveWidths(k, w) {
+	if (!k) return;
+	try {
+		window.localStorage.setItem(widthsKey(k), JSON.stringify(w));
+	} catch {
+		/* storage unavailable: widths just reset next visit */
+	}
+}
+
+const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom, activeC, editingC, editInitial, readOnly, handlers }) {
 	return (
 		<div role="row" aria-rowindex={r + 2} className={`sheet__row ${row.isNew ? 'is-new' : ''} ${r % 2 ? 'is-odd' : ''}`.trim()}>
-			<div role="rowheader" className={`sheet__gutter ${c0 === 0 && c1 === columns.length - 1 ? 'is-selected' : ''}`.trim()} title={row.isNew ? 'New, unsaved record' : `Record ${row.id}`} onMouseDown={(e) => handlers.rowHeader(r, e)}>
+			<div role="rowheader" className={`sheet__gutter ${c0 !== -1 ? 'is-selected' : ''}`.trim()} title={row.isNew ? 'New, unsaved record' : `Record ${row.id}`} onMouseDown={(e) => handlers.rowHeader(r, e)}>
 				{row.number}
 				{row.isNew ? <i className="sheet__newdot" aria-label="New row" /> : null}
 				{row.rowError ? <i className="sheet__rowerr" role="img" aria-label={row.rowError} title={row.rowError} /> : null}
@@ -22,7 +43,7 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, activeC, editi
 				const dirty = row.dirty[col.field];
 				const error = row.errors[col.field];
 				const locked = readOnly || (!row.isNew && col.immutable);
-				const cls = ['sheet__cell', selected && 'is-selected', active && 'is-active', dirty && 'is-dirty', error && 'has-error', locked && 'is-locked', col.type === 'int' || col.type === 'num' ? 'is-num' : ''].filter(Boolean).join(' ');
+				const cls = ['sheet__cell', selected && 'is-selected', selected && rTop && 'edge-t', selected && rBottom && 'edge-b', selected && c === c0 && 'edge-l', selected && c === c1 && 'edge-r', active && 'is-active', dirty && 'is-dirty', error && 'has-error', locked && 'is-locked', col.type === 'int' || col.type === 'num' ? 'is-num' : ''].filter(Boolean).join(' ');
 				const text = displayText(col, row.values[col.field], labelOf);
 				return (
 					<div
@@ -41,7 +62,7 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, activeC, editi
 						onDoubleClick={() => handlers.cellEdit(r, c)}
 					>
 						{editingC === c ? (
-							<CellEditor col={col} initial={row.values[col.field] ?? ''} onCommit={(t, nav) => handlers.commit(r, c, t, nav)} onCancel={handlers.cancel} />
+							<CellEditor col={col} initial={editInitial ?? row.values[col.field] ?? ''} onCommit={(t, nav) => handlers.commit(r, c, t, nav)} onCancel={handlers.cancel} />
 						) : (
 							<span className="sheet__text">{text}</span>
 						)}
@@ -52,6 +73,58 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, activeC, editi
 	);
 });
 
+/** Right-click menu. Rendered in a portal; closes on outside click, Escape, scroll or choosing an item. */
+function ContextMenu({ at, items, onClose }) {
+	const ref = useRef(null);
+	useEffect(() => {
+		const first = ref.current && ref.current.querySelector('button:not([disabled])');
+		if (first) first.focus();
+		const away = (e) => {
+			if (ref.current && !ref.current.contains(e.target)) onClose();
+		};
+		const key = (e) => {
+			if (e.key === 'Escape') onClose();
+		};
+		document.addEventListener('mousedown', away);
+		document.addEventListener('keydown', key);
+		window.addEventListener('scroll', onClose, true);
+		window.addEventListener('resize', onClose);
+		return () => {
+			document.removeEventListener('mousedown', away);
+			document.removeEventListener('keydown', key);
+			window.removeEventListener('scroll', onClose, true);
+			window.removeEventListener('resize', onClose);
+		};
+	}, [onClose]);
+	const onKeyDown = (e) => {
+		if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+		const btns = [...ref.current.querySelectorAll('button:not([disabled])')];
+		const i = btns.indexOf(document.activeElement);
+		e.preventDefault();
+		btns[(i + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length].focus();
+	};
+	return (
+		<div ref={ref} className="sheet-menu" role="menu" aria-label="Cell actions" style={{ left: at.x, top: at.y }} onKeyDown={onKeyDown}>
+			{items.map((it) => (
+				<button
+					key={it.label}
+					type="button"
+					role="menuitem"
+					className={`sheet-menu__item ${it.danger ? 'is-danger' : ''}`.trim()}
+					disabled={it.disabled}
+					onClick={() => {
+						onClose();
+						it.run();
+					}}
+				>
+					<span>{it.label}</span>
+					{it.hint ? <kbd>{it.hint}</kbd> : null}
+				</button>
+			))}
+		</div>
+	);
+}
+
 /**
  * Spreadsheet grid: column letters, name headers (sortable, resizable), sticky row numbers,
  * range selection, keyboard navigation, in-cell editing and clipboard. It owns only presentation
@@ -61,14 +134,17 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, activeC, editi
  * to edit, Delete clears, Ctrl+C / Ctrl+V copy and paste tab-separated text, Ctrl+Z / Ctrl+Y undo
  * and redo, Ctrl+A selects all. While a cell is being edited the editor owns the keyboard.
  */
-export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows, onSetCells, onAddRows, onNotice, onUndo, onRedo, sort, onSort, onSelectRows, label }) {
+const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows, onSetCells, onAddRows, onNotice, onUndo, onRedo, sort, onSort, onSelectRows, onSelection, onDeleteRows, density = 'compact', storageKey, label }, ref) {
 	const uid = useId().replace(/:/g, '');
 	const scrollRef = useRef(null);
 	const gridRef = useRef(null);
 	const [sel, setSel] = useState({ r0: 0, c0: 0, r1: 0, c1: 0 }); // anchor (r0,c0) -> focus (r1,c1)
 	const [editing, setEditing] = useState(null); // { r, c }
-	const [widths, setWidths] = useState({});
+	const [widths, setWidths] = useState(() => loadWidths(storageKey));
+	const [menu, setMenu] = useState(null); // context menu position
 	const dragging = useRef(false);
+
+	useEffect(() => saveWidths(storageKey, widths), [storageKey, widths]);
 
 	const rowCount = rows.length;
 	const colCount = columns.length;
@@ -102,6 +178,13 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 			onSelectRows(keys);
 		}
 	}, [sel, rows, onSelectRows]);
+
+	// Tell the page what is selected (name-box style label) for its status bar.
+	useEffect(() => {
+		if (!onSelection) return;
+		const n = (Math.abs(sel.r1 - sel.r0) + 1) * (Math.abs(sel.c1 - sel.c0) + 1);
+		onSelection(rowCount && colCount ? { label: rangeLabel(sel), cells: n } : null);
+	}, [sel, rowCount, colCount, onSelection]);
 
 	const cellId = useCallback((r, c) => `${uid}-${r}-${c}`, [uid]);
 	const activeId = rowCount && colCount ? cellId(sel.r1, sel.c1) : undefined;
@@ -169,6 +252,7 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 					if (rejected.length) notice(rejected[0].reason);
 				}
 				if (nav === 'down') moveTo(r + 1, c, false);
+				else if (nav === 'up') moveTo(r - 1, c, false);
 				else if (nav === 'right') moveTo(r, c + 1, false);
 				else if (nav === 'left') moveTo(r, c - 1, false);
 				requestAnimationFrame(focusGrid);
@@ -193,18 +277,19 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 	// ---- selection helpers --------------------------------------------------------------------
 	const bounds = () => ({ ra: Math.min(sel.r0, sel.r1), rb: Math.max(sel.r0, sel.r1), ca: Math.min(sel.c0, sel.c1), cb: Math.max(sel.c0, sel.c1) });
 
-	const clearSelection = () => {
+	const clearSelection = (fromCut = false) => {
 		const { ra, rb, ca, cb } = bounds();
 		const changes = [];
 		for (let r = ra; r <= rb; r++) for (let c = ca; c <= cb; c++) if (rows[r] && !isLocked(r, c)) changes.push({ key: rows[r].key, field: columns[c].field, text: '' });
 		if (!changes.length) return;
 		const { rejected, applied } = onSetCells(changes);
 		if (rejected.length) onNotice(`${rejected.length} cell${rejected.length > 1 ? 's' : ''} not cleared. ${rejected[0].reason}`);
-		else if (!applied) onNotice('Nothing to clear.');
+		else if (!applied && !fromCut) onNotice('Nothing to clear.');
 	};
 
-	const onCopy = (e) => {
-		if (editing || !rowCount) return;
+	// Values are copied as the stored text (ids for foreign keys) so they paste back losslessly.
+	const displayForCopy = (row, col) => (row ? String(row.values[col.field] ?? '') : '');
+	const selectionText = () => {
 		const { ra, rb, ca, cb } = bounds();
 		const matrix = [];
 		for (let r = ra; r <= rb; r++) {
@@ -212,19 +297,30 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 			for (let c = ca; c <= cb; c++) line.push(displayForCopy(rows[r], columns[c]));
 			matrix.push(line);
 		}
-		e.clipboardData.setData('text/plain', toTsv(matrix));
-		e.preventDefault();
-		onNotice(`Copied ${(rb - ra + 1) * (cb - ca + 1)} cell${(rb - ra + 1) * (cb - ca + 1) > 1 ? 's' : ''}`, 'info');
+		return { text: toTsv(matrix), count: (rb - ra + 1) * (cb - ca + 1) };
 	};
-	// Values are copied as the stored text (ids for foreign keys) so they paste back losslessly.
-	const displayForCopy = (row, col) => (row ? String(row.values[col.field] ?? '') : '');
+	const copiedNotice = (verb, count) => onNotice(`${verb} ${count} cell${count > 1 ? 's' : ''}`, 'info');
 
-	const onPaste = (e) => {
-		if (editing) return;
+	const onCopy = (e) => {
+		if (editing || !rowCount) return;
+		const { text, count } = selectionText();
+		e.clipboardData.setData('text/plain', text);
 		e.preventDefault();
+		copiedNotice('Copied', count);
+	};
+
+	const onCut = (e) => {
+		if (editing || !rowCount) return;
+		e.preventDefault();
+		const { text, count } = selectionText();
+		e.clipboardData.setData('text/plain', text);
+		copiedNotice('Cut', count);
+		clearSelection(true);
+	};
+
+	/** Applies tab/newline separated text at the selection. Nothing is saved: edits stay unsaved until Save. */
+	const applyPaste = (text) => {
 		if (readOnly) return onNotice('This sheet is read-only.');
-		// Plain text only: HTML on the clipboard is never read, so markup cannot be injected.
-		const text = e.clipboardData.getData('text/plain');
 		if (!text) return;
 		const matrix = parseTsv(text);
 		if (!matrix.length) return;
@@ -256,10 +352,55 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 		const { applied, rejected } = onSetCells(changes);
 		const extra = skippedCols ? ` ${skippedCols} value${skippedCols > 1 ? 's' : ''} fell outside the last column and were ignored.` : '';
 		if (rejected.length) onNotice(`Pasted ${applied} cell${applied === 1 ? '' : 's'}; ${rejected.length} skipped. ${rejected[0].reason}${extra}`);
-		else onNotice(`Pasted ${applied} cell${applied === 1 ? '' : 's'}.${extra}`, 'info');
+		else onNotice(`Pasted ${applied} cell${applied === 1 ? '' : 's'}. Review them, then Save.${extra}`, 'info');
 	};
 
+	const onPaste = (e) => {
+		if (editing) return;
+		e.preventDefault();
+		// Plain text only: HTML on the clipboard is never read, so markup cannot be injected.
+		applyPaste(e.clipboardData.getData('text/plain'));
+	};
+
+	// Toolbar / context-menu versions use the async clipboard API, which browsers may refuse.
+	const blocked = () => onNotice('The browser blocked clipboard access. Click the grid and use Ctrl+C / Ctrl+X / Ctrl+V instead.');
+	const apiRef = useRef(null);
+	useImperativeHandle(ref, () => {
+		apiRef.current = {
+			focus: focusGrid,
+			selectAll: () => setSel({ r0: 0, c0: 0, r1: Math.max(rowCount - 1, 0), c1: Math.max(colCount - 1, 0) }),
+			clear: () => clearSelection(),
+			copy: () => {
+				if (!rowCount) return;
+				const { text, count } = selectionText();
+				if (!navigator.clipboard || !navigator.clipboard.writeText) return blocked();
+				navigator.clipboard.writeText(text).then(() => copiedNotice('Copied', count), blocked);
+			},
+			cut: () => {
+				if (!rowCount) return;
+				const { text, count } = selectionText();
+				if (!navigator.clipboard || !navigator.clipboard.writeText) return blocked();
+				navigator.clipboard.writeText(text).then(() => {
+					copiedNotice('Cut', count);
+					clearSelection(true);
+				}, blocked);
+			},
+			paste: () => {
+				if (!navigator.clipboard || !navigator.clipboard.readText) return blocked();
+				navigator.clipboard.readText().then(applyPaste, blocked);
+			},
+		};
+		return apiRef.current;
+	});
+
 	// ---- keyboard -----------------------------------------------------------------------------
+	const rowHeight = ROW_HEIGHT[density] || ROW_HEIGHT.compact;
+	const pageRows = () => {
+		const h = scrollRef.current ? scrollRef.current.clientHeight : 400;
+		return Math.max(1, Math.floor((h - 40) / rowHeight) - 1);
+	};
+	const filled = (r, c) => String((rows[r] && rows[r].values[columns[c].field]) ?? '') !== '';
+
 	const onKeyDown = (e) => {
 		if (editing || e.target !== gridRef.current || !rowCount) return;
 		const mod = e.ctrlKey || e.metaKey;
@@ -268,23 +409,28 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 			e.preventDefault();
 			moveTo(r, c, e.shiftKey);
 		};
+		// Ctrl/Cmd + arrow jumps to the edge of the data run (Shift extends the selection to it).
+		const jump = (dr, dc) => {
+			const [r, c] = jumpTarget(filled, r1, c1, dr, dc, rowCount, colCount);
+			return go(r, c);
+		};
 		switch (e.key) {
 			case 'ArrowDown':
-				return go(mod ? rowCount - 1 : r1 + 1, c1);
+				return mod ? jump(1, 0) : go(r1 + 1, c1);
 			case 'ArrowUp':
-				return go(mod ? 0 : r1 - 1, c1);
+				return mod ? jump(-1, 0) : go(r1 - 1, c1);
 			case 'ArrowRight':
-				return go(r1, mod ? colCount - 1 : c1 + 1);
+				return mod ? jump(0, 1) : go(r1, c1 + 1);
 			case 'ArrowLeft':
-				return go(r1, mod ? 0 : c1 - 1);
+				return mod ? jump(0, -1) : go(r1, c1 - 1);
 			case 'Home':
 				return go(mod ? 0 : r1, 0);
 			case 'End':
 				return go(mod ? rowCount - 1 : r1, colCount - 1);
 			case 'PageDown':
-				return go(r1 + 10, c1);
+				return go(r1 + pageRows(), c1);
 			case 'PageUp':
-				return go(r1 - 10, c1);
+				return go(r1 - pageRows(), c1);
 			case 'Tab': {
 				e.preventDefault();
 				const next = e.shiftKey ? (c1 === 0 ? [r1 - 1, colCount - 1] : [r1, c1 - 1]) : c1 === colCount - 1 ? [r1 + 1, 0] : [r1, c1 + 1];
@@ -292,6 +438,7 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 			}
 			case 'Enter':
 				e.preventDefault();
+				if (e.shiftKey) return moveTo(r1 - 1, c1, false);
 				return startEdit(r1, c1, rows[r1].values[columns[c1].field] ?? '');
 			case 'F2':
 				e.preventDefault();
@@ -304,15 +451,16 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 				return moveTo(r1, c1, false);
 			default:
 		}
-		if (mod && e.key.toLowerCase() === 'a') {
+		const k = e.key.toLowerCase();
+		if (mod && k === 'a') {
 			e.preventDefault();
 			return setSel({ r0: 0, c0: 0, r1: rowCount - 1, c1: colCount - 1 });
 		}
-		if (mod && e.key.toLowerCase() === 'z') {
+		if (mod && k === 'z') {
 			e.preventDefault();
 			return e.shiftKey ? onRedo() : onUndo();
 		}
-		if (mod && e.key.toLowerCase() === 'y') {
+		if (mod && k === 'y') {
 			e.preventDefault();
 			return onRedo();
 		}
@@ -322,6 +470,26 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 			const picker = c.fk || c.type === 'enum' || c.type === 'bool';
 			startEdit(r1, c1, picker ? rows[r1].values[c.field] ?? '' : e.key); // typing replaces the text, like a spreadsheet
 		}
+	};
+
+	// ---- context menu -------------------------------------------------------------------------
+	const onContextMenu = (e) => {
+		if (editing || !rowCount) return;
+		const cell = e.target.closest && e.target.closest('[role="gridcell"], [role="rowheader"]');
+		if (!cell) return;
+		e.preventDefault();
+		const m = /-(\d+)-(\d+)$/.exec(cell.id || '');
+		if (m) {
+			const r = Number(m[1]);
+			const c = Number(m[2]);
+			const bb = bounds();
+			if (r < bb.ra || r > bb.rb || c < bb.ca || c > bb.cb) setSel({ r0: r, c0: c, r1: r, c1: c });
+		}
+		setMenu({ x: Math.min(e.clientX, window.innerWidth - 210), y: Math.min(e.clientY, window.innerHeight - 240) });
+	};
+	const closeMenu = () => {
+		setMenu(null);
+		focusGrid();
 	};
 
 	// ---- column resize ------------------------------------------------------------------------
@@ -359,7 +527,7 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 	};
 
 	return (
-		<div className="sheet__scroll" ref={scrollRef} style={cssVars}>
+		<div className="sheet__scroll" ref={scrollRef} style={{ ...cssVars, '--sheet-row-h': `${rowHeight}px` }}>
 			<div
 				ref={gridRef}
 				className="sheet__grid"
@@ -374,7 +542,9 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 				style={{ minWidth: gridWidth }}
 				onKeyDown={onKeyDown}
 				onCopy={onCopy}
+				onCut={onCut}
 				onPaste={onPaste}
+				onContextMenu={onContextMenu}
 			>
 				<div role="row" aria-rowindex={1} className="sheet__head">
 					<div role="columnheader" className="sheet__corner" aria-label="Row numbers" />
@@ -409,14 +579,35 @@ export default function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows
 							labelOf={labelOf}
 							c0={inRows ? ca : -1}
 							c1={inRows ? cb : -1}
+							rTop={r === ra}
+							rBottom={r === rb}
 							activeC={r === sel.r1 ? sel.c1 : -1}
 							editingC={editing && editing.r === r ? editing.c : -1}
+							editInitial={editing && editing.r === r ? editing.initial : undefined}
 							readOnly={readOnly}
 							handlers={handlers}
 						/>
 					);
 				})}
 			</div>
+			{menu
+				? createPortal(
+						<ContextMenu
+							at={menu}
+							onClose={closeMenu}
+							items={[
+								{ label: 'Cut', hint: 'Ctrl+X', disabled: readOnly, run: () => apiRef.current.cut() },
+								{ label: 'Copy', hint: 'Ctrl+C', run: () => apiRef.current.copy() },
+								{ label: 'Paste', hint: 'Ctrl+V', disabled: readOnly, run: () => apiRef.current.paste() },
+								{ label: 'Clear contents', hint: 'Del', disabled: readOnly, run: () => apiRef.current.clear() },
+								...(onDeleteRows && !readOnly ? [{ label: 'Delete selected rows…', danger: true, run: () => onDeleteRows() }] : []),
+							]}
+						/>,
+						document.body
+				  )
+				: null}
 		</div>
 	);
-}
+});
+
+export default SheetGrid;

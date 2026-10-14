@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { forwardRef, useState } from 'react';
 import Button, { IconButton } from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
 import Popover from '../../components/common/Popover';
@@ -85,55 +85,116 @@ function FilterPanel({ columns, filters, onChange }) {
 	);
 }
 
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
+export const MOD = isMac ? '⌘' : 'Ctrl+';
+
+/** Small labelled toolbar button: compact text control with the shortcut in its tooltip. */
+function Tool({ label, hint, onClick, disabled, danger, icon, children }) {
+	return (
+		<Button size="sm" variant={danger ? 'danger' : 'ghost'} icon={icon} onClick={onClick} disabled={disabled} title={hint ? `${label} (${hint})` : label} aria-label={label}>
+			{children}
+		</Button>
+	);
+}
+
+const STATUS_ICON = { saved: 'check', dirty: 'edit', saving: 'refresh', failed: 'alert', partial: 'alert', idle: 'check' };
+
 /**
- * Toolbar. Only actions that work for the current sheet are shown; the rest are disabled with a
- * reason where it helps (e.g. a read-only role).
+ * Compact spreadsheet toolbar in four groups (file/data, editing, data tools, view). Every control
+ * works; unavailable ones are disabled (and the editing group is hidden for read-only roles).
  */
-export default function SheetToolbar({ title, canWrite, dirtyCount, saving, onSave, onDiscard, canUndo, canRedo, onUndo, onRedo, onAddRow, canDelete, onDelete, search, onSearch, searchLabel, columns, filters, onFilters, sortLabel, onClearSort, onExport, canExport, onReload, loading }) {
+const SheetToolbar = forwardRef(function SheetToolbar(
+	{ title, canWrite, status, dirtyCount, saving, onSave, onDiscard, canUndo, canRedo, onUndo, onRedo, onCut, onCopy, onPaste, onAddRow, canDelete, onDelete, search, onSearch, searchLabel, searchScope, onSearchScope, canServerSearch, columns, filters, onFilters, sortLabel, onClearSort, onExport, canExport, onReload, loading, density, onDensity, onShortcuts },
+	searchRef
+) {
 	return (
 		<div className="sheet-toolbar" role="toolbar" aria-label="Spreadsheet actions">
-			<h2 className="sheet-toolbar__title">{title}</h2>
-			<div className="sheet-toolbar__group">
-				{canWrite ? (
-					<>
-						<Button variant="primary" icon="check" onClick={onSave} loading={saving} disabled={dirtyCount === 0}>
-							Save changes{dirtyCount ? ` (${dirtyCount})` : ''}
-						</Button>
-						<Button variant="ghost" onClick={onDiscard} disabled={dirtyCount === 0 || saving}>
-							Discard
-						</Button>
-					</>
-				) : (
-					<span className="badge badge--neutral">Read-only</span>
-				)}
+			<div className="sheet-toolbar__group sheet-toolbar__group--title">
+				<h2 className="sheet-toolbar__title">{title}</h2>
+				<span className={`sheet-state sheet-state--${status.kind}`} role="status" aria-live="polite">
+					<Icon name={STATUS_ICON[status.kind] || 'check'} size={13} />
+					{status.text}
+				</span>
 			</div>
+
 			{canWrite ? (
-				<div className="sheet-toolbar__group">
-					<Button variant="ghost" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)">
-						↶ Undo
+				<div className="sheet-toolbar__group" role="group" aria-label="File and data">
+					<Button size="sm" variant="primary" icon="check" onClick={onSave} loading={saving} disabled={dirtyCount === 0} title={`Save changes (${MOD}S)`} aria-label={`Save changes${dirtyCount ? ` (${dirtyCount})` : ''}`}>
+						Save{dirtyCount ? ` (${dirtyCount})` : ''}
 					</Button>
-					<Button variant="ghost" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)">
-						↷ Redo
-					</Button>
-					<Button icon="plus" onClick={onAddRow}>
+					<Tool label="Add row" icon="plus" onClick={onAddRow}>
 						Add row
-					</Button>
-					<Button icon="trash" variant="danger" onClick={onDelete} disabled={!canDelete}>
-						Delete rows
-					</Button>
+					</Tool>
+					<Tool label="Discard changes" onClick={onDiscard} disabled={dirtyCount === 0 || saving}>
+						Discard
+					</Tool>
 				</div>
-			) : null}
+			) : (
+				<span className="badge badge--neutral">Read-only</span>
+			)}
+
+			{canWrite ? (
+				<div className="sheet-toolbar__group" role="group" aria-label="Editing">
+					<Tool label="Undo" hint={`${MOD}Z`} onClick={onUndo} disabled={!canUndo}>
+						Undo
+					</Tool>
+					<Tool label="Redo" hint={`${MOD}Y`} onClick={onRedo} disabled={!canRedo}>
+						Redo
+					</Tool>
+					<Tool label="Cut" hint={`${MOD}X`} onClick={onCut}>
+						Cut
+					</Tool>
+					<Tool label="Copy" hint={`${MOD}C`} onClick={onCopy}>
+						Copy
+					</Tool>
+					<Tool label="Paste" hint={`${MOD}V`} onClick={onPaste}>
+						Paste
+					</Tool>
+					<Tool label="Delete selected rows" icon="trash" danger onClick={onDelete} disabled={!canDelete}>
+						Delete rows
+					</Tool>
+				</div>
+			) : (
+				<div className="sheet-toolbar__group" role="group" aria-label="Editing">
+					<Tool label="Copy" hint={`${MOD}C`} onClick={onCopy}>
+						Copy
+					</Tool>
+				</div>
+			)}
+
 			<div className="sheet-toolbar__spacer" />
-			<div className="sheet-toolbar__group">
+
+			<div className="sheet-toolbar__group" role="group" aria-label="Data tools">
 				<div className="search-input sheet-search">
 					<Icon name="search" size={14} />
-					<input type="search" className="input" aria-label={searchLabel} placeholder="Search" value={search} onChange={(e) => onSearch(e.target.value)} />
+					<input
+						ref={searchRef}
+						type="search"
+						className="input"
+						aria-label={searchLabel}
+						placeholder={`Search…  ${MOD}F`}
+						value={search}
+						onChange={(e) => onSearch(e.target.value)}
+						onKeyDown={(e) => {
+							if (e.key === 'Escape' && search) {
+								e.preventDefault();
+								e.stopPropagation();
+								onSearch('');
+							}
+						}}
+					/>
 				</div>
+				{canServerSearch ? (
+					<select className="sheet-scope" aria-label="Where to search" value={searchScope} onChange={(e) => onSearchScope(e.target.value)} title="Search all records on the server (by name), or only the rows loaded in the grid (every column)">
+						<option value="server">All records</option>
+						<option value="loaded">Loaded rows</option>
+					</select>
+				) : null}
 				<Popover
 					label="Filter rows"
 					align="right"
 					trigger={({ toggle, props }) => (
-						<Button icon="filter" onClick={toggle} {...props}>
+						<Button size="sm" variant={filters.length ? 'secondary' : 'ghost'} icon="filter" onClick={toggle} {...props}>
 							Filter{filters.length ? ` (${filters.length})` : ''}
 						</Button>
 					)}
@@ -141,15 +202,51 @@ export default function SheetToolbar({ title, canWrite, dirtyCount, saving, onSa
 					<FilterPanel columns={columns} filters={filters} onChange={onFilters} />
 				</Popover>
 				{sortLabel ? (
-					<Button variant="ghost" onClick={onClearSort} title="Clear sort">
-						Sorted: {sortLabel} ✕
+					<Button size="sm" variant="secondary" onClick={onClearSort} title="Clear sort">
+						Sort: {sortLabel} ✕
 					</Button>
 				) : null}
-				<Button icon="download" onClick={onExport} disabled={!canExport} title="Download the visible rows as CSV">
-					Export CSV
-				</Button>
 				<IconButton icon="refresh" label="Reload from server" onClick={onReload} disabled={loading} />
+			</div>
+
+			<div className="sheet-toolbar__group" role="group" aria-label="View and export">
+				<Popover
+					label="View options"
+					align="right"
+					trigger={({ toggle, props }) => (
+						<Button size="sm" variant="ghost" icon="settings" onClick={toggle} {...props}>
+							View
+						</Button>
+					)}
+				>
+					{({ close }) => (
+						<div className="sheet-filter">
+							<span className="small muted">Row density</span>
+							{['compact', 'comfortable'].map((d) => (
+								<label key={d} className="sheet-filter__row" style={{ gridAutoFlow: 'column', justifyContent: 'start', alignItems: 'center', gap: 8 }}>
+									<input
+										type="radio"
+										name="sheet-density"
+										checked={density === d}
+										onChange={() => {
+											onDensity(d);
+											close();
+										}}
+									/>
+									<span style={{ textTransform: 'capitalize' }}>{d}</span>
+								</label>
+							))}
+							<p className="small muted">Column widths are remembered per record type on this device.</p>
+						</div>
+					)}
+				</Popover>
+				<Tool label="Download the visible rows as CSV" icon="download" onClick={onExport} disabled={!canExport}>
+					Export
+				</Tool>
+				<IconButton icon="info" label="Keyboard shortcuts" onClick={onShortcuts} />
 			</div>
 		</div>
 	);
-}
+});
+
+export default SheetToolbar;

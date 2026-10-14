@@ -32,7 +32,7 @@ describe('authentication', () => {
 		render(<App />);
 		expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
 		expect(global.fetch).not.toHaveBeenCalled();
-		expect(authService.renderLogin).toHaveBeenCalledWith('login-container', expect.objectContaining({ cssUrl: expect.stringMatching(/login-iframe-light\.css$/) }));
+		expect(authService.renderLogin).toHaveBeenCalledWith('login-container', expect.objectContaining({ cssUrl: expect.stringMatching(/login-iframe-blueberry\.css$/) }));
 	});
 	test('an unprovisioned user is told so and gets no data', async () => {
 		authService.isSignedIn.mockResolvedValue(true);
@@ -179,9 +179,9 @@ describe('theme from the header', () => {
 		mockFetch([meRoute(manager), ...dashboardRoutes()]);
 		render(<App />);
 		await userEvent.click(await screen.findByRole('button', { name: 'Appearance' }));
-		await userEvent.click(screen.getByRole('radio', { name: 'Moon' }));
-		expect(document.documentElement.dataset.theme).toBe('moon');
-		expect(localStorage.getItem('company360.appearance')).toContain('moon');
+		await userEvent.click(screen.getByRole('radio', { name: 'Black Current' }));
+		expect(document.documentElement.dataset.theme).toBe('blackcurrant');
+		expect(localStorage.getItem('company360.appearance')).toContain('blackcurrant');
 	});
 });
 

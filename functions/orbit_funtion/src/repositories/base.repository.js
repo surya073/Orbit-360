@@ -9,7 +9,7 @@ const SCOPED = Symbol('scopedBy'); // marks rows returned by a scoped read
 
 /**
  * Generic repository for one Data Store table. All access requires a Scope; controllers and
- * services never build SQL. Lists issue exactly 2 queries (count + page).
+ * services never build SQL. Lists issue 1 query when the page is short, else 2 (page + count).
  */
 function createTableRepository(db, resource) {
 	const detailBools = [...new Set([...(resource.bools || []), ...Object.entries(resource.fields || {}).filter(([, s]) => s.t === 'bool').map(([k]) => k)])];
@@ -26,7 +26,13 @@ function createTableRepository(db, resource) {
 
 		async list(scope, input) {
 			const q = buildListQueries(resource, input, scope);
-			const [total, rows] = await Promise.all([db.count(q.countSql), db.select(q.listSql, resource.table, resource.bools)]);
+			const rows = await db.select(q.listSql, resource.table, resource.bools);
+			// A short page already tells us the total, so the count query (a billed request) is only
+			// needed when the page is full or the requested page is past the end.
+			let total;
+			if (rows.length > 0 && rows.length < q.pageSize) total = (q.page - 1) * q.pageSize + rows.length;
+			else if (rows.length === 0 && q.page === 1) total = 0;
+			else total = await db.count(q.countSql);
 			return { rows, total, page: q.page, pageSize: q.pageSize };
 		},
 

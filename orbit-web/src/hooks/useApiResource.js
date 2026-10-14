@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { clearApiCache } from '../services/apiClient';
 
 /**
  * Loads data with explicit state: 'loading' | 'success' | 'empty' | 'error'.
@@ -30,6 +31,10 @@ export default function useApiResource(fetcher, key, { enabled = true, isEmpty }
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [key, enabled, tick]);
 
-	const reload = useCallback(() => setTick((t) => t + 1), []);
+	// Reload is an explicit request for fresh data, so it bypasses the short read cache.
+	const reload = useCallback(() => {
+		clearApiCache();
+		setTick((t) => t + 1);
+	}, []);
 	return { ...state, reload };
 }

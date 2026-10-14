@@ -1,7 +1,7 @@
 @import url("/__catalyst/auth/static-file?file_name=embedded_signin.css");
 
 /*
- * Sign-in form - theme: dark. GENERATED from src/styles/themes.css by scripts/generate-login-css.js; do not edit.
+ * Sign-in form - theme: volcano. GENERATED from src/styles/themes.css by scripts/generate-login-css.js; do not edit.
  * Regenerate with `npm run gen:login-css` (src/tests/login.test.js fails if these drift).
  */
 
@@ -24,11 +24,11 @@
   border: 0 !important;
 }
 .signin_head, .titlename, .service_name { display: none !important; } /* our page has its own heading */
-.hellouser, .backup_desc, .pass_name, .textbox_label, .textbox_actions, .oneAuthLable, .option_details { color: #a2a9b6 !important; }
+.hellouser, .backup_desc, .pass_name, .textbox_label, .textbox_actions, .oneAuthLable, .option_details { color: #c4aca2 !important; }
 
 html, body {
-  background: #171a1f !important;
-  color: #e9ebef !important;
+  background: #1b1311 !important;
+  color: #f5ece8 !important;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   -webkit-font-smoothing: antialiased;
   overflow: hidden !important; /* the card is sized to this content (useIframeHeight): no inner scrollbar */
@@ -37,9 +37,9 @@ html, body {
 }
 .textbox_div { margin-bottom: 18px !important; }
 .textbox {
-  background: #0f1114 !important;
-  color: #e9ebef !important;
-  border: 1px solid #444b57 !important;
+  background: #110c0b !important;
+  color: #f5ece8 !important;
+  border: 1px solid #5a3d32 !important;
   border-radius: 8px !important;
   height: 42px !important;
   text-indent: 0 !important;
@@ -47,21 +47,21 @@ html, body {
   font-size: 14px !important;
   transition: border-color .15s ease, box-shadow .15s ease !important;
 }
-.textbox:hover { border-color: #a2a9b6 !important; }
+.textbox:hover { border-color: #c4aca2 !important; }
 .textbox:focus {
-  border-color: #a9c6ff !important;
-  box-shadow: 0 0 0 1px #a9c6ff !important;
+  border-color: #ff9a73 !important;
+  box-shadow: 0 0 0 1px #ff9a73 !important;
 }
-.textbox::placeholder { color: #a2a9b6 !important; opacity: 1 !important; }
+.textbox::placeholder { color: #c4aca2 !important; opacity: 1 !important; }
 .textbox:-webkit-autofill, .textbox:-webkit-autofill:hover, .textbox:-webkit-autofill:focus {
-  -webkit-text-fill-color: #e9ebef !important;
-  -webkit-box-shadow: 0 0 0 100px #0f1114 inset !important;
-  background-color: #0f1114 !important;
+  -webkit-text-fill-color: #f5ece8 !important;
+  -webkit-box-shadow: 0 0 0 100px #110c0b inset !important;
+  background-color: #110c0b !important;
 }
-.errorborder, .textbox.errorborder { border-color: #ff8d85 !important; }
+.errorborder, .textbox.errorborder { border-color: #ff8a80 !important; }
 .btn.blue, .blue {
-  background: #8db3ff !important;
-  color: #0b1220 !important;
+  background: #ff7a4d !important;
+  color: #1d0d07 !important;
   box-shadow: none !important;
   height: 42px !important;
   border-radius: 8px !important;
@@ -71,12 +71,12 @@ html, body {
   margin-bottom: 14px !important;
   transition: background-color .15s ease, transform .1s ease !important;
 }
-.btn.blue:hover, .blue:hover { background: #adc9ff !important; box-shadow: none !important; }
+.btn.blue:hover, .blue:hover { background: #ff9570 !important; box-shadow: none !important; }
 .btn.blue:active { transform: translateY(1px); }
-.btn:focus-visible { outline: 2px solid #a9c6ff !important; outline-offset: 2px !important; }
-.loadwithbtn { border-color: #0b1220 !important; border-left-color: transparent !important; }
-a, a:visited, .bluetext_action, .bluetext_action a, .change_user, .fielderror a { color: #8db3ff !important; text-decoration: none !important; }
+.btn:focus-visible { outline: 2px solid #ff9a73 !important; outline-offset: 2px !important; }
+.loadwithbtn { border-color: #1d0d07 !important; border-left-color: transparent !important; }
+a, a:visited, .bluetext_action, .bluetext_action a, .change_user, .fielderror a { color: #ff7a4d !important; text-decoration: none !important; }
 a:hover, .bluetext_action:hover { text-decoration: underline !important; }
-.fielderror, .error_icon, .error_message { color: #ff8d85 !important; }
-.backoption { color: #a2a9b6 !important; }
-.backoption:hover { background: #20242b !important; }
+.fielderror, .error_icon, .error_message { color: #ff8a80 !important; }
+.backoption { color: #c4aca2 !important; }
+.backoption:hover { background: #261a17 !important; }

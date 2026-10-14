@@ -1,0 +1,281 @@
+/* ---------- Form controls ----------
+ * Text, search, number, date, select, textarea, file: one consistent look driven by theme tokens.
+ * States: hover, focus (ring), disabled, readonly, invalid (aria-invalid), valid (data-valid).
+ */
+.field input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.field select,
+.field textarea,
+.input {
+	width: 100%;
+	height: var(--control-h);
+	padding: 0 var(--space-3);
+	font-size: var(--fs-sm);
+	color: var(--text);
+	background-color: var(--surface);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-md);
+	transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+.field input::placeholder,
+.field textarea::placeholder {
+	color: var(--text-muted);
+	opacity: 0.8;
+}
+.field textarea {
+	height: auto;
+	min-height: 76px;
+	padding: var(--space-2) var(--space-3);
+	resize: vertical;
+	line-height: var(--lh-body);
+}
+.field select {
+	appearance: none;
+	-webkit-appearance: none;
+	padding-right: 32px;
+	cursor: pointer;
+	background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+	background-position: calc(100% - 17px) 52%, calc(100% - 12px) 52%;
+	background-size: 5px 5px, 5px 5px;
+	background-repeat: no-repeat;
+}
+.field input[type='date'],
+.field input[type='number'] {
+	font-variant-numeric: tabular-nums;
+}
+.field input[type='date']::-webkit-calendar-picker-indicator {
+	opacity: 0.7;
+	cursor: pointer;
+	border-radius: 4px;
+}
+html[data-theme='blackcurrant'] .field input[type='date']::-webkit-calendar-picker-indicator,
+html[data-theme='volcano'] .field input[type='date']::-webkit-calendar-picker-indicator {
+	filter: invert(1);
+}
+.field input:hover:not(:disabled):not([readonly]),
+.field select:hover:not(:disabled),
+.field textarea:hover:not(:disabled):not([readonly]) {
+	border-color: var(--text-muted);
+}
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible,
+.input:focus-visible {
+	outline: none;
+	border-color: var(--focus);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
+	border-color: var(--danger);
+	background-color: var(--danger-soft);
+}
+.field input[aria-invalid='true']:focus-visible,
+.field select[aria-invalid='true']:focus-visible,
+.field textarea[aria-invalid='true']:focus-visible {
+	box-shadow: 0 0 0 3px var(--danger-soft);
+}
+.field [data-valid='true'] {
+	border-color: var(--success);
+}
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+	background-color: var(--surface-2);
+	color: var(--text-muted);
+	border-style: dashed;
+	cursor: not-allowed;
+	opacity: 0.85;
+}
+.field input[readonly],
+.field textarea[readonly] {
+	background-color: var(--surface-2);
+	border-color: var(--border);
+	cursor: default;
+}
+.field .field-error,
+.field .field-ok,
+.field .field-hint {
+	display: flex;
+	align-items: flex-start;
+	gap: 5px;
+	font-size: var(--fs-xs);
+	line-height: 1.4;
+}
+.field .field-error .icon,
+.field .field-ok .icon {
+	margin-top: 2px;
+}
+.field .field-ok {
+	color: var(--success);
+}
+.field > label {
+	letter-spacing: 0.01em;
+}
+
+/* File input: the native button is restyled to match secondary buttons. */
+.field input[type='file'] {
+	width: 100%;
+	padding: 4px;
+	font-size: var(--fs-sm);
+	color: var(--text-muted);
+	background: var(--surface);
+	border: 1px dashed var(--border-strong);
+	border-radius: var(--radius-md);
+	cursor: pointer;
+	transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+.field input[type='file']:hover:not(:disabled) {
+	border-color: var(--accent);
+	background: var(--accent-soft);
+}
+.field input[type='file']:focus-visible {
+	outline: none;
+	border-color: var(--focus);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.field input[type='file']:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+.field input[type='file']::file-selector-button {
+	height: calc(var(--control-h) - 8px);
+	margin-right: var(--space-3);
+	padding: 0 var(--space-3);
+	font: inherit;
+	font-weight: 560;
+	color: var(--text);
+	background: var(--surface-2);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	transition: background-color var(--dur-fast) var(--ease);
+}
+.field input[type='file']:hover:not(:disabled)::file-selector-button {
+	background: var(--surface-3);
+}
+
+/* ---------- Checkbox / radio / switch ---------- */
+.choice {
+	display: inline-flex;
+	align-items: flex-start;
+	gap: var(--space-2);
+	position: relative;
+	cursor: pointer;
+	font-size: var(--fs-sm);
+	color: var(--text);
+	user-select: none;
+}
+.choice.is-disabled {
+	cursor: not-allowed;
+	opacity: 0.55;
+}
+.choice > input {
+	position: absolute;
+	opacity: 0;
+	width: 18px;
+	height: 18px;
+	margin: 0;
+	cursor: inherit;
+}
+.choice__mark {
+	flex: none;
+	position: relative;
+	width: 18px;
+	height: 18px;
+	margin-top: 1px;
+	border: 1.5px solid var(--border-strong);
+	border-radius: 5px;
+	background: var(--surface);
+	transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.choice:hover:not(.is-disabled) .choice__mark {
+	border-color: var(--accent);
+}
+.choice > input:focus-visible + .choice__mark {
+	box-shadow: 0 0 0 3px var(--ring);
+	border-color: var(--focus);
+}
+.choice > input:checked + .choice__mark {
+	background: var(--accent);
+	border-color: var(--accent);
+}
+.choice > input[aria-invalid='true'] + .choice__mark {
+	border-color: var(--danger);
+}
+.choice > input:active:not(:disabled) + .choice__mark {
+	transform: scale(0.92);
+}
+.choice--checkbox .choice__mark::after {
+	content: '';
+	position: absolute;
+	left: 5px;
+	top: 1px;
+	width: 5px;
+	height: 10px;
+	border: solid var(--on-accent);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg) scale(0);
+	transition: transform var(--dur-fast) var(--ease);
+}
+.choice--checkbox > input:checked + .choice__mark::after {
+	transform: rotate(45deg) scale(1);
+}
+.choice--radio .choice__mark {
+	border-radius: 50%;
+}
+.choice--radio .choice__mark::after {
+	content: '';
+	position: absolute;
+	inset: 4px;
+	border-radius: 50%;
+	background: var(--on-accent);
+	transform: scale(0);
+	transition: transform var(--dur-fast) var(--ease);
+}
+.choice--radio > input:checked + .choice__mark::after {
+	transform: scale(1);
+}
+.choice--switch .choice__mark {
+	width: 34px;
+	height: 20px;
+	border-radius: 999px;
+	background: var(--surface-3);
+}
+.choice--switch .choice__mark::after {
+	content: '';
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: var(--text-muted);
+	box-shadow: var(--shadow-sm);
+	transition: transform var(--dur) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+.choice--switch > input:checked + .choice__mark {
+	background: var(--accent);
+}
+.choice--switch > input:checked + .choice__mark::after {
+	transform: translateX(14px);
+	background: var(--on-accent);
+}
+.choice__text {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	line-height: 1.35;
+}
+.choice__label {
+	font-weight: 550;
+}
+.choice__hint {
+	font-size: var(--fs-xs);
+	color: var(--text-muted);
+	font-weight: 400;
+}
+.choice-group {
+	display: grid;
+	gap: var(--space-3);
+}

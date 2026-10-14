@@ -1,130 +1,158 @@
 /*
- * Themes. Each block is scoped by attribute (not only :root) so theme previews can render
- * a swatch with data-theme="..." using the very same tokens. `light` is the :root default.
+ * Themes. Each block is scoped by attribute (not only :root) so theme previews can paint a miniature
+ * interface with data-theme="..." using the very same tokens. `blueberry` is the :root default.
  * Text/accent/status pairs are verified for WCAG AA contrast by src/tests/themes.test.js.
  *
- * Token contract: bg, surface, surface-2 (hover/raised), border, text, text-muted,
- * accent (+ -hover, -contrast, -soft), focus, status (success/warning/danger/info + -soft),
- * chart-1..6, chart-grid, header-bg, shadow-rgb.
+ * Token contract
+ *   surfaces   bg, surface, surface-2 (hover/raised), surface-3 (pressed/track)
+ *   lines      border, border-strong
+ *   text       text, text-muted, on-accent (text on filled accent/danger surfaces)
+ *   accent     accent, accent-hover, accent-contrast, accent-soft, focus, ring (soft focus halo)
+ *   status     success / warning / danger / info (+ -soft)
+ *   charts     chart-1..6, chart-grid
+ *   chrome     header-bg, gradient-accent, gradient-wash (page/panel backdrop), scrollbar, shadow-rgb
+ * Only the six themes below exist; "System" simply picks Light Blueberry or Black Current.
  */
 
+/* ============ Light Blueberry (default light) ============ */
 :root,
-[data-theme='light'] {
+[data-theme='blueberry'] {
 	color-scheme: light;
-	--bg: #f4f5f8;
+	--bg: #f3f5fb;
 	--surface: #ffffff;
-	--surface-2: #eef0f5;
-	--border: #dcdfe7;
-	--border-strong: #c3c8d4;
-	--text: #1a2030;
-	--text-muted: #566075;
-	--accent: #2457c5;
-	--accent-hover: #1c46a3;
+	--surface-2: #eaeefa;
+	--surface-3: #dde4f5;
+	--border: #dde2f0;
+	--border-strong: #bcc5de;
+	--text: #161b33;
+	--text-muted: #4b5578;
+	--on-accent: #ffffff;
+	--accent: #3d52d5;
+	--accent-hover: #2f40b8;
 	--accent-contrast: #ffffff;
-	--accent-soft: #e6edfb;
-	--focus: #2457c5;
+	--accent-soft: #e6e9fb;
+	--focus: #3d52d5;
+	--ring: rgb(61 82 213 / 0.22);
 	--success: #19703f;
-	--success-soft: #e2f3e9;
+	--success-soft: #e0f3e8;
 	--warning: #8a5300;
 	--warning-soft: #fdf0d5;
 	--danger: #b3261e;
 	--danger-soft: #fbe6e4;
 	--info: #1c5c93;
-	--info-soft: #e3f0fa;
-	--chart-1: #2f6fdb;
+	--info-soft: #e1edf9;
+	--chart-1: #3d52d5;
 	--chart-2: #c2680f;
-	--chart-3: #178a79;
-	--chart-4: #8b5cc6;
+	--chart-3: #14907e;
+	--chart-4: #8a4fc4;
 	--chart-5: #d4476a;
-	--chart-6: #6b7a90;
-	--chart-grid: #e3e6ee;
-	--header-bg: rgb(255 255 255 / 0.9);
-	--gradient-accent: linear-gradient(135deg, #2f6fdb 0%, #5b8def 100%);
-	--shadow-rgb: 26 32 48;
+	--chart-6: #66749a;
+	--chart-grid: #e3e7f3;
+	--header-bg: rgb(255 255 255 / 0.82);
+	--gradient-accent: linear-gradient(135deg, #3d52d5 0%, #6f83ff 100%);
+	--gradient-wash: radial-gradient(900px 420px at 85% -10%, rgb(111 131 255 / 0.12), transparent 70%);
+	--scrollbar: #bcc5de;
+	--shadow-rgb: 22 30 80;
 }
 
-[data-theme='dark'] {
+/* ============ Black Current (premium dark) ============ */
+[data-theme='blackcurrant'] {
 	color-scheme: dark;
-	--bg: #0f1114;
-	--surface: #171a1f;
-	--surface-2: #20242b;
-	--border: #2d323b;
-	--border-strong: #444b57;
-	--text: #e9ebef;
-	--text-muted: #a2a9b6;
-	--accent: #8db3ff;
-	--accent-hover: #adc9ff;
-	--accent-contrast: #0b1220;
-	--accent-soft: #1d2a45;
-	--focus: #a9c6ff;
+	--bg: #0a0a0d;
+	--surface: #131318;
+	--surface-2: #1b1b22;
+	--surface-3: #25252e;
+	--border: #2a2a34;
+	--border-strong: #44445a;
+	--text: #ececf2;
+	--text-muted: #a4a4b6;
+	--on-accent: #14101f;
+	--accent: #b9a1ff;
+	--accent-hover: #cfbfff;
+	--accent-contrast: #14101f;
+	--accent-soft: #231d3a;
+	--focus: #c6b3ff;
+	--ring: rgb(185 161 255 / 0.28);
 	--success: #5fd392;
-	--success-soft: #15291f;
-	--warning: #f2bc5b;
-	--warning-soft: #33280f;
+	--success-soft: #12261c;
+	--warning: #f0b95a;
+	--warning-soft: #2e2410;
 	--danger: #ff8d85;
-	--danger-soft: #3a1b1a;
-	--info: #7fc0f2;
-	--info-soft: #14283a;
-	--chart-1: #6ea2f5;
+	--danger-soft: #351a1a;
+	--info: #7fb6f2;
+	--info-soft: #14243a;
+	--chart-1: #a78bfa;
 	--chart-2: #f0a24a;
 	--chart-3: #4fcfb9;
-	--chart-4: #b78cf0;
-	--chart-5: #f27a98;
-	--chart-6: #9aa6ba;
-	--chart-grid: #272c34;
-	--header-bg: rgb(23 26 31 / 0.88);
-	--gradient-accent: linear-gradient(135deg, #5d8fe8 0%, #8db3ff 100%);
+	--chart-4: #f27a98;
+	--chart-5: #7cb4f5;
+	--chart-6: #9ca3b5;
+	--chart-grid: #24242d;
+	--header-bg: rgb(19 19 24 / 0.82);
+	--gradient-accent: linear-gradient(135deg, #7c5fe0 0%, #b9a1ff 100%);
+	--gradient-wash: radial-gradient(900px 420px at 85% -10%, rgb(124 95 224 / 0.16), transparent 70%);
+	--scrollbar: #44445a;
 	--shadow-rgb: 0 0 0;
 }
 
-[data-theme='moon'] {
+/* ============ Volcano (bold, warm dark) ============ */
+[data-theme='volcano'] {
 	color-scheme: dark;
-	--bg: #0c1220;
-	--surface: #131c2e;
-	--surface-2: #1b2740;
-	--border: #26344f;
-	--border-strong: #3a4c70;
-	--text: #e5ecf8;
-	--text-muted: #9fb1cf;
-	--accent: #6db3ff;
-	--accent-hover: #93c6ff;
-	--accent-contrast: #07121f;
-	--accent-soft: #162b4a;
-	--focus: #9ccaff;
-	--success: #5cd6a0;
-	--success-soft: #12302a;
-	--warning: #f0be66;
-	--warning-soft: #342b17;
-	--danger: #ff94a0;
-	--danger-soft: #3a1c26;
-	--info: #78c3ff;
-	--info-soft: #12304d;
-	--chart-1: #62a8ff;
-	--chart-2: #f2b25c;
-	--chart-3: #4ed6c4;
-	--chart-4: #a99bff;
-	--chart-5: #ff8aa8;
-	--chart-6: #8ea3c4;
-	--chart-grid: #1f2c45;
-	--header-bg: rgb(19 28 46 / 0.88);
-	--gradient-accent: linear-gradient(135deg, #4a8fe8 0%, #7ec0ff 100%);
-	--shadow-rgb: 2 6 16;
+	--bg: #110c0b;
+	--surface: #1b1311;
+	--surface-2: #261a17;
+	--surface-3: #33231e;
+	--border: #3a2823;
+	--border-strong: #5a3d32;
+	--text: #f5ece8;
+	--text-muted: #c4aca2;
+	--on-accent: #1d0d07;
+	--accent: #ff7a4d;
+	--accent-hover: #ff9570;
+	--accent-contrast: #1d0d07;
+	--accent-soft: #3a1e16;
+	--focus: #ff9a73;
+	--ring: rgb(255 122 77 / 0.28);
+	--success: #6fd49b;
+	--success-soft: #142a1e;
+	--warning: #f2bf62;
+	--warning-soft: #33260f;
+	--danger: #ff8a80;
+	--danger-soft: #3a1816;
+	--info: #86b9ee;
+	--info-soft: #16263a;
+	--chart-1: #ff7a4d;
+	--chart-2: #f0b84a;
+	--chart-3: #e8566a;
+	--chart-4: #c88ddb;
+	--chart-5: #4fcfb9;
+	--chart-6: #ad9d96;
+	--chart-grid: #2c1e1a;
+	--header-bg: rgb(27 19 17 / 0.84);
+	--gradient-accent: linear-gradient(135deg, #e0452b 0%, #ff8a4d 100%);
+	--gradient-wash: radial-gradient(900px 420px at 85% -10%, rgb(224 69 43 / 0.18), transparent 70%);
+	--scrollbar: #5a3d32;
+	--shadow-rgb: 0 0 0;
 }
 
+/* ============ Sunset (warm light) ============ */
 [data-theme='sunset'] {
 	color-scheme: light;
 	--bg: #faf2ec;
 	--surface: #fffaf6;
 	--surface-2: #f6e8de;
+	--surface-3: #efd9cb;
 	--border: #ecd7c9;
-	--border-strong: #d9bba8;
+	--border-strong: #d2b09d;
 	--text: #2e1f1a;
 	--text-muted: #644d46;
+	--on-accent: #ffffff;
 	--accent: #ac3a19;
 	--accent-hover: #922f13;
 	--accent-contrast: #ffffff;
 	--accent-soft: #fbe1d4;
 	--focus: #ac3a19;
+	--ring: rgb(172 58 25 / 0.2);
 	--success: #1d6b45;
 	--success-soft: #e0f1e6;
 	--warning: #84500a;
@@ -140,41 +168,89 @@
 	--chart-5: #2f8a80;
 	--chart-6: #6a7894;
 	--chart-grid: #efdfd3;
-	--header-bg: rgb(255 250 246 / 0.9);
+	--header-bg: rgb(255 250 246 / 0.84);
 	--gradient-accent: linear-gradient(135deg, #d4532f 0%, #e8913c 100%);
+	--gradient-wash: radial-gradient(900px 420px at 85% -10%, rgb(232 145 60 / 0.16), transparent 70%);
+	--scrollbar: #d2b09d;
 	--shadow-rgb: 70 36 20;
 }
 
-[data-theme='beach'] {
+/* ============ Ocean (calm, trustworthy) ============ */
+[data-theme='ocean'] {
 	color-scheme: light;
-	--bg: #f5f0e4;
-	--surface: #fffdf7;
-	--surface-2: #eee8d8;
-	--border: #e0d8c3;
-	--border-strong: #c9bfa4;
-	--text: #1b2a32;
-	--text-muted: #4f626b;
-	--accent: #0a6a9e;
-	--accent-hover: #075582;
+	--bg: #eaf1f5;
+	--surface: #fafcfd;
+	--surface-2: #e2ecf2;
+	--surface-3: #d3e2ea;
+	--border: #d0dee7;
+	--border-strong: #a9c0cf;
+	--text: #0e2631;
+	--text-muted: #44606f;
+	--on-accent: #ffffff;
+	--accent: #08608a;
+	--accent-hover: #064d6f;
 	--accent-contrast: #ffffff;
-	--accent-soft: #dcedf6;
-	--focus: #0a6a9e;
-	--success: #17704f;
-	--success-soft: #ddf1e8;
+	--accent-soft: #d9ebf4;
+	--focus: #08608a;
+	--ring: rgb(8 96 138 / 0.22);
+	--success: #17745a;
+	--success-soft: #daf1e8;
 	--warning: #84520a;
 	--warning-soft: #f9ebc8;
 	--danger: #b02c2c;
 	--danger-soft: #f9e0dd;
 	--info: #0f6b78;
-	--info-soft: #d9eff1;
+	--info-soft: #d6eef1;
 	--chart-1: #1b78b0;
-	--chart-2: #1f9189;
+	--chart-2: #148f88;
 	--chart-3: #a8700f;
-	--chart-4: #d1634a;
-	--chart-5: #4a5bb5;
+	--chart-4: #4a5bb5;
+	--chart-5: #cc5a44;
 	--chart-6: #4f9577;
-	--chart-grid: #e8e1cd;
-	--header-bg: rgb(255 253 247 / 0.9);
-	--gradient-accent: linear-gradient(135deg, #1b78b0 0%, #36a5a0 100%);
-	--shadow-rgb: 40 52 44;
+	--chart-grid: #dbe7ee;
+	--header-bg: rgb(250 252 253 / 0.84);
+	--gradient-accent: linear-gradient(135deg, #08608a 0%, #1aa3a1 100%);
+	--gradient-wash: radial-gradient(900px 420px at 85% -10%, rgb(26 163 161 / 0.14), transparent 70%);
+	--scrollbar: #a9c0cf;
+	--shadow-rgb: 10 50 70;
+}
+
+/* ============ Forest (natural, refined) ============ */
+[data-theme='forest'] {
+	color-scheme: light;
+	--bg: #eff3ec;
+	--surface: #fbfcf9;
+	--surface-2: #e4ece0;
+	--surface-3: #d4e0cf;
+	--border: #d4dfcf;
+	--border-strong: #aebfa8;
+	--text: #16261a;
+	--text-muted: #4a5f4f;
+	--on-accent: #ffffff;
+	--accent: #1f6b45;
+	--accent-hover: #175537;
+	--accent-contrast: #ffffff;
+	--accent-soft: #daeadf;
+	--focus: #1f6b45;
+	--ring: rgb(31 107 69 / 0.22);
+	--success: #17703f;
+	--success-soft: #dcf0e3;
+	--warning: #84520a;
+	--warning-soft: #f7ebc9;
+	--danger: #b02c2c;
+	--danger-soft: #f9e0dd;
+	--info: #1c6a7a;
+	--info-soft: #d7edf0;
+	--chart-1: #2c7a50;
+	--chart-2: #b06a0f;
+	--chart-3: #2f8791;
+	--chart-4: #7a5aa8;
+	--chart-5: #c2563f;
+	--chart-6: #62805a;
+	--chart-grid: #dce6d7;
+	--header-bg: rgb(251 252 249 / 0.84);
+	--gradient-accent: linear-gradient(135deg, #1f6b45 0%, #4f9a6a 100%);
+	--gradient-wash: radial-gradient(900px 420px at 85% -10%, rgb(79 154 106 / 0.14), transparent 70%);
+	--scrollbar: #aebfa8;
+	--shadow-rgb: 22 50 30;
 }

@@ -8,20 +8,22 @@
       /* Apply the saved theme before first paint (no flash). Keep in sync with
          src/config/themes.js (ids) and src/app/providers/ThemeProvider.js (storage key). */
       (function () {
-        var theme = 'light', density = 'comfortable';
+        var theme = 'blueberry', density = 'comfortable';
+        var legacy = { light: 'blueberry', dark: 'blackcurrant', moon: 'blackcurrant', beach: 'ocean' };
         try {
           var s = JSON.parse(localStorage.getItem('company360.appearance') || '{}');
-          if (['sunset', 'moon', 'beach', 'dark', 'light', 'system'].indexOf(s.theme) > -1) theme = s.theme;
+          var t = legacy[s.theme] || s.theme;
+          if (['blueberry', 'blackcurrant', 'volcano', 'sunset', 'ocean', 'forest', 'system'].indexOf(t) > -1) theme = t;
           if (s.density === 'compact') density = 'compact';
         } catch (e) {}
         var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         var r = document.documentElement;
-        r.dataset.theme = theme === 'system' ? (dark ? 'dark' : 'light') : theme;
+        r.dataset.theme = theme === 'system' ? (dark ? 'blackcurrant' : 'blueberry') : theme;
         r.dataset.themePref = theme;
         r.dataset.density = density;
       })();
     </script>
-    <meta name="theme-color" content="#1f5fbf" />
+    <meta name="theme-color" content="#3d52d5" />
     <meta
       name="description"
       content="Company 360 internal analytics and reporting"

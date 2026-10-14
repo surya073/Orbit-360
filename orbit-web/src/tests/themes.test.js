@@ -11,7 +11,7 @@ import ThemeSelector from '../features/settings/ThemeSelector';
 const css = fs.readFileSync(path.join(__dirname, '../styles/themes.css'), 'utf8');
 
 function tokensFor(id) {
-	const re = id === 'light' ? /:root,\s*\[data-theme='light'\]\s*\{([^}]*)\}/ : new RegExp(`\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`);
+	const re = id === 'blueberry' ? /:root,\s*\[data-theme='blueberry'\]\s*\{([^}]*)\}/ : new RegExp(`\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`);
 	const block = re.exec(css);
 	if (!block) throw new Error(`theme ${id} not found`);
 	return Object.fromEntries([...block[1].matchAll(/--([\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/g)].map((m) => [m[1], m[2]]));
@@ -28,7 +28,7 @@ const contrast = (a, b) => {
 describe.each(THEME_IDS)('theme %s', (id) => {
 	const t = tokensFor(id);
 	test('defines the full token contract', () => {
-		for (const k of ['bg', 'surface', 'surface-2', 'border', 'text', 'text-muted', 'accent', 'accent-hover', 'accent-contrast', 'accent-soft', 'focus', 'success', 'warning', 'danger', 'info', 'chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5', 'chart-6', 'chart-grid']) {
+		for (const k of ['bg', 'surface', 'surface-2', 'surface-3', 'border', 'border-strong', 'text', 'text-muted', 'accent', 'accent-hover', 'accent-contrast', 'on-accent', 'accent-soft', 'focus', 'scrollbar', 'success', 'warning', 'danger', 'info', 'chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5', 'chart-6', 'chart-grid']) {
 			expect(t[k]).toBeDefined();
 		}
 	});
@@ -60,20 +60,20 @@ const dark = (matches) => {
 	window.matchMedia = (q) => ({ matches: q.includes('dark') ? matches : false, media: q, addEventListener() {}, removeEventListener() {} });
 };
 
-test('defaults to Light, applies attributes, and persists a selection', async () => {
+test('defaults to Light Blueberry, applies attributes, and persists a selection', async () => {
 	render(
 		<ThemeProvider>
 			<ThemeSelector />
 		</ThemeProvider>
 	);
-	expect(document.documentElement.dataset.theme).toBe('light');
+	expect(document.documentElement.dataset.theme).toBe('blueberry');
 	await userEvent.click(screen.getByRole('radio', { name: /sunset/i }));
 	expect(document.documentElement.dataset.theme).toBe('sunset');
 	expect(JSON.parse(localStorage.getItem(APPEARANCE_KEY)).theme).toBe('sunset');
 	expect(screen.getByRole('radio', { name: /sunset/i })).toHaveAttribute('aria-checked', 'true');
 });
 
-test('the selector offers all five themes plus an explicit System option, each with a preview', () => {
+test('the selector offers exactly six themes plus an explicit System option, each with a preview', () => {
 	render(
 		<ThemeProvider>
 			<ThemeSelector />
@@ -81,19 +81,19 @@ test('the selector offers all five themes plus an explicit System option, each w
 	);
 	const group = screen.getByRole('radiogroup', { name: 'Theme' });
 	const names = within(group).getAllByRole('radio').map((r) => r.querySelector('b').textContent);
-	expect(names).toEqual(['Sunset', 'Moon', 'Beach', 'Dark', 'Light', 'System']);
-	expect(group.querySelectorAll('.theme-preview[data-theme]').length).toBe(6);
+	expect(names).toEqual(['Light Blueberry', 'Black Current', 'Volcano', 'Sunset', 'Ocean', 'Forest', 'System']);
+	expect(group.querySelectorAll('.theme-preview[data-theme]').length).toBe(7);
 });
 
 test('a stored theme is restored on startup; invalid stored data falls back safely', () => {
-	localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'moon', density: 'compact' }));
+	localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'volcano', density: 'compact' }));
 	render(<ThemeProvider><span /></ThemeProvider>);
-	expect(document.documentElement.dataset.theme).toBe('moon');
+	expect(document.documentElement.dataset.theme).toBe('volcano');
 	expect(document.documentElement.dataset.density).toBe('compact');
 	localStorage.setItem(APPEARANCE_KEY, '{not json');
-	expect(readAppearance()).toEqual({ theme: 'light', density: 'comfortable', iconStyle: 'tabler' });
+	expect(readAppearance()).toEqual({ theme: 'blueberry', density: 'comfortable', iconStyle: 'tabler' });
 	localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'neon', density: 'huge' }));
-	expect(readAppearance()).toEqual({ theme: 'light', density: 'comfortable', iconStyle: 'tabler' });
+	expect(readAppearance()).toEqual({ theme: 'blueberry', density: 'comfortable', iconStyle: 'tabler' });
 });
 
 test('System follows the device preference only when selected', async () => {
@@ -103,12 +103,19 @@ test('System follows the device preference only when selected', async () => {
 			<ThemeSelector />
 		</ThemeProvider>
 	);
-	expect(document.documentElement.dataset.theme).toBe('light'); // explicit default is not "system"
+	expect(document.documentElement.dataset.theme).toBe('blueberry'); // explicit default is not "system"
 	await userEvent.click(screen.getByRole('radio', { name: /system/i }));
-	expect(document.documentElement.dataset.theme).toBe('dark');
+	expect(document.documentElement.dataset.theme).toBe('blackcurrant');
 	expect(document.documentElement.dataset.themePref).toBe('system');
-	expect(resolveTheme('system', false)).toBe('light');
-	expect(resolveTheme('beach', true)).toBe('beach');
+	expect(resolveTheme('system', false)).toBe('blueberry');
+	expect(resolveTheme('ocean', true)).toBe('ocean');
+});
+
+test('themes saved by earlier versions migrate to their closest successor', () => {
+	for (const [old, next] of [['light', 'blueberry'], ['dark', 'blackcurrant'], ['moon', 'blackcurrant'], ['beach', 'ocean'], ['sunset', 'sunset']]) {
+		localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: old }));
+		expect(readAppearance().theme).toBe(next);
+	}
 });
 
 test('storage failures do not break theming (session-only fallback)', async () => {
@@ -120,8 +127,8 @@ test('storage failures do not break theming (session-only fallback)', async () =
 			<ThemeSelector />
 		</ThemeProvider>
 	);
-	await userEvent.click(screen.getByRole('radio', { name: /beach/i }));
-	expect(document.documentElement.dataset.theme).toBe('beach');
+	await userEvent.click(screen.getByRole('radio', { name: /ocean/i }));
+	expect(document.documentElement.dataset.theme).toBe('ocean');
 	spy.mockRestore();
 });
 
@@ -133,13 +140,13 @@ test('theme switches ease colors briefly unless reduced motion is requested', as
 			<ThemeSelector />
 		</ThemeProvider>
 	);
-	await user.click(screen.getByRole('radio', { name: /^dark/i }));
+	await user.click(screen.getByRole('radio', { name: /^black current/i }));
 	expect(document.documentElement.classList.contains('theme-transition')).toBe(true);
 	act(() => jest.advanceTimersByTime(400));
 	expect(document.documentElement.classList.contains('theme-transition')).toBe(false);
 
 	window.matchMedia = (q) => ({ matches: q.includes('reduce'), media: q, addEventListener() {}, removeEventListener() {} });
-	await user.click(screen.getByRole('radio', { name: /moon/i }));
+	await user.click(screen.getByRole('radio', { name: /forest/i }));
 	expect(document.documentElement.classList.contains('theme-transition')).toBe(false);
 	jest.useRealTimers();
 });

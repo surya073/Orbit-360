@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import Card from '../../components/cards/Card';
 import Button from '../../components/common/Button';
+import SortableList from '../../components/common/SortableList';
 import StateView from '../../components/feedback/StateView';
 import { useToast } from '../../components/feedback/ToastProvider';
 import DateRangeFilter, { isValidPeriod } from '../../components/filters/DateRangeFilter';
@@ -54,14 +55,7 @@ export default function PresentationEditor() {
 
 	const included = new Set(slides.filter((s) => s.type === 'section').map((s) => s.section));
 	const available = REPORT_SECTIONS.filter((s) => !included.has(s.key));
-	const move = (i, d) =>
-		setSlides((list) => {
-			const j = i + d;
-			if (j < 0 || j >= list.length) return list;
-			const c = [...list];
-			[c[i], c[j]] = [c[j], c[i]];
-			return c;
-		});
+	const slideItems = slides.map((s, i) => ({ id: s.type === 'section' ? `section-${s.section}` : `${s.type}-${i}`, label: slideLabel(s), legacy: s.type !== 'section' }));
 
 	const canSave = title.trim() && slides.length > 0 && isValidPeriod(period) && !saving;
 
@@ -125,28 +119,32 @@ export default function PresentationEditor() {
 							</p>
 						) : null}
 						{slides.length === 0 ? <p className="muted">Add at least one section below.</p> : null}
-						<ol className="stack" style={{ gap: 6 }}>
-							{slides.map((s, i) => (
-								<li key={`${s.type}-${s.section || ''}-${i}`} className="insight" style={{ alignItems: 'center' }}>
+						<SortableList
+							label="Slides"
+							items={slideItems}
+							onReorder={(ids) => setSlides((list) => ids.map((id) => list[slideItems.findIndex((it) => it.id === id)]))}
+							renderItem={(it, { handle, index: i, isFirst, isLast, moveUp, moveDown }) => (
+								<div className="insight" style={{ alignItems: 'center' }}>
+									{handle}
 									<span className="num muted" style={{ width: 20 }}>
 										{i + 1}
 									</span>
 									<span style={{ flex: 1 }}>
-										<strong>{slideLabel(s)}</strong>
-										{s.type !== 'section' ? <span className="small muted"> · legacy slide</span> : null}
+										<strong>{it.label}</strong>
+										{it.legacy ? <span className="small muted"> · legacy slide</span> : null}
 									</span>
-									<Button size="sm" variant="ghost" aria-label={`Move ${slideLabel(s)} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+									<Button size="sm" variant="ghost" aria-label={`Move ${it.label} up`} disabled={isFirst} onClick={moveUp}>
 										↑
 									</Button>
-									<Button size="sm" variant="ghost" aria-label={`Move ${slideLabel(s)} down`} disabled={i === slides.length - 1} onClick={() => move(i, 1)}>
+									<Button size="sm" variant="ghost" aria-label={`Move ${it.label} down`} disabled={isLast} onClick={moveDown}>
 										↓
 									</Button>
-									<Button size="sm" variant="ghost" icon="x" aria-label={`Remove ${slideLabel(s)}`} onClick={() => setSlides((l) => l.filter((_, j) => j !== i))}>
+									<Button size="sm" variant="ghost" icon="x" aria-label={`Remove ${it.label}`} onClick={() => setSlides((l) => l.filter((_, j) => j !== i))}>
 										Remove
 									</Button>
-								</li>
-							))}
-						</ol>
+								</div>
+							)}
+						/>
 						{available.length ? (
 							<>
 								<h3 className="small muted" style={{ margin: 'var(--space-4) 0 var(--space-2)' }}>

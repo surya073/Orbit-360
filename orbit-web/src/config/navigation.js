@@ -34,6 +34,7 @@ export const NAV = [
 		],
 	},
 	{ type: 'link', to: ROUTES.imports, label: 'Imports', icon: 'upload', roles: BOTH },
+	{ type: 'link', to: ROUTES.spreadsheet, label: 'Spreadsheet', icon: 'edit', roles: BOTH },
 	{ type: 'link', to: ROUTES.presentations, label: 'Presentations', icon: 'present', roles: BOTH },
 ];
 

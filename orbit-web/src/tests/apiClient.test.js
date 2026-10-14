@@ -1,8 +1,9 @@
-import { api, ApiClientError, toQuery } from '../services/apiClient';
+import { api, ApiClientError, clearApiCache, toQuery } from '../services/apiClient';
 
 const json = (status, body) => Promise.resolve({ ok: status < 400, status, json: () => Promise.resolve(body) });
 
 afterEach(() => {
+	clearApiCache();
 	delete global.fetch;
 });
 
@@ -24,6 +25,21 @@ test('identical in-flight GETs share one request', async () => {
 	global.fetch = jest.fn(() => json(200, { ok: true, data: [] }));
 	await Promise.all([api.get('/me'), api.get('/me')]);
 	expect(global.fetch).toHaveBeenCalledTimes(1);
+});
+
+test('repeat GETs reuse a short-lived cache; writes and clearApiCache force a fresh read', async () => {
+	global.fetch = jest.fn(() => json(200, { ok: true, data: [1] }));
+	await api.get('/employees', { params: { page: 1 }, signal: new AbortController().signal });
+	await api.get('/employees', { params: { page: 1 } });
+	expect(global.fetch).toHaveBeenCalledTimes(1);
+	await api.get('/employees', { params: { page: 2 } });
+	expect(global.fetch).toHaveBeenCalledTimes(2);
+	await api.patch('/employees/1', { x: 1 });
+	await api.get('/employees', { params: { page: 1 } });
+	expect(global.fetch).toHaveBeenCalledTimes(4); // the PATCH, then a fresh read
+	clearApiCache();
+	await api.get('/employees', { params: { page: 1 } });
+	expect(global.fetch).toHaveBeenCalledTimes(5);
 });
 
 test('error contract maps to ApiClientError with field errors', async () => {

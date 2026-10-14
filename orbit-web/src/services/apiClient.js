@@ -68,18 +68,48 @@ async function execute(method, path, { params, body, signal } = {}) {
 	return { data: payload.data, meta: payload.meta || null };
 }
 
+// Short-lived, in-memory (never persisted) cache of successful GETs. Every backend read costs
+// billed Data Store requests, so going back to a page or re-selecting a filter within a minute
+// reuses the answer. Any write, Reload or sign-in change clears it, so edits are never hidden.
+const CACHE_TTL_MS = 60000;
+const CACHE_MAX = 80;
+const cache = new Map();
+
+export function clearApiCache() {
+	cache.clear();
+}
+
+function remember(key, value) {
+	if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
+	cache.set(key, { value, until: Date.now() + CACHE_TTL_MS });
+}
+
+async function write(method, path, opts) {
+	try {
+		return await execute(method, path, opts);
+	} finally {
+		clearApiCache(); // also on failure: a partly applied write may have changed data
+	}
+}
+
 export const api = {
 	get(path, opts = {}) {
-		// Requests with a signal are caller-owned (abortable); only unsignalled GETs are shared.
-		if (opts.signal) return execute('GET', path, opts);
 		const key = `${path}${toQuery(opts.params)}`;
-		if (!inflight.has(key)) {
-			inflight.set(key, execute('GET', path, opts).finally(() => inflight.delete(key)));
-		}
+		const hit = cache.get(key);
+		if (hit && hit.until > Date.now()) return Promise.resolve(hit.value);
+		cache.delete(key);
+		const run = () =>
+			execute('GET', path, opts).then((out) => {
+				remember(key, out);
+				return out;
+			});
+		// Requests with a signal are caller-owned (abortable); only unsignalled GETs are shared.
+		if (opts.signal) return run();
+		if (!inflight.has(key)) inflight.set(key, run().finally(() => inflight.delete(key)));
 		return inflight.get(key);
 	},
-	post: (path, body, opts) => execute('POST', path, { ...opts, body: body ?? {} }),
-	put: (path, body, opts) => execute('PUT', path, { ...opts, body }),
-	patch: (path, body, opts) => execute('PATCH', path, { ...opts, body }),
-	delete: (path, opts) => execute('DELETE', path, opts),
+	post: (path, body, opts) => write('POST', path, { ...opts, body: body ?? {} }),
+	put: (path, body, opts) => write('PUT', path, { ...opts, body }),
+	patch: (path, body, opts) => write('PATCH', path, { ...opts, body }),
+	delete: (path, opts) => write('DELETE', path, opts),
 };

@@ -15,6 +15,7 @@ import PageHeader from '../../components/layout/PageHeader';
 import DataTable from '../../components/tables/DataTable';
 import Pagination from '../../components/tables/Pagination';
 import { PAGE_SIZE } from '../../config/constants';
+import { SHEET_MODULES } from '../spreadsheet/spreadsheetModules';
 import { ROUTES } from '../../config/routes';
 import useApiResource from '../../hooks/useApiResource';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
@@ -78,6 +79,17 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 	const closeDialog = () => setDialog(null);
 	const openCreate = () => setDialog({ type: 'form' });
 
+	// "Add form" in the data-entry options links here with ?new=1 to open the create dialog.
+	const wantsNew = sp.get('new') === '1';
+	useEffect(() => {
+		if (!wantsNew || !canWrite) return;
+		setDialog({ type: 'form' });
+		setSp((p) => {
+			p.delete('new');
+			return p;
+		}, { replace: true });
+	}, [wantsNew, canWrite, setSp]);
+
 	const act = useCallback(
 		async (fn, success) => {
 			try {
@@ -128,6 +140,11 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 						{canWrite ? (
 							<Button variant="primary" icon="plus" onClick={openCreate}>
 								{config.addLabel || 'Add record'}
+							</Button>
+						) : null}
+						{canWrite && SHEET_MODULES.some((m) => m.resource === resource) ? (
+							<Button icon="edit" to={`${ROUTES.spreadsheet}?module=${resource}`}>
+								Spreadsheet
 							</Button>
 						) : null}
 						{config.importable ? (

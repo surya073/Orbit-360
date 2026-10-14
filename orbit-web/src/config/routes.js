@@ -13,6 +13,7 @@ export const ROUTES = {
 	usage: '/ai-usage',
 	product: '/product-development',
 	imports: '/imports',
+	spreadsheet: '/spreadsheet',
 	presentations: '/presentations',
 	presentationNew: '/presentations/new',
 	presentationEdit: (id = ':id') => `/presentations/${id}/edit`,

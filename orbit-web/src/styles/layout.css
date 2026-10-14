@@ -110,7 +110,7 @@
 	height: 26px;
 	border-radius: 50%;
 	background: var(--gradient-accent);
-	color: #fff;
+	color: var(--on-accent);
 	font-size: var(--fs-2xs);
 	font-weight: 700;
 	flex: none;

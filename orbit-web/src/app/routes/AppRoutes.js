@@ -18,6 +18,7 @@ const PerformancePage = lazy(() => import('../../features/performance/Performanc
 const AiUsagePage = lazy(() => import('../../features/ai-usage/AiUsagePage'));
 const ProductDevelopmentPage = lazy(() => import('../../features/product-development/ProductDevelopmentPage'));
 const ImportPage = lazy(() => import('../../features/imports/ImportPage'));
+const SpreadsheetPage = lazy(() => import('../../features/spreadsheet/SpreadsheetPage'));
 const PresentationsPage = lazy(() => import('../../features/presentations/PresentationsPage'));
 const PresentationEditor = lazy(() => import('../../features/presentations/PresentationEditor'));
 const PresentationPlayer = lazy(() => import('../../features/presentations/PresentationPlayer'));
@@ -48,6 +49,7 @@ export default function AppRoutes() {
 							<Route path={ROUTES.usage} element={<AiUsagePage />} />
 							<Route path={ROUTES.product} element={<ProductDevelopmentPage />} />
 							<Route path={ROUTES.imports} element={<ImportPage />} />
+							<Route path={ROUTES.spreadsheet} element={<SpreadsheetPage />} />
 							<Route path={ROUTES.presentations} element={<PresentationsPage />} />
 							<Route path={ROUTES.presentationNew} element={<PresentationEditor />} />
 							<Route path={ROUTES.presentationEdit()} element={<PresentationEditor />} />

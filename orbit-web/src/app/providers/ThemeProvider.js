@@ -1,10 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { IconStyleContext } from '../../components/common/iconStyle';
 import { DEFAULT_ICON_STYLE, ICON_STYLE_IDS } from '../../config/icons';
-import { APPEARANCE_KEY, DEFAULT_THEME, DENSITIES, SYSTEM_MAP, THEME_IDS } from '../../config/themes';
+import { APPEARANCE_KEY, DEFAULT_THEME, DENSITIES, LEGACY_THEMES, SYSTEM_MAP, THEME_IDS } from '../../config/themes';
 
 /**
- * Appearance = theme (one of the five, or 'system') + table density + icon style. It is a per-device
+ * Appearance = theme (one of the six, or 'system') + table density + icon style. It is a per-device
  * cosmetic preference, so it is kept in localStorage (no backend call); storage failures degrade to
  * session-only. index.html applies the stored theme before first paint to avoid a flash.
  */
@@ -14,8 +14,9 @@ const VALID_DENSITY = DENSITIES.map((d) => d.id);
 export function readAppearance(storage = window.localStorage) {
 	try {
 		const raw = JSON.parse(storage.getItem(APPEARANCE_KEY) || '{}');
+		const stored = LEGACY_THEMES[raw.theme] || raw.theme; // themes from earlier versions map to a successor
 		return {
-			theme: raw.theme === 'system' || THEME_IDS.includes(raw.theme) ? raw.theme : DEFAULTS.theme,
+			theme: stored === 'system' || THEME_IDS.includes(stored) ? stored : DEFAULTS.theme,
 			density: VALID_DENSITY.includes(raw.density) ? raw.density : DEFAULTS.density,
 			iconStyle: ICON_STYLE_IDS.includes(raw.iconStyle) ? raw.iconStyle : DEFAULTS.iconStyle,
 		};

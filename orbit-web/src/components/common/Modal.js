@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconButton } from './Button';
 
@@ -12,6 +12,15 @@ export default function Modal({ title, onClose, children, footer, size = 'md', d
 	const titleId = useId();
 	const ref = useRef(null);
 	const returnTo = useRef(document.activeElement);
+	const [closing, setClosing] = useState(false);
+
+	// Closes after a short exit animation (immediately when reduced motion is preferred or unsupported).
+	const close = useCallback(() => {
+		const animate = window.matchMedia && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		if (!animate) return onClose();
+		setClosing(true);
+		setTimeout(onClose, 150);
+	}, [onClose]);
 
 	useEffect(() => {
 		const node = ref.current;
@@ -33,7 +42,7 @@ export default function Modal({ title, onClose, children, footer, size = 'md', d
 	const onKeyDown = (e) => {
 		if (e.key === 'Escape' && dismissible) {
 			e.stopPropagation();
-			onClose();
+			close();
 			return;
 		}
 		if (e.key !== 'Tab') return;
@@ -51,11 +60,11 @@ export default function Modal({ title, onClose, children, footer, size = 'md', d
 	};
 
 	return createPortal(
-		<div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && dismissible && onClose()}>
+		<div className={`modal-backdrop ${closing ? 'is-closing' : ''}`.trim()} onMouseDown={(e) => e.target === e.currentTarget && dismissible && close()}>
 			<div ref={ref} className={`modal ${size === 'lg' ? 'modal--lg' : ''}`} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={onKeyDown}>
 				<div className="modal__head">
 					<h2 id={titleId}>{title}</h2>
-					{dismissible ? <IconButton icon="x" label="Close dialog" onClick={onClose} /> : null}
+					{dismissible ? <IconButton icon="x" label="Close dialog" onClick={close} /> : null}
 				</div>
 				<div className="modal__body">{children}</div>
 				{footer ? <div className="modal__foot">{footer}</div> : null}

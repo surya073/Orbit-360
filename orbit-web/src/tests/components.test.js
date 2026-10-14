@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import KpiCard from '../components/cards/KpiCard';
 import BarList from '../components/charts/BarList';
@@ -142,7 +142,7 @@ describe('Modal and ConfirmDialog', () => {
 		await userEvent.tab();
 		expect(dialog.contains(document.activeElement)).toBe(true); // Tab wraps inside the dialog
 		await userEvent.keyboard('{Escape}');
-		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+		await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument()); // closes after a short exit animation
 		expect(opener).toHaveFocus();
 	});
 	test('a failing confirm action shows the error and stays open', async () => {
@@ -157,7 +157,7 @@ describe('Modal and ConfirmDialog', () => {
 		render(<Modal title="T" onClose={onClose}>body</Modal>);
 		const backdrop = screen.getByRole('dialog').parentElement;
 		backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-		expect(onClose).toHaveBeenCalled();
+		await waitFor(() => expect(onClose).toHaveBeenCalled());
 	});
 });
 

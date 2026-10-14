@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { clearApiCache } from '../../services/apiClient';
 import { authService } from '../../services/authService';
 import { sessionService } from '../../services/sessionService';
 
@@ -13,6 +14,7 @@ export function AuthProvider({ children }) {
 	const [state, setState] = useState({ status: 'checking', user: null, error: null });
 
 	const load = useCallback(async () => {
+		clearApiCache();
 		setState({ status: 'checking', user: null, error: null });
 		try {
 			if (!(await authService.isSignedIn())) return setState({ status: 'signedOut', user: null, error: null });

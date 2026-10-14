@@ -17,6 +17,7 @@ function intVar(env, name, fallback, min, max) {
  *
  *   REQUEST_TIMEOUT_MS   per-request deadline (Advanced I/O is killed at 30s)
  *   QUERY_BUDGET         max Data Store requests one API call may issue (Data Store is billed per request)
+ *   USER_CACHE_SECONDS   how long a signed-in user's role/team row is reused per function instance (0 disables)
  *   IMPORT_BATCH_SIZE    rows per preview/commit call
  *   LOG_LEVEL            debug | info | warn | error
  */
@@ -24,6 +25,7 @@ function loadEnvironment(env = process.env) {
 	return Object.freeze({
 		requestTimeoutMs: intVar(env, 'REQUEST_TIMEOUT_MS', 25000, 1000, 28000),
 		queryBudget: intVar(env, 'QUERY_BUDGET', 30, 5, 100),
+		userCacheSeconds: intVar(env, 'USER_CACHE_SECONDS', 60, 0, 600),
 		importBatchSize: intVar(env, 'IMPORT_BATCH_SIZE', LIMITS.maxImportBatch, 1, LIMITS.maxImportBatch),
 		logLevel: ['debug', 'info', 'warn', 'error'].includes(env.LOG_LEVEL) ? env.LOG_LEVEL : 'info',
 		snapshotRetentionDays: intVar(env, 'SNAPSHOT_RETENTION_DAYS', 365, 1, 3650),

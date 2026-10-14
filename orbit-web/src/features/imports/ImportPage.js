@@ -7,6 +7,7 @@ import Field from '../../components/forms/Field';
 import PageHeader from '../../components/layout/PageHeader';
 import DataTable from '../../components/tables/DataTable';
 import features from '../../config/features';
+import DataEntryModes from '../spreadsheet/DataEntryModes';
 import useTemplates from '../../hooks/useTemplates';
 import { importsService } from '../../services/importsService';
 import { csvToRecords, toCsv } from '../../utils/csv';
@@ -191,6 +192,7 @@ export default function ImportPage() {
 	return (
 		<>
 			<PageHeader title="Import data" description="Upload a CSV, review what will happen, then import. Nothing is saved until you confirm." />
+			<DataEntryModes current="import" resource={module || undefined} />
 			<ol className="tabs" aria-label="Progress" style={{ borderBottom: 0, marginBottom: 'var(--space-3)' }}>
 				{STEPS.map((s, i) => (
 					<li key={s} className="small" style={{ padding: '4px 12px 4px 0', fontWeight: i === step ? 700 : 500, color: i <= step ? 'var(--text)' : 'var(--text-muted)' }} aria-current={i === step ? 'step' : undefined}>

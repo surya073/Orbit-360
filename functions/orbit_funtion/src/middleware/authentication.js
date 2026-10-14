@@ -14,7 +14,35 @@ const { ROLES } = require('../config/constants');
  * Fails closed: if the identity cannot be verified the request is rejected. There is no
  * development bypass in this module.
  */
-async function authenticate(userApp, users) {
+const MAX_CACHED_USERS = 500;
+
+/**
+ * Per-instance cache of `users` rows keyed by the VERIFIED Catalyst user id (never by anything
+ * the client sends), so it cannot mix identities. Saves one Data Store request per API call;
+ * a role/team/active change takes effect within `ttlSeconds`. 0 disables it.
+ */
+function createUserCache(ttlSeconds) {
+	const map = new Map();
+	const ttl = ttlSeconds * 1000;
+	return {
+		get(id) {
+			const hit = map.get(id);
+			if (!hit) return undefined;
+			if (hit.until <= Date.now()) {
+				map.delete(id);
+				return undefined;
+			}
+			return hit.row;
+		},
+		set(id, row) {
+			if (!ttl || !row) return;
+			if (map.size >= MAX_CACHED_USERS) map.delete(map.keys().next().value);
+			map.set(id, { row, until: Date.now() + ttl });
+		},
+	};
+}
+
+async function authenticate(userApp, users, cache) {
 	let current;
 	try {
 		current = await userApp.userManagement().getCurrentUser();
@@ -23,7 +51,12 @@ async function authenticate(userApp, users) {
 	}
 	if (!current || !isId(String(current.user_id))) throw errors.unauthenticated();
 
-	const u = await users.findByCatalystId(String(current.user_id));
+	const catalystId = String(current.user_id);
+	let u = cache ? cache.get(catalystId) : undefined;
+	if (!u) {
+		u = await users.findByCatalystId(catalystId);
+		if (cache) cache.set(catalystId, u);
+	}
 	if (!u) throw errors.forbidden('Your account has not been provisioned for Company 360', 'NOT_PROVISIONED');
 	if (u.is_active !== true) throw errors.forbidden('Your account is inactive', 'ACCOUNT_INACTIVE');
 	if (u.app_role !== ROLES.ADMIN && u.app_role !== ROLES.MANAGER) throw errors.forbidden('Your account has no valid role', 'INVALID_ROLE');
@@ -39,4 +72,4 @@ async function authenticate(userApp, users) {
 	};
 }
 
-module.exports = { authenticate };
+module.exports = { authenticate, createUserCache };

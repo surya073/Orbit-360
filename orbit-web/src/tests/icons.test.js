@@ -91,7 +91,7 @@ describe('icon style preference', () => {
 	});
 
 	test('stored sets are restored; removed/invalid ones (e.g. earlier "duotone") fall back to the default', () => {
-		localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'moon', iconStyle: 'ionic' }));
+		localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'volcano', iconStyle: 'ionic' }));
 		expect(readAppearance().iconStyle).toBe('ionic');
 		for (const old of ['duotone', 'bold', 'neon']) {
 			localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ iconStyle: old }));

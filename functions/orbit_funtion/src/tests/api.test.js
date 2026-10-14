@@ -241,11 +241,16 @@ test('query budget: a request needing too many Data Store calls is stopped, not 
 	assert.equal(r.body.error.code, 'QUERY_BUDGET_EXCEEDED');
 });
 
-test('list endpoints cost exactly two Data Store queries (count + page) plus authentication', async () => {
+test('list endpoints cost one query for a short page, two for a full page, and authentication is cached', async () => {
 	const w = buildWorld();
-	const before = w.store.queries.length;
-	await w.api(w.ids.mgr1, 'GET', '/employees?pageSize=2&page=2');
-	assert.equal(w.store.queries.length - before, 3);
+	await w.api(w.ids.mgr1, 'GET', '/employees?pageSize=2&page=2'); // warms the user cache
+	let before = w.store.queries.length;
+	const short = await w.api(w.ids.mgr1, 'GET', '/employees?pageSize=2&page=2');
+	assert.equal(w.store.queries.length - before, 1); // page only: 1 row < pageSize, total derived
+	assert.equal(short.body.meta.total, 3);
+	before = w.store.queries.length;
+	await w.api(w.ids.mgr1, 'GET', '/employees?pageSize=2&page=1');
+	assert.equal(w.store.queries.length - before, 2); // full page: page + count
 	assert.equal((await w.api(w.ids.mgr1, 'GET', '/employees?pageSize=101')).status, 400);
 	assert.equal((await w.api(w.ids.mgr1, 'GET', '/employees?pageSize=2&page=2')).body.data.length, 1);
 });

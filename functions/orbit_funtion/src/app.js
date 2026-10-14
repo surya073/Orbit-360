@@ -5,7 +5,7 @@ const { createDb } = require('./config/datastore');
 const { createLogger } = require('./utils/logger');
 const { send } = require('./utils/response');
 const { createContext, withTimeout, readJson } = require('./middleware/requestContext');
-const { authenticate } = require('./middleware/authentication');
+const { authenticate, createUserCache } = require('./middleware/authentication');
 const { authorize } = require('./middleware/authorization');
 const { runValidators } = require('./middleware/validation');
 const { toErrorResponse } = require('./middleware/errorHandler');
@@ -27,6 +27,7 @@ const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH']);
  * be cancelled; import commits are idempotent for exactly this reason.
  */
 function createApp({ catalyst, env = defaultEnv, logger = createLogger({}, env.logLevel) }) {
+	const userCache = createUserCache(env.userCacheSeconds ?? 0);
 	async function pipeline(ctx, req, res) {
 		const { route, params } = match(ctx.method, ctx.path);
 		ctx.params = params;
@@ -51,7 +52,7 @@ function createApp({ catalyst, env = defaultEnv, logger = createLogger({}, env.l
 		}
 		ctx.db = createDb(adminApp, { budget: route.budget || env.queryBudget, logger: ctx.logger });
 		ctx.repos = createRepositories(ctx.db);
-		ctx.actor = await authenticate(userApp, ctx.repos.users);
+		ctx.actor = await authenticate(userApp, ctx.repos.users, userCache);
 		authorize(ctx, route);
 
 		const body = BODY_METHODS.has(ctx.method) ? await readJson(req) : {};

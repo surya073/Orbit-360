@@ -31,7 +31,7 @@ export default function useLookupLabels(rows, columns) {
 			if (!def) continue;
 			for (const r of rows) {
 				const id = r[col];
-				if (id && !(cache[def[0]] || {})[id] && !(pending[def[0]] || new Set()).has(String(id))) (wanted[def[0]] ||= new Set()).add(String(id));
+				if (id && !(String(id) in (cache[def[0]] || {})) && !(pending[def[0]] || new Set()).has(String(id))) (wanted[def[0]] ||= new Set()).add(String(id));
 			}
 		}
 		Object.entries(wanted).forEach(([resource, ids]) => {
@@ -44,6 +44,10 @@ export default function useLookupLabels(rows, columns) {
 				.then(({ data }) => {
 					cache[resource] ||= {};
 					data.forEach((d) => (cache[resource][String(d.ROWID)] = d[labelCol]));
+					// Ids the server did not return (deleted/out of scope) are remembered so they are not asked for again.
+					list.forEach((i) => {
+						if (!(i in cache[resource])) cache[resource][i] = null;
+					});
 				})
 				.catch(() => {})
 				.finally(() => {

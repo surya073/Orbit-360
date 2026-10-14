@@ -38,7 +38,7 @@ describe('sign-in page', () => {
 
 	test('both hosted pages (sign-in and forgot password) get the stylesheet for the active theme', async () => {
 		renderLogin();
-		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledWith('login-container', options('light')));
+		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledWith('login-container', options('blueberry')));
 		expect(document.getElementById('login-container')).toBeInTheDocument();
 	});
 
@@ -46,16 +46,16 @@ describe('sign-in page', () => {
 		renderLogin();
 		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledTimes(1));
 		await userEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-		await userEvent.click(screen.getByRole('radio', { name: 'Moon' }));
-		expect(document.documentElement.dataset.theme).toBe('moon');
-		await waitFor(() => expect(authService.renderLogin).toHaveBeenLastCalledWith('login-container', options('moon')));
+		await userEvent.click(screen.getByRole('radio', { name: 'Black Current' }));
+		expect(document.documentElement.dataset.theme).toBe('blackcurrant');
+		await waitFor(() => expect(authService.renderLogin).toHaveBeenLastCalledWith('login-container', options('blackcurrant')));
 	});
 
 	test('the pre-login theme menu offers themes but no link into the (authenticated) settings page', async () => {
 		renderLogin();
 		await userEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 		const menu = screen.getByRole('radiogroup', { name: 'Theme' });
-		expect(within(menu).getAllByRole('radio')).toHaveLength(6);
+		expect(within(menu).getAllByRole('radio')).toHaveLength(7);
 		expect(screen.queryByRole('link', { name: /Appearance settings/ })).not.toBeInTheDocument();
 	});
 
@@ -156,7 +156,7 @@ describe('auto-sizing the hosted card', () => {
 describe('generated iframe stylesheets', () => {
 	const themes = fs.readFileSync(path.join(__dirname, '../styles/themes.css'), 'utf8');
 	const token = (id, name) => {
-		const re = id === 'light' ? /:root,\s*\[data-theme='light'\]\s*\{([^}]*)\}/ : new RegExp(`\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`);
+		const re = id === 'blueberry' ? /:root,\s*\[data-theme='blueberry'\]\s*\{([^}]*)\}/ : new RegExp(`\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`);
 		return new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(re.exec(themes)[1])[1];
 	};
 	const BASE = { login: 'embedded_signin.css', forgot: 'embedded_password_reset.css' };

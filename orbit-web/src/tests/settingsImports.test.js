@@ -32,8 +32,8 @@ describe('settings', () => {
 		mockFetch([]);
 		renderWithProviders(<SettingsPage />);
 		expect(await screen.findByRole('radiogroup', { name: 'Theme' })).toBeInTheDocument();
-		await userEvent.click(screen.getByRole('radio', { name: /^beach/i }));
-		expect(document.documentElement.dataset.theme).toBe('beach');
+		await userEvent.click(screen.getByRole('radio', { name: /^ocean/i }));
+		expect(document.documentElement.dataset.theme).toBe('ocean');
 		expect(global.fetch).not.toHaveBeenCalled(); // a cosmetic preference needs no backend call
 	});
 

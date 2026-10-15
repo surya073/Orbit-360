@@ -1,7 +1,7 @@
 'use strict';
 
 const { assertScope } = require('../services/scope.service');
-const { buildListQueries, lit } = require('./queryBuilder');
+const { buildListQueries, likeVariants, lit } = require('./queryBuilder');
 const { LIMITS } = require('../config/constants');
 const { resources } = require('../config/resources');
 
@@ -31,7 +31,7 @@ function createTableRepository(db, resource) {
 			refs.map(async (ref) => {
 				const parent = resources[ref.parent];
 				const soft = parent.softDelete ? ' AND is_deleted = false' : '';
-				const rows = await db.select(`SELECT ROWID FROM ${parent.table} WHERE ${ref.col} LIKE '%${input.q}%'${soft} LIMIT 0, 50`, parent.table);
+				const rows = await db.select(`SELECT ROWID FROM ${parent.table} WHERE (${likeVariants(ref.col, input.q).join(' OR ')})${soft} LIMIT 0, 50`, parent.table);
 				out[ref.fk] = rows.map((r) => String(r.ROWID));
 			})
 		);

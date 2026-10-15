@@ -13,6 +13,7 @@ import './styles/controls.css';
 import './styles/settings.css';
 import './styles/spreadsheet.css';
 import './styles/reporting.css';
+import './styles/access.css';
 import './styles/presentations.css';
 import './styles/reportingSlide.css';
 import './styles/dashboard.css';

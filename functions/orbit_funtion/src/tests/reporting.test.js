@@ -59,8 +59,7 @@ test('reporting structure: team boundaries hold for managers and admins', async 
 	assert.equal((await put(w, w.ids.admin, [{ employeeId: d, parentId: null, roleLabel: 'Lead' }], w.t2.ROWID)).status, 200);
 	assert.equal((await w.api(w.ids.mgr2, 'GET', '/reporting-structure')).body.data.nodes.length, 1);
 	assert.deepEqual((await w.api(w.ids.mgr1, 'GET', '/reporting-structure')).body.data.nodes, []);
-	// the generic settings list never exposes tree rows
-	assert.equal((await w.api(w.ids.admin, 'GET', '/settings')).body.data.length, 0);
+	assert.equal((await w.api(w.ids.admin, 'GET', '/settings')).status, 404); // the old settings endpoint is gone
 });
 
 test('reporting structure: stale nodes (soft-deleted employees, vanished managers) are dropped on read', async () => {

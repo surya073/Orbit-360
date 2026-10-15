@@ -9,6 +9,8 @@ const { environment } = require('../config/environment');
 const { validateRecord } = require('../validators/schema');
 const { importableModules } = require('../validators/imports.validators');
 const { audit, auditBatch } = require('./audit.service');
+const { requirePermission, can } = require('../middleware/authorization');
+const { KEY, moduleOfResource } = require('../config/permissions');
 const { matchKeyFor, prepareRow, loadReferences, applyReferences, immutableFields } = require('./recordRules');
 
 /**
@@ -35,6 +37,13 @@ const TEXT_MAX = 2000;
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const rowHash = (data) => sha(JSON.stringify(Object.keys(data).sort().map((k) => [k, data[k]])));
 
+/** An import writes into the target module, so the actor needs that module's own permission too (not just Imports). */
+function requireTarget(ctx, resourceName, action) {
+	const module = moduleOfResource(resourceName);
+	if (!module) throw errors.badRequest('Import job has an unsupported module');
+	requirePermission(ctx, KEY(module, action));
+}
+
 async function loadJob(ctx, id) {
 	const job = await ctx.repos.imports.findJob(ctx.scope, id);
 	if (!job) throw errors.notFound('Import job not found');
@@ -49,6 +58,8 @@ function assertOpen(job) {
 
 async function createJob(ctx, body) {
 	const { scope, repos } = ctx;
+	requireTarget(ctx, body.module, 'create');
+	if (body.conflictPolicy === 'update' || body.conflictPolicy === 'ask') requireTarget(ctx, body.module, 'edit'); // may overwrite existing records
 	const team = scope.resolveTeam(body.teamId); // managers: pinned; admins: optional
 	const dedupeKey = body.fileSha256 ? `${team || 'all'}|${body.module}|${body.fileSha256}` : null;
 	const previous = dedupeKey ? await repos.imports.jobsWithKey(dedupeKey) : [];
@@ -230,6 +241,7 @@ const outcomeOf = (item, rowStatus, extra = {}) => ({
 async function previewBatch(ctx, jobId, rows) {
 	const { job, resource } = await loadJob(ctx, jobId);
 	assertOpen(job);
+	requireTarget(ctx, resource.name, 'create');
 	const [items, stored] = await Promise.all([
 		evaluateRows(ctx, job, resource, rows),
 		ctx.repos.imports.findRows(job.ROWID, rows.map((r) => r.rowNumber)),
@@ -264,8 +276,10 @@ async function previewBatch(ctx, jobId, rows) {
 }
 
 async function resolveConflicts(ctx, jobId, resolutions) {
-	const { job } = await loadJob(ctx, jobId);
+	const { job, resource } = await loadJob(ctx, jobId);
 	assertOpen(job);
+	requireTarget(ctx, resource.name, 'create');
+	if (resolutions.some((r) => r.resolution === 'update')) requireTarget(ctx, resource.name, 'edit');
 	const stored = await ctx.repos.imports.findRows(job.ROWID, resolutions.map((r) => r.rowNumber));
 	const byNumber = new Map(stored.map((s) => [Number(s.row_number), s]));
 	const now = businessNow();
@@ -286,6 +300,7 @@ async function commitBatch(ctx, jobId, rows) {
 	const { scope, repos } = ctx;
 	const { job, resource } = await loadJob(ctx, jobId);
 	assertOpen(job);
+	requireTarget(ctx, resource.name, 'create');
 	const repo = repos.table(resource.name);
 
 	const stored = await repos.imports.findRows(job.ROWID, rows.map((r) => r.rowNumber));
@@ -448,14 +463,17 @@ async function listRows(ctx, id, query) {
 }
 
 /** Field contracts for every writable resource (drives forms and CSV templates). */
-function templates() {
+function templates(actor) {
 	const importable = importableModules();
 	return Object.values(resources)
 		.filter((r) => r.fields)
 		.map((r) => ({
 			module: r.name,
 			importable: importable.includes(r.name),
-			adminOnly: Boolean(r.adminWrite),
+			// What the signed-in user may do with this record type (the forms and the spreadsheet follow it).
+			permissions: { view: can(actor, KEY(moduleOfResource(r.name), 'view')), create: can(actor, KEY(moduleOfResource(r.name), 'create')), edit: can(actor, KEY(moduleOfResource(r.name), 'edit')), delete: can(actor, KEY(moduleOfResource(r.name), 'delete')) },
+			adminOnly: !can(actor, KEY(moduleOfResource(r.name), 'create')), // legacy flag: "this user cannot add records"
+
 			immutable: [...immutableFields(r)],
 			columns: Object.entries(r.fields).map(([field, spec]) => ({
 				field,

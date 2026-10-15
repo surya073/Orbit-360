@@ -13,7 +13,8 @@ const { f } = require('../validators/schema');
  * scopeVia  - for tables with no team column: managers must filter by a parent row that
  *             belongs to their team (verified server-side)
  * teamFrom  - on create, derive the team from a referenced parent row
- * adminOnly - managers cannot read this resource
+ * adminWrite - not offered for bulk import (teams are curated by hand). Who may view/create/edit/delete a
+ *              resource is NOT decided here: it is a permission (config/permissions.js, enforced in crud.service)
  * fields    - writable columns (absent => read-only resource)
  */
 
@@ -291,7 +292,6 @@ const resources = {
 	audit_logs: {
 		table: 'audit_logs',
 		teamColumn: 'team_id',
-		adminOnly: true,
 		list: ['ROWID', 'actor_user_id', 'action', 'entity_table', 'entity_row_id', 'team_id', 'reason', 'request_id', ...TS],
 		bools: [],
 		sortable: ['CREATEDTIME'],

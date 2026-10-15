@@ -4,6 +4,8 @@ const { assertScope } = require('../services/scope.service');
 const { lit } = require('./queryBuilder');
 
 const join = (parts) => parts.filter(Boolean).join(' AND ');
+/** `col IN (...)` over validated ids only (callers pass ids that already went through the id validator). */
+const inList = (col, ids) => `${col} IN (${ids.map((i) => lit('id', i)).join(', ')})`;
 
 /**
  * Aggregate queries for the dashboard. Everything is a GROUP BY aggregate over a date range
@@ -95,6 +97,34 @@ function createDashboardRepository(db) {
 			const team = scope.resolveTeam(f.teamId);
 			const c = join(['is_deleted = false', team ? `team_id = ${lit('id', team)}` : null, f.projectId ? `project_id = ${lit('id', f.projectId)}` : null, 'reporting_period IS NULL']);
 			return db.count(`SELECT COUNT(ROWID) AS total FROM ai_usage_records WHERE ${c}`);
+		},
+
+		// ---- per-person profile aggregates (presentation profile slides) ----------------------------
+		// Each is ONE grouped query over a handful of employee ids, so cost does not grow with people.
+		peopleTime: (scope, f, ids) =>
+			db.aggregate(`SELECT employee_id, is_billable, SUM(duration_minutes) AS minutes, COUNT(ROWID) AS entries FROM time_entries WHERE ${timeWhere(scope, f, ["approval_status = 'approved'", inList('employee_id', ids)])} GROUP BY employee_id, is_billable LIMIT 0, 300`),
+		peopleTimePending: (scope, f, ids) =>
+			db.aggregate(`SELECT employee_id, COUNT(ROWID) AS entries FROM time_entries WHERE ${timeWhere(scope, f, ["approval_status = 'pending'", inList('employee_id', ids)])} GROUP BY employee_id LIMIT 0, 300`),
+		peopleProjects: (scope, f, ids) =>
+			db.aggregate(`SELECT employee_id, project_id, SUM(duration_minutes) AS minutes, COUNT(ROWID) AS entries FROM time_entries WHERE ${timeWhere(scope, f, ["approval_status = 'approved'", inList('employee_id', ids)])} GROUP BY employee_id, project_id LIMIT 0, 300`),
+		peopleAttendance: (scope, f, ids) =>
+			db.aggregate(`SELECT employee_id, late_status, COUNT(ROWID) AS records FROM attendance_records WHERE ${conditions(scope, f, { dateCol: 'attendance_date', teamCol: 'team_id', extra: [inList('employee_id', ids)] })} GROUP BY employee_id, late_status LIMIT 0, 300`),
+		peopleLeave: (scope, f, ids) =>
+			db.aggregate(`SELECT employee_id, status, unit_type, SUM(units) AS units, COUNT(ROWID) AS records FROM leave_records WHERE ${conditions(scope, f, { rangeMode: 'overlap', teamCol: 'team_id', extra: [inList('employee_id', ids)] })} GROUP BY employee_id, status, unit_type LIMIT 0, 300`),
+		peopleLeaveMissing: (scope, f, ids) =>
+			db.aggregate(`SELECT employee_id, COUNT(ROWID) AS total FROM leave_records WHERE ${conditions(scope, f, { rangeMode: 'overlap', teamCol: 'team_id', extra: [inList('employee_id', ids), 'units IS NULL'] })} GROUP BY employee_id LIMIT 0, 300`),
+		peopleAi(scope, f, ids) {
+			assertScope(scope);
+			const team = scope.resolveTeam(f.teamId);
+			const c = join(['is_deleted = false', team ? `team_id = ${lit('id', team)}` : null, inList('employee_id', ids), `reporting_period >= ${lit('str', f.from.slice(0, 7))}`, `reporting_period <= ${lit('str', f.to.slice(0, 7))}`]);
+			return db.aggregate(`SELECT employee_id, tool_name, tool_category, COUNT(ROWID) AS records, AVG(usage_percent_reported) AS avg_percent FROM ai_usage_records WHERE ${c} GROUP BY employee_id, tool_name, tool_category LIMIT 0, 300`);
+		},
+		/** Product items currently assigned to each person (current state, not date-filtered). */
+		peopleProduct(scope, f, ids) {
+			assertScope(scope);
+			const team = scope.resolveTeam(f.teamId);
+			const c = join(['is_deleted = false', team ? `team_id = ${lit('id', team)}` : null, inList('assignee_employee_id', ids)]);
+			return db.aggregate(`SELECT assignee_employee_id, item_type, status, COUNT(ROWID) AS items FROM product_items WHERE ${c} GROUP BY assignee_employee_id, item_type, status LIMIT 0, 300`);
 		},
 
 		// ---- data freshness: the newest business date/time seen per source ----------------------

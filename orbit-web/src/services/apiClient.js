@@ -35,6 +35,57 @@ export function toQuery(params = {}) {
 // Identical in-flight GETs share one request (StrictMode, sibling components).
 const inflight = new Map();
 
+// Reads are idempotent, so a busy or cold backend is retried quietly instead of failing a card.
+// Only transient failures retry (offline, gateway/timeout, or the Data Store's own busy/timeout codes).
+export const readPolicy = { retries: 2, delays: [700, 1800], maxParallel: 3 };
+
+const transient = (e) => e && e.name === 'ApiClientError' && (e.status === 0 || e.status === 429 || e.status === 502 || e.status === 504 || e.code === 'DATASTORE_THROTTLED' || e.code === 'DATASTORE_TIMEOUT');
+
+const sleep = (ms, signal) =>
+	new Promise((resolve, reject) => {
+		if (signal && signal.aborted) return reject(new DOMException('Aborted', 'AbortError'));
+		const t = setTimeout(resolve, ms);
+		if (signal) signal.addEventListener('abort', () => { clearTimeout(t); reject(new DOMException('Aborted', 'AbortError')); }, { once: true });
+	});
+
+// A dashboard opens six reads at once; running them all together is what trips the Data Store's
+// concurrency limit. A small queue keeps the first cards fast and the rest reliable.
+let running = 0;
+const waiting = [];
+function acquire(signal) {
+	if (running < readPolicy.maxParallel) {
+		running += 1;
+		return Promise.resolve();
+	}
+	return new Promise((resolve, reject) => {
+		const entry = { resolve: () => { running += 1; resolve(); } };
+		waiting.push(entry);
+		if (signal) signal.addEventListener('abort', () => {
+			const i = waiting.indexOf(entry);
+			if (i >= 0) { waiting.splice(i, 1); reject(new DOMException('Aborted', 'AbortError')); }
+		}, { once: true });
+	});
+}
+function release() {
+	running -= 1;
+	const next = waiting.shift();
+	if (next) next.resolve();
+}
+
+async function executeRead(path, opts) {
+	for (let attempt = 0; ; attempt += 1) {
+		await acquire(opts.signal);
+		try {
+			return await execute('GET', path, opts);
+		} catch (err) {
+			if (attempt >= readPolicy.retries || !transient(err)) throw err;
+		} finally {
+			release();
+		}
+		await sleep(readPolicy.delays[Math.min(attempt, readPolicy.delays.length - 1)], opts.signal);
+	}
+}
+
 async function execute(method, path, { params, body, signal } = {}) {
 	let res;
 	try {
@@ -100,7 +151,7 @@ export const api = {
 		if (hit && hit.until > Date.now()) return Promise.resolve(hit.value);
 		cache.delete(key);
 		const run = () =>
-			execute('GET', path, opts).then((out) => {
+			executeRead(path, opts).then((out) => {
 				remember(key, out);
 				return out;
 			});

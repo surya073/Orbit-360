@@ -18,6 +18,7 @@ module.exports = [
 	{
 		method: 'POST',
 		path: '/time-entries/:id/decision',
+		permission: 'time_entries.approve',
 		validate: { params: idParams, body: decisionBody },
 		handler: async (ctx) => ok(await crud.decideTimeEntry(ctx, ctx.input.params.id, ctx.input.body.status)),
 	},

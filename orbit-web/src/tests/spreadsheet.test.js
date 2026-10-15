@@ -272,7 +272,7 @@ describe('Spreadsheet editor page', () => {
 		expect(screen.queryByRole('button', { name: /Save changes/ })).not.toBeInTheDocument();
 		expect(screen.getByRole('grid')).toHaveAttribute('aria-readonly', 'true');
 		await userEvent.click(screen.getByRole('button', { name: 'About the spreadsheet editor' }));
-		expect(screen.getByText(/Only administrators can change this record type/)).toBeInTheDocument();
+		expect(screen.getByText(/Your role cannot change this record type/)).toBeInTheDocument();
 	});
 
 	test('administrators get the admin-only record types as writable', async () => {
@@ -382,6 +382,67 @@ describe('Spreadsheet editor page', () => {
 			expect(global.fetch.calls.length).toBe(before);
 			await userEvent.clear(screen.getByRole('searchbox'));
 			expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+		});
+
+		test('typing filters the loaded rows at once, before the server has answered', async () => {
+			mockFetch([
+				[/^GET \/imports\/templates/, okBody([template, teamsTemplate])],
+				[/^GET \/employees\?.*q=/, () => new Promise(() => {})],
+				[/^GET \/employees/, () => okBody(rows(), meta)],
+				[/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }], meta)],
+			]);
+			renderWithProviders(<SpreadsheetPage />, { user: manager, route: '/spreadsheet?module=employees' });
+			await screen.findByText('Asha Rao');
+			await userEvent.type(screen.getByRole('searchbox', { name: /Search employees/ }), 'bala');
+			await waitFor(() => expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument()); // instant, server still pending
+			expect(screen.getByText('Bala Iyer')).toBeInTheDocument();
+		});
+
+		test('if searching all records fails, the sheet falls back to the loaded rows instead of going dead', async () => {
+			mockFetch([
+				[/^GET \/imports\/templates/, okBody([template, teamsTemplate])],
+				[/^GET \/employees\?.*q=/, { status: 503, body: errBody(503, 'DATASTORE_THROTTLED', 'The data service is busy. Retry shortly.') }],
+				[/^GET \/employees/, () => okBody(rows(), meta)],
+				[/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }], meta)],
+			]);
+			renderWithProviders(<SpreadsheetPage />, { user: manager, route: '/spreadsheet?module=employees' });
+			await screen.findByText('Asha Rao');
+			await userEvent.type(screen.getByRole('searchbox', { name: /Search employees/ }), 'bala');
+			expect(await screen.findByText(/Searching all records is unavailable right now/)).toBeInTheDocument();
+			await waitFor(() => expect(screen.getByLabelText('Where to search')).toHaveValue('loaded'));
+			await waitFor(() => expect(screen.getByText('Bala Iyer')).toBeInTheDocument());
+			expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument(); // the typed search still filters
+		});
+
+		test('formatting changes share one undo/redo history with cell edits, in the order they happened', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.click(gridcell(0, 0));
+			await userEvent.click(screen.getByRole('button', { name: 'Bold' }));
+			expect(gridcell(0, 0)).toHaveStyle({ fontWeight: '700' });
+			await editCell(0, 1, 'Architect'); // a value edit after the formatting
+			const undo = screen.getByRole('button', { name: 'Undo' });
+			await userEvent.click(undo); // 1st undo reverts the value edit...
+			expect(gridcell(0, 1)).toHaveTextContent('Engineer');
+			expect(gridcell(0, 0)).toHaveStyle({ fontWeight: '700' }); // ...the bold is still there
+			await userEvent.click(undo); // 2nd undo reverts the formatting
+			expect(gridcell(0, 0)).not.toHaveStyle({ fontWeight: '700' });
+			expect(undo).toBeDisabled();
+			await userEvent.click(screen.getByRole('button', { name: 'Redo' }));
+			expect(gridcell(0, 0)).toHaveStyle({ fontWeight: '700' });
+			expect(writes('PATCH')).toHaveLength(0); // formatting never reaches the record API
+		});
+
+		test('a custom fill colour can be picked, and undone with Ctrl+Z', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await userEvent.click(gridcell(1, 0));
+			await userEvent.click(screen.getByRole('button', { name: 'Fill colour' }));
+			fireEvent.change(screen.getByLabelText('Fill colour: custom colour'), { target: { value: '#ff8800' } });
+			expect(gridcell(1, 0).style.getPropertyValue('--cell-fill')).toBe('#ff8800');
+			await userEvent.click(gridcell(1, 0));
+			await userEvent.keyboard('{Control>}z{/Control}');
+			expect(gridcell(1, 0).style.getPropertyValue('--cell-fill')).toBe('');
 		});
 
 		test('Ctrl+S saves pending edits; the save status pill follows the state', async () => {

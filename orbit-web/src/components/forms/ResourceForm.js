@@ -3,11 +3,12 @@ import { LOOKUPS } from '../../hooks/useLookup';
 import { resourceService } from '../../services/resourceService';
 import { humanize } from '../../utils/format';
 import Button from '../common/Button';
+import DetailsEditor from './DetailsEditor';
 import Field from './Field';
 import LookupSelect from './LookupSelect';
 
 // Friendlier labels where the column name is schema jargon.
-const LABELS = { email_normalized: 'Email', source_record_id: 'Source record ID', work_description: 'Description', is_billable: 'Billable', late_status: 'Late status' };
+const LABELS = { email_normalized: 'Email', source_record_id: 'Source record ID', work_description: 'Description', is_billable: 'Billable', late_status: 'Late status', more_details: 'Extra details' };
 const labelFor = (field) => LABELS[field] || humanize(field);
 
 const toInput = (v) => (v === null || v === undefined ? '' : String(v));
@@ -73,7 +74,7 @@ export default function ResourceForm({ resource, template, initial, defaults = {
 			<div className="form-grid">
 				{template.columns.map((c) => {
 					const locked = lockedFields.includes(c.field) || (editing && template.immutable.includes(c.field));
-					const hint = c.type === 'datetime' ? 'YYYY-MM-DD HH:mm:ss (IST)' : c.field === 'more_details' ? 'Optional JSON object' : undefined;
+					const hint = c.type === 'datetime' ? 'Pick a date and time (India time, IST)' : c.type === 'json' ? 'Optional. Add anything that has no field of its own, such as Desk → B-12.' : undefined;
 					return (
 						<Field key={c.field} label={labelFor(c.field)} required={c.required} error={fieldErrors[c.field]} hint={hint} className={c.type === 'text' || c.type === 'json' ? 'span-2' : ''}>
 							{(p) => {
@@ -99,7 +100,14 @@ export default function ResourceForm({ resource, template, initial, defaults = {
 											<option value="false">No</option>
 										</select>
 									);
-								if (c.type === 'text' || c.type === 'json') return <textarea {...p} rows={3} value={v} onChange={on} disabled={locked} />;
+								if (c.type === 'json') return <DetailsEditor id={p.id} value={v} onChange={set(c.field)} disabled={locked} label={labelFor(c.field)} />;
+								if (c.type === 'text') return <textarea {...p} rows={3} value={v} onChange={on} disabled={locked} />;
+								if (c.type === 'datetime') {
+									// A date-time picker instead of typing YYYY-MM-DD HH:mm:ss; the stored text format is unchanged.
+									const shown = v ? String(v).replace(' ', 'T').slice(0, 19) : '';
+									const picked = (e) => set(c.field)(e.target.value ? `${e.target.value.replace('T', ' ')}${e.target.value.length === 16 ? ':00' : ''}` : '');
+									return <input {...p} type="datetime-local" step="1" value={shown} onChange={picked} disabled={locked} />;
+								}
 								const type = c.type === 'date' ? 'date' : c.type === 'int' || c.type === 'num' ? 'number' : 'text';
 								return <input {...p} type={type} step={c.type === 'num' ? 'any' : undefined} maxLength={c.maxLength} value={v} onChange={on} disabled={locked} />;
 							}}

@@ -121,19 +121,26 @@ function select(store, sql, style = 'alias') {
  * (a Catalyst user id); missing header = not signed in.
  */
 function createMemoryCatalyst(store, { latencyMs = 0, hooks = {}, aggregateKeys = 'alias' } = {}) {
+	// store.missing: names of tables that "do not exist" (simulates a table that was not created yet).
+	const gone = (name) => {
+		if (store.missing && store.missing.has(name)) throw new Error(`Table ${name} not found`);
+	};
 	const pause = () => (latencyMs ? new Promise((r) => setTimeout(r, latencyMs)) : Promise.resolve());
 	const admin = {
 		zcql: () => ({
 			executeZCQLQuery: async (sql) => {
 				store.queries.push(sql);
 				await pause();
+				const from = /\sFROM (\w+)/.exec(sql);
+				if (from) gone(from[1]);
 				return select(store, sql, aggregateKeys);
 			},
 		}),
 		datastore: () => ({
 			table: (name) => ({
-				insertRow: async (row) => store.insert(name, row),
+				insertRow: async (row) => (gone(name), store.insert(name, row)),
 				insertRows: async (rows) => {
+					gone(name);
 					store.queries.push(`BULK INSERT ${name} x${rows.length}`);
 					if (hooks.beforeBulkInsert) await hooks.beforeBulkInsert(name, rows, store);
 					const staged = createStore();

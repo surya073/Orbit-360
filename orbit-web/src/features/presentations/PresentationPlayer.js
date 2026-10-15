@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../app/providers/AuthProvider';
 import KpiCard from '../../components/cards/KpiCard';
 import Button from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
@@ -19,7 +20,7 @@ import { formatNumber, minutesToHours } from '../../utils/format';
 import { presetLabel, resolvePeriod } from '../../utils/periods';
 import useDashboardData from '../dashboard/useDashboardData';
 import FreshnessBar from '../dashboard/widgets/FreshnessBar';
-import { buildSlides, detailOptions, PEOPLE_LIMIT, RECORDS_LIMIT } from './deckSlides';
+import { buildSlides, detailOptions, PEOPLE_LIMIT, PROFILE_LIMIT, RECORDS_LIMIT } from './deckSlides';
 import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, storeTheme, THEME_IDS, themeById, themeStyle } from './presentationThemes';
 import { Brand, ClosingSlide, DetailStateSlide, OpeningSlide, PeopleSlide, ProfileSlide, RecordsSlide, SlideFrame, TextSlide } from './PresentationSlides';
 import { ReportingSlide, ReportingStateSlide } from './ReportingSlide';
@@ -93,6 +94,7 @@ const queryFlag = (sp, key, fallback) => (sp.has(key) ? sp.get(key) === '1' : fa
  * Keys: ← → PageUp PageDown Space Home End to move, F fullscreen, Esc to exit.
  */
 export default function PresentationPlayer() {
+	const { can: allowed } = useAuth(); // permissions: which optional detail slides this viewer may load
 	const { id } = useParams();
 	const navigate = useNavigate();
 	const [sp] = useSearchParams();
@@ -104,6 +106,7 @@ export default function PresentationPlayer() {
 	const stored = useMemo(() => readStoredOptions(), []);
 	const wantPeople = queryFlag(sp, 'people', stored.people);
 	const wantRecords = queryFlag(sp, 'records', stored.records);
+	const wantReportingExtra = queryFlag(sp, 'reporting', stored.reporting);
 	const marked = useRef(false);
 	const [fullscreen, setFullscreen] = useState(false);
 	const [chrome, setChrome] = useState(true);
@@ -118,22 +121,31 @@ export default function PresentationPlayer() {
 
 	// Optional detail datasets: fetched once, only when the deck has the matching section and the option is on.
 	const can = useMemo(() => detailOptions(slides), [slides]);
-	const peopleOn = Boolean(config) && wantPeople && can.people;
-	const recordsOn = Boolean(config) && wantRecords && can.records;
+	const peopleOn = Boolean(config) && wantPeople && can.people && allowed('employees.view');
+	const recordsOn = Boolean(config) && wantRecords && can.records && allowed('projects.view');
 	const scope = filters.teamId ? { team_id: filters.teamId } : {}; // managers are pinned to their team by the backend either way
 	const people = useApiResource((signal) => resourceService.list('employees', { page: 1, pageSize: PEOPLE_LIMIT, ...scope }, { signal }), `pv|${filters.teamId || ''}`, { enabled: peopleOn, isEmpty: () => false });
 	const records = useApiResource((signal) => resourceService.list('projects', { page: 1, pageSize: RECORDS_LIMIT, ...scope, ...(filters.projectId ? { ids: filters.projectId } : {}) }, { signal }), `rv|${filters.teamId || ''}|${filters.projectId || ''}`, { enabled: recordsOn, isEmpty: () => false });
+	// Per-person activity for the profile slides: ONE request for the profiled people, after the people list is in.
+	const profileIds = useMemo(() => (people.status === 'success' && people.data ? people.data.slice(0, PROFILE_LIMIT).map((p) => String(p.ROWID)) : []), [people.status, people.data]);
+	const profiles = useApiResource(
+		(signal) => dashboardService.peopleProfiles({ from: params.from, to: params.to, ...(filters.teamId ? { team_id: filters.teamId } : {}), employee_ids: profileIds.join(',') }, { signal }),
+		`pf|${filters.teamId || ''}|${params.from}|${params.to}|${profileIds.join(',')}`,
+		{ enabled: peopleOn && profileIds.length > 0, isEmpty: () => false }
+	);
 	const lookupRows = useMemo(() => [...(people.data || []), ...(records.data || [])], [people.data, records.data]);
 	const labelOf = useLookupLabels(lookupRows, LOOKUP_COLUMNS);
 
 	// Saved reporting tree: fetched once, only when the deck has the Team reporting structure section.
-	const wantReporting = useMemo(() => slides.some((s) => s.type === 'section' && s.section === 'reporting_structure'), [slides]);
+	const hasReportingSection = useMemo(() => slides.some((s) => s.type === 'section' && s.section === 'reporting_structure'), [slides]);
+	const addReporting = Boolean(config) && wantReportingExtra && !hasReportingSection && allowed('reporting.view') && allowed('employees.view');
+	const wantReporting = hasReportingSection || addReporting;
 	const reportingRes = useApiResource((signal) => reportingService.get(filters.teamId || '', { signal }), `rp|${filters.teamId || ''}`, { enabled: Boolean(config) && wantReporting, isEmpty: () => false });
 	const reporting = useMemo(() => (wantReporting ? { status: reportingRes.status, error: reportingRes.error, model: buildReportingModel(reportingRes.data) } : null), [wantReporting, reportingRes.status, reportingRes.error, reportingRes.data]);
 
 	const list = useMemo(
-		() => buildSlides(slides, { people: peopleOn ? { status: people.status, data: people.data, meta: people.meta, error: people.error } : null, records: recordsOn ? { status: records.status, data: records.data, meta: records.meta, error: records.error } : null, wantPeople: peopleOn, wantRecords: recordsOn, reporting }),
-		[slides, peopleOn, recordsOn, reporting, people.status, people.data, people.meta, people.error, records.status, records.data, records.meta, records.error]
+		() => buildSlides(slides, { people: peopleOn ? { status: people.status, data: people.data, meta: people.meta, error: people.error } : null, records: recordsOn ? { status: records.status, data: records.data, meta: records.meta, error: records.error } : null, wantPeople: peopleOn, wantRecords: recordsOn, reporting, addReporting, profiles: peopleOn ? { status: profileIds.length ? profiles.status : 'loading', data: profiles.data, error: profiles.error } : null }),
+		[slides, peopleOn, recordsOn, reporting, addReporting, profiles.status, profiles.data, profiles.error, profileIds.length, people.status, people.data, people.meta, people.error, records.status, records.data, records.meta, records.error]
 	);
 	const hasSlides = slides.length > 0;
 	const last = Math.max(list.length - 1, 0);
@@ -334,6 +346,7 @@ export default function PresentationPlayer() {
 				<Popover
 					label="Presentation theme"
 					align="right"
+					placement="up"
 					trigger={({ toggle, props }) => (
 						<Button size="sm" icon="palette" onClick={toggle} {...props} aria-label={`Theme: ${t.name}`}>
 							Theme

@@ -43,7 +43,20 @@ function trendsQuery(raw) {
 	return { ...f, granularity };
 }
 
+const PROFILE_MAX = 12;
+/** GET /dashboard/people-profiles?employee_ids=1,2,3 plus the usual period/team filters. */
+function peopleProfilesQuery(raw) {
+	const f = parseDashboardFilters(raw);
+	const ids = String(raw.employee_ids || '')
+		.split(',')
+		.map((v) => v.trim())
+		.filter(Boolean);
+	if (ids.length === 0) throw errors.badRequest('employee_ids is required');
+	if (ids.length > PROFILE_MAX) throw errors.badRequest(`At most ${PROFILE_MAX} employees per request`);
+	return { ...f, employeeIds: [...new Set(ids.map((v) => parseFilterValue('id', v, 'employee_ids')))] };
+}
+
 /** POST /dashboard/snapshots takes the same filters in the body. */
 const snapshotBody = (raw) => parseDashboardFilters(raw || {});
 
-module.exports = { parseDashboardFilters, overviewQuery, trendsQuery, snapshotBody };
+module.exports = { parseDashboardFilters, overviewQuery, trendsQuery, snapshotBody, peopleProfilesQuery };

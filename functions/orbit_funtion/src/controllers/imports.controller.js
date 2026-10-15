@@ -4,7 +4,7 @@ const { ok, paged } = require('../utils/response');
 const imports = require('../services/import.service');
 
 module.exports = {
-	templates: async () => ok(imports.templates()),
+	templates: async (ctx) => ok(imports.templates(ctx.actor)),
 	createJob: async (ctx) => ({ status: 201, body: ok(await imports.createJob(ctx, ctx.input.body)) }),
 	getJob: async (ctx) => ok(await imports.getJob(ctx, ctx.input.params.id)),
 	listRows: async (ctx) => {

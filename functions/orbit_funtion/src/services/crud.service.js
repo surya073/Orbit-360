@@ -4,8 +4,8 @@ const { errors } = require('../utils/errors');
 const { businessNow } = require('../utils/dateUtils');
 const { resources } = require('../config/resources');
 const { audit } = require('./audit.service');
-const { requireRole } = require('../middleware/authorization');
-const { ROLES } = require('../config/constants');
+const { requirePermission } = require('../middleware/authorization');
+const { KEY, moduleOfResource } = require('../config/permissions');
 const { prepareRow, immutableFields, loadReferences, applyReferences } = require('./recordRules');
 
 function resourceOf(name) {
@@ -14,10 +14,17 @@ function resourceOf(name) {
 	return r;
 }
 
-function writable(name, ctx) {
+/** The permission a resource action needs, e.g. ('attendance_records', 'edit') -> attendance.edit. Unmapped resources are denied. */
+function need(ctx, name, action) {
+	const module = moduleOfResource(name);
+	if (!module) throw errors.forbidden('This operation is not available', 'NO_PERMISSION_DECLARED');
+	requirePermission(ctx, KEY(module, action));
+}
+
+function writable(name, ctx, action) {
 	const r = resourceOf(name);
 	if (!r.fields) throw errors.notFound('Resource is read-only');
-	if (r.adminWrite) requireRole(ctx, [ROLES.ADMIN]);
+	need(ctx, name, action);
 	return r;
 }
 
@@ -25,7 +32,7 @@ const teamOf = (resource, row) => (resource.teamColumn && resource.teamColumn !=
 
 async function list(ctx, name, input) {
 	const resource = resourceOf(name);
-	if (resource.adminOnly) requireRole(ctx, [ROLES.ADMIN]);
+	need(ctx, name, 'view');
 	const { scope } = ctx;
 	// Tables with no team column (project_assignments) are scoped through their project.
 	if (resource.scopeVia && !scope.isAdmin) {
@@ -41,14 +48,14 @@ async function list(ctx, name, input) {
 
 async function get(ctx, name, id) {
 	const resource = resourceOf(name);
-	if (resource.adminOnly) requireRole(ctx, [ROLES.ADMIN]);
+	need(ctx, name, 'view');
 	const row = await ctx.repos.table(name).findById(ctx.scope, id, { detail: true });
 	if (!row) throw errors.notFound();
 	return row;
 }
 
 async function create(ctx, name, value) {
-	const resource = writable(name, ctx);
+	const resource = writable(name, ctx, 'create');
 	const { scope } = ctx;
 	const refs = await loadReferences(ctx, resource, [value]);
 	const row = prepareRow(resource, applyReferences(scope, resource, { ...value }, refs));
@@ -58,7 +65,7 @@ async function create(ctx, name, value) {
 }
 
 async function update(ctx, name, id, patch) {
-	const resource = writable(name, ctx);
+	const resource = writable(name, ctx, 'edit');
 	const { scope } = ctx;
 	const repo = ctx.repos.table(name);
 	const existing = await repo.findById(scope, id, { detail: true });
@@ -83,7 +90,7 @@ async function update(ctx, name, id, patch) {
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => k in o).map((k) => [k, o[k]]));
 
 async function remove(ctx, name, id) {
-	const resource = writable(name, ctx);
+	const resource = writable(name, ctx, 'delete');
 	if (!resource.softDelete) throw errors.badRequest('This resource cannot be deleted');
 	const repo = ctx.repos.table(name);
 	const existing = await repo.findById(ctx.scope, id);
@@ -95,6 +102,7 @@ async function remove(ctx, name, id) {
 
 /** Approve/reject a time entry. Only approved entries feed billable metrics. */
 async function decideTimeEntry(ctx, id, status) {
+	requirePermission(ctx, 'time_entries.approve');
 	const repo = ctx.repos.table('time_entries');
 	const existing = await repo.findById(ctx.scope, id);
 	if (!existing) throw errors.notFound();

@@ -812,6 +812,8 @@
 	min-width: 8px;
 }
 .pres__themes {
+	max-height: min(60vh, 420px);
+	overflow-y: auto;
 	display: grid;
 	gap: 2px;
 	min-width: 230px;
@@ -1449,4 +1451,194 @@
 	.pc-hero__card {
 		transition: none !important;
 	}
+}
+
+/* Individual profile slide: identity on the left, six activity panels on the right */
+.pprofile {
+	grid-template-columns: 380px minmax(0, 1fr);
+	gap: 48px;
+	align-items: stretch;
+}
+.pprofile__id {
+	align-content: start;
+	gap: 22px;
+}
+.pprofile__avatar {
+	width: 200px;
+	height: 200px;
+	font-size: 80px;
+	box-shadow: 0 0 0 10px rgb(var(--p-glow) / 0.1), 0 0 0 22px rgb(var(--p-glow) / 0.05);
+}
+.pprofile__facts {
+	grid-template-columns: minmax(0, 1fr);
+	gap: 18px;
+	width: 100%;
+	text-align: left;
+}
+.pprofile__facts .pfact dd {
+	font-size: 28px;
+	padding-top: 8px;
+}
+.pprofile__facts .pfact small {
+	font-size: 17px;
+}
+.pprofile__facts .pfact dt {
+	font-size: 15px;
+}
+.pprofile__note {
+	font-size: 16px;
+}
+.pactivity {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	grid-auto-rows: minmax(0, 1fr);
+	gap: 20px;
+	min-height: 0;
+}
+.pact {
+	display: grid;
+	align-content: start;
+	gap: 10px;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+	padding: 20px 24px;
+	border-radius: 20px;
+	background: var(--p-card);
+	border: 1px solid var(--p-card-border);
+}
+.pact__title {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0 0 2px;
+	font-size: 17px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.pact__title svg {
+	color: var(--accent);
+}
+.pact__state {
+	margin: 0;
+	font-size: 22px;
+	color: var(--text-muted);
+}
+.pact__note,
+.pact__chips {
+	margin: 0;
+	font-size: 17px;
+	line-height: 1.35;
+	color: var(--text-muted);
+}
+.pstat {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 16px;
+	font-size: 22px;
+}
+.pstat__label {
+	color: var(--text-muted);
+}
+.pstat__value {
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+.pstat--strong {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0;
+}
+.pstat--strong .pstat__value {
+	order: -1;
+	font-family: var(--p-font-display);
+	font-size: 46px;
+	line-height: 1.1;
+	color: var(--text);
+}
+.pstat--strong .pstat__label {
+	font-size: 17px;
+}
+.pbar {
+	height: 10px;
+	border-radius: 999px;
+	background: rgb(var(--p-glow) / 0.16);
+	overflow: hidden;
+}
+.pbar i {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--gradient-accent);
+}
+.ptools,
+.pprojects {
+	display: grid;
+	gap: 10px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.ptools li {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-size: 22px;
+}
+.ptools__name,
+.pprojects__name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.ptools__n {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+.ptools__more {
+	font-size: 17px;
+	color: var(--text-muted);
+}
+.pprojects li {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 14px;
+	font-size: 22px;
+}
+.pprojects b {
+	font-variant-numeric: tabular-nums;
+}
+
+/* keep the whole profile inside the slide body: compact identity column, panels share the height */
+.pprofile {
+	grid-template-rows: minmax(0, 1fr);
+}
+.pprofile__id {
+	min-height: 0;
+	gap: 14px;
+}
+.pprofile__avatar {
+	width: 150px;
+	height: 150px;
+	font-size: 60px;
+	box-shadow: 0 0 0 8px rgb(var(--p-glow) / 0.1), 0 0 0 16px rgb(var(--p-glow) / 0.05);
+}
+.pprofile__facts {
+	gap: 12px;
+}
+.pprofile__facts .pfact dd {
+	font-size: 24px;
+	padding-top: 6px;
+	margin-top: 4px;
+}
+.pactivity {
+	grid-template-rows: repeat(2, minmax(0, 1fr));
+	height: 100%;
 }

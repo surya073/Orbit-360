@@ -64,14 +64,19 @@ export function RequireAuth() {
 	return <Outlet />;
 }
 
-export function RequireRole({ roles }) {
-	const { user } = useAuth();
-	if (!roles.includes(user.role)) {
+/**
+ * UX guard for a page: renders it only when the user holds the permission. A direct URL to a page the
+ * user cannot use shows this notice instead; the backend refuses the underlying calls regardless.
+ */
+export function RequirePermission({ permission, children }) {
+	const { can } = useAuth();
+	const keys = [].concat(permission);
+	if (!keys.every((k) => can(k))) {
 		return (
 			<p className="banner banner--warning" role="alert">
-				Your role does not have access to this page.
+				Your role does not have access to this page. Ask an administrator if you need it.
 			</p>
 		);
 	}
-	return <Outlet />;
+	return children || <Outlet />;
 }

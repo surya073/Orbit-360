@@ -10,6 +10,7 @@ const { authorize } = require('./middleware/authorization');
 const { runValidators } = require('./middleware/validation');
 const { toErrorResponse } = require('./middleware/errorHandler');
 const { createRepositories } = require('./repositories');
+const { createAccessResolver } = require('./services/accessResolver');
 const { match } = require('./routes');
 const { errors } = require('./utils/errors');
 
@@ -20,7 +21,7 @@ const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH']);
  * request - there is no listening server - so this is a pipeline of middleware steps rather
  * than an Express app, which would add a dependency without adding capability here.
  *
- *   context -> route match -> authenticate -> authorize(scope) -> body -> validate -> handler
+ *   context -> route match -> authenticate (role + permissions) -> authorize (permission, team scope) -> body -> validate -> handler
  *
  * `catalyst` is injected so tests can supply a fake SDK.
  * Timeout note: a timed-out request returns 504 but already-issued Data Store writes cannot
@@ -28,6 +29,9 @@ const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH']);
  */
 function createApp({ catalyst, env = defaultEnv, logger = createLogger({}, env.logLevel) }) {
 	const userCache = createUserCache(env.userCacheSeconds ?? 0);
+	const accessResolver = createAccessResolver(env.userCacheSeconds ?? 0);
+	// Role, assignment or user changes made through the Access API take effect at once on this instance.
+	const caches = { clear: () => (userCache.clear(), accessResolver.clear()), tablesAvailable: () => accessResolver.tablesAvailable() };
 	async function pipeline(ctx, req, res) {
 		const { route, params } = match(ctx.method, ctx.path);
 		ctx.params = params;
@@ -52,7 +56,8 @@ function createApp({ catalyst, env = defaultEnv, logger = createLogger({}, env.l
 		}
 		ctx.db = createDb(adminApp, { budget: route.budget || env.queryBudget, logger: ctx.logger });
 		ctx.repos = createRepositories(ctx.db);
-		ctx.actor = await authenticate(userApp, ctx.repos.users, userCache);
+		ctx.caches = caches;
+		ctx.actor = await authenticate(userApp, ctx.repos, { userCache, access: accessResolver });
 		authorize(ctx, route);
 
 		const body = BODY_METHODS.has(ctx.method) ? await readJson(req) : {};

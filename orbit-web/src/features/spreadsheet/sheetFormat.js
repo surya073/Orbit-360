@@ -35,6 +35,24 @@ export const FILL_COLORS = [
 const textById = Object.fromEntries(TEXT_COLORS.map((c) => [c.id, c]));
 const fillById = Object.fromEntries(FILL_COLORS.map((c) => [c.id, c]));
 
+/** A custom colour chosen with the colour picker, stored as #rrggbb (validated: the stored JSON is untrusted). */
+export const isHexColor = (v) => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+
+/** Readable ink for text on a custom fill (dark on light fills, white on dark ones). */
+export function inkFor(hex) {
+	const n = parseInt(hex.slice(1), 16);
+	const lin = (c) => {
+		const v = c / 255;
+		return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+	};
+	const lum = 0.2126 * lin(n >> 16) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+	return lum > 0.32 ? '#111827' : '#ffffff';
+}
+
+/** A palette id or a custom #rrggbb -> { css, ink? }, or null when unknown. */
+export const resolveText = (id) => (isHexColor(id) ? { css: id.toLowerCase() } : textById[id] || null);
+export const resolveFill = (id) => (isHexColor(id) ? { css: id.toLowerCase(), ink: inkFor(id) } : fillById[id] || null);
+
 /** Only http(s) and mailto links are ever rendered as links; everything else is rejected. */
 export function safeUrl(input) {
 	const raw = String(input ?? '').trim();
@@ -67,8 +85,8 @@ export function sanitizeCell(c) {
 	if (c.wrap === true) out.wrap = true;
 	if (ALIGNS.includes(c.align)) out.align = c.align;
 	if (FONT_SIZES.includes(c.size)) out.size = c.size;
-	if (typeof c.color === 'string' && textById[c.color]) out.color = c.color;
-	if (typeof c.fill === 'string' && fillById[c.fill]) out.fill = c.fill;
+	if (typeof c.color === 'string' && resolveText(c.color)) out.color = isHexColor(c.color) ? c.color.toLowerCase() : c.color;
+	if (typeof c.fill === 'string' && resolveFill(c.fill)) out.fill = isHexColor(c.fill) ? c.fill.toLowerCase() : c.fill;
 	if (typeof c.link === 'string' && safeUrl(c.link)) out.link = c.link;
 	return Object.keys(out).length ? out : null;
 }
@@ -93,12 +111,13 @@ export function sanitizeStore(raw) {
 export function cellStyle(fmt) {
 	if (!fmt) return undefined;
 	const s = {};
-	const fill = fmt.fill && fillById[fmt.fill];
+	const fill = fmt.fill && resolveFill(fmt.fill);
 	if (fill) {
 		s['--cell-fill'] = fill.css; // a custom property, so selection and unsaved tints can layer over it
 		if (fill.ink) s.color = fill.ink;
 	}
-	if (fmt.color && textById[fmt.color]) s.color = textById[fmt.color].css;
+	const text = fmt.color && resolveText(fmt.color);
+	if (text) s.color = text.css;
 	if (fmt.b) s.fontWeight = 700;
 	if (fmt.i) s.fontStyle = 'italic';
 	if (fmt.size) s.fontSize = `calc(${fmt.size}px * var(--sheet-zoom, 1))`;

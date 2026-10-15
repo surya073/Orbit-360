@@ -2,8 +2,9 @@ import React from 'react';
 import logo from '../../assets/images/logo.svg';
 import Button from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
+import ToolLogo from '../../components/common/ToolLogo';
 import { formatDate } from '../../utils/dates';
-import { EMPTY, formatNumber, humanize } from '../../utils/format';
+import { EMPTY, formatNumber, humanize, metricNote } from '../../utils/format';
 import { initials, statusTone, tenureText } from './deckSlides';
 
 /** Common slide layout: kicker, title, lead and a body that scrolls (never clips) if content is tall. */
@@ -137,9 +138,124 @@ function Fact({ label, value, note }) {
 	);
 }
 
-/** One person, editorial layout. Only fields that exist are shown as values; the rest read as not recorded. */
+const hoursText = (min) => (min === null || min === undefined ? null : `${formatNumber(min / 60, 1)} h`);
+const noData = (metric) => !metric || metric.completeness === 'insufficient_data' || metric.completeness === 'not_applicable';
+
+/** One activity panel of a profile slide: a heading, the figures, and the data-quality note when a figure is partial. */
+function ActivityPanel({ icon, title, state, metric, children, empty = 'No records in this period' }) {
+	let body;
+	if (state === 'loading') body = <p className="pact__state">Loading…</p>;
+	else if (state === 'error') body = <p className="pact__state">Could not be loaded</p>;
+	else if (metric !== undefined && noData(metric)) body = <p className="pact__state">{empty}</p>;
+	else body = children;
+	const note = state === 'ready' && metric && metric.completeness === 'partial' ? metricNote(metric) : null;
+	return (
+		<section className="pact">
+			<h3 className="pact__title">
+				<Icon name={icon} size={22} /> {title}
+			</h3>
+			{body}
+			{note ? <p className="pact__note">{note}</p> : null}
+		</section>
+	);
+}
+
+const Stat = ({ label, value, strong }) => (
+	<div className={`pstat ${strong ? 'pstat--strong' : ''}`.trim()}>
+		<span className="pstat__label">{label}</span>
+		<b className="pstat__value">{value}</b>
+	</div>
+);
+
+/** Everything known about one person for the period, from backend-computed metrics (missing = not recorded, never 0). */
+function ProfileActivity({ activity }) {
+	const state = activity.status;
+	const d = activity.data || {};
+	const time = d.time;
+	const att = d.attendance;
+	const leave = d.leave;
+	const ai = d.ai;
+	const product = d.product;
+	const projects = d.projects;
+	const leaveStatuses = leave && leave.byStatus ? Object.entries(leave.byStatus) : [];
+	const types = product && product.byType ? Object.entries(product.byType).map(([t, s]) => [t, Object.values(s || {}).reduce((a, b) => a + b, 0)]) : [];
+	return (
+		<div className="pactivity">
+			<ActivityPanel icon="clock" title="Approved time" state={state} metric={time}>
+				{time ? (
+					<>
+						<Stat strong label="Total" value={hoursText(time.totalMinutes) || EMPTY} />
+						<Stat label="Billable" value={`${hoursText(time.billableMinutes) || EMPTY}${time.billablePercent === null || time.billablePercent === undefined ? '' : ` · ${formatNumber(time.billablePercent, 0)}%`}`} />
+						<Stat label="Non-billable" value={hoursText(time.nonBillableMinutes) || EMPTY} />
+						{time.billablePercent !== null && time.billablePercent !== undefined ? (
+							<div className="pbar" aria-hidden="true">
+								<i style={{ width: `${Math.min(Math.max(time.billablePercent, 0), 100)}%` }} />
+							</div>
+						) : null}
+					</>
+				) : null}
+			</ActivityPanel>
+			<ActivityPanel icon="alert" title="Check-ins" state={state} metric={att}>
+				{att ? (
+					<>
+						<Stat strong label="Late check-ins" value={att.lateCount === null ? EMPTY : `${att.lateCount} of ${att.records}`} />
+						<Stat label="On time" value={att.onTimeCount === null ? EMPTY : att.onTimeCount} />
+						<Stat label="Late rate" value={att.lateRatePercent === null ? EMPTY : `${formatNumber(att.lateRatePercent, 0)}%`} />
+					</>
+				) : null}
+			</ActivityPanel>
+			<ActivityPanel icon="calendar" title="Leave" state={state} metric={leave}>
+				{leave ? (
+					<>
+						<Stat strong label="Approved days" value={leave.approvedDays === null ? EMPTY : formatNumber(leave.approvedDays, 1)} />
+						{leave.approvedHours ? <Stat label="Approved hours" value={formatNumber(leave.approvedHours, 1)} /> : null}
+						<p className="pact__chips">{leaveStatuses.map(([s, n]) => `${humanize(s)} ${n}`).join(' · ')}</p>
+					</>
+				) : null}
+			</ActivityPanel>
+			<ActivityPanel icon="sparkles" title="AI tool usage" state={state} metric={ai} empty="No usage reported">
+				{ai ? (
+					<ul className="ptools">
+						{(ai.tools || []).slice(0, 4).map((t) => (
+							<li key={`${t.tool}-${t.category}`}>
+								<ToolLogo name={t.tool} size={34} />
+								<span className="ptools__name">{t.tool}</span>
+								<span className="ptools__n">{t.avgReportedPercent === null ? `${t.records} rec.` : `${formatNumber(t.avgReportedPercent, 0)}%`}</span>
+							</li>
+						))}
+						{(ai.tools || []).length > 4 ? <li className="ptools__more">+{ai.tools.length - 4} more tools</li> : null}
+					</ul>
+				) : null}
+			</ActivityPanel>
+			<ActivityPanel icon="box" title="Product development" state={state} metric={product} empty="No items assigned">
+				{product ? (
+					<>
+						<Stat strong label="Items assigned" value={product.total} />
+						<p className="pact__chips">{Object.entries(product.byStatus || {}).map(([s, n]) => `${humanize(s)} ${n}`).join(' · ')}</p>
+						<p className="pact__chips">{types.map(([t, n]) => `${humanize(t)} ${n}`).join(' · ')}</p>
+					</>
+				) : null}
+			</ActivityPanel>
+			<ActivityPanel icon="folder" title="Projects contributed" state={state} metric={projects && projects.total ? projects : { completeness: 'insufficient_data' }} empty="No approved time on projects">
+				{projects ? (
+					<ul className="pprojects">
+						{(projects.items || []).map((p) => (
+							<li key={p.projectId}>
+								<span className="pprojects__name">{p.name || `Project ${p.projectId}`}</span>
+								<b>{hoursText(p.periodMinutes)}</b>
+							</li>
+						))}
+						{projects.total > (projects.items || []).length ? <li className="ptools__more">+{projects.total - (projects.items || []).length} more projects</li> : null}
+					</ul>
+				) : null}
+			</ActivityPanel>
+		</div>
+	);
+}
+
+/** One person: identity on the left, their activity for the deck period on the right. Fields that were not recorded read as a dash. */
 export function ProfileSlide({ slide, labelOf }) {
-	const { person: p, n, of, total } = slide;
+	const { person: p, n, of, total, activity } = slide;
 	const tenure = tenureText(p.joining_date);
 	return (
 		<SlideFrame kicker={`Profile ${n} of ${of}`} title={p.full_name} lead={p.job_role || 'Role not recorded'} className="pframe--profile">
@@ -149,14 +265,15 @@ export function ProfileSlide({ slide, labelOf }) {
 						{initials(p.full_name)}
 					</span>
 					{p.employment_status ? <Pill tone={statusTone(p.employment_status)}>{humanize(p.employment_status)}</Pill> : null}
+					<dl className="pprofile__facts">
+						<Fact label="Team" value={teamName(labelOf, p.primary_team_id)} />
+						<Fact label="Reports to" value={p.reports_to_employee_id ? labelOf('reports_to_employee_id', p.reports_to_employee_id) : null} />
+						<Fact label="Employee code" value={p.employee_code} />
+						<Fact label="Joined" value={p.joining_date ? formatDate(p.joining_date) : null} note={tenure ? `${tenure} (calculated)` : null} />
+					</dl>
 					<p className="pprofile__note">{total > of ? `One of the first ${of} of ${formatNumber(total)} people, in name order` : `${of} ${of === 1 ? 'person' : 'people'} in this selection`}</p>
 				</div>
-				<dl className="pprofile__facts">
-					<Fact label="Team" value={teamName(labelOf, p.primary_team_id)} />
-					<Fact label="Reports to" value={p.reports_to_employee_id ? labelOf('reports_to_employee_id', p.reports_to_employee_id) : null} />
-					<Fact label="Employee code" value={p.employee_code} />
-					<Fact label="Joined" value={p.joining_date ? formatDate(p.joining_date) : null} note={tenure ? `${tenure} (calculated)` : null} />
-				</dl>
+				<ProfileActivity activity={activity || { status: 'loading' }} />
 			</div>
 		</SlideFrame>
 	);

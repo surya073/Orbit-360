@@ -10,6 +10,7 @@ module.exports = {
 	product: async (ctx) => ok(await dashboard.product(ctx, ctx.input.query)),
 	aiUsage: async (ctx) => ok(await dashboard.aiUsage(ctx, ctx.input.query)),
 	freshness: async (ctx) => ok(await dashboard.freshness(ctx, ctx.input.query)),
+	peopleProfiles: async (ctx) => ok(await dashboard.peopleProfiles(ctx, ctx.input.query, ctx.input.query.employeeIds)),
 	createSnapshot: async (ctx) => ({ status: 201, body: ok(await dashboard.createSnapshot(ctx, ctx.input.body)) }),
 	listSnapshots: async (ctx) => {
 		const r = await dashboard.listSnapshots(ctx, ctx.input.query.paging);

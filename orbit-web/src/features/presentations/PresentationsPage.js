@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../app/providers/AuthProvider';
 import Button from '../../components/common/Button';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Icon from '../../components/common/Icon';
@@ -19,7 +20,7 @@ import ThemePreview from './ThemePreview';
 
 const FK = ['team_id'];
 
-export const presentUrl = ({ id, theme, people, records }) => `${ROUTES.present(id)}?theme=${theme}&people=${people ? 1 : 0}&records=${records ? 1 : 0}`;
+export const presentUrl = ({ id, theme, people, records, reporting }) => `${ROUTES.present(id)}?theme=${theme}&people=${people ? 1 : 0}&records=${records ? 1 : 0}&reporting=${reporting ? 1 : 0}`;
 
 /**
  * Executive presentation center: a studio-style landing page. Saved decks the caller may open
@@ -28,6 +29,7 @@ export const presentUrl = ({ id, theme, people, records }) => `${ROUTES.present(
  */
 export default function PresentationsPage() {
 	const { notify } = useToast();
+	const { can } = useAuth();
 	const navigate = useNavigate();
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = usePageSize('presentations');
@@ -57,9 +59,11 @@ export default function PresentationsPage() {
 						<Button variant="primary" icon="play" className="pc-play" onClick={() => first && setLaunch({ id: String(first.ROWID) })} disabled={!first} title={first ? undefined : 'Create a presentation first'}>
 							Play Presentation
 						</Button>
-						<Button icon="plus" to={ROUTES.presentationNew}>
-							New presentation
-						</Button>
+						{can('presentations.create') ? (
+							<Button icon="plus" to={ROUTES.presentationNew}>
+								New presentation
+							</Button>
+						) : null}
 					</div>
 					<ul className="pc-points">
 						<li>
@@ -89,9 +93,11 @@ export default function PresentationsPage() {
 						<div className="pc-empty">
 							<div className="state__title">No presentations yet</div>
 							<p>Pick the sections, reporting period and filters, then save the deck to present it again any time.</p>
-							<Button variant="primary" icon="plus" to={ROUTES.presentationNew}>
-								Create a presentation
-							</Button>
+							{can('presentations.create') ? (
+								<Button variant="primary" icon="plus" to={ROUTES.presentationNew}>
+									Create a presentation
+								</Button>
+							) : null}
 						</div>
 					) : (
 						<>
@@ -113,12 +119,16 @@ export default function PresentationsPage() {
 												<Button size="sm" variant="primary" icon="play" aria-label={`Present ${row.title}`} onClick={() => setLaunch({ id: String(row.ROWID) })}>
 													Present
 												</Button>
-												<Button size="sm" icon="edit" to={ROUTES.presentationEdit(row.ROWID)} aria-label={`Edit ${row.title}`}>
-													Edit
-												</Button>
-												<Button size="sm" variant="ghost" icon="trash" aria-label={`Delete ${row.title}`} onClick={() => setTarget(row)}>
-													Delete
-												</Button>
+												{can('presentations.edit') ? (
+													<Button size="sm" icon="edit" to={ROUTES.presentationEdit(row.ROWID)} aria-label={`Edit ${row.title}`}>
+														Edit
+													</Button>
+												) : null}
+												{can('presentations.delete') ? (
+													<Button size="sm" variant="ghost" icon="trash" aria-label={`Delete ${row.title}`} onClick={() => setTarget(row)}>
+														Delete
+													</Button>
+												) : null}
 											</div>
 										</div>
 									</li>

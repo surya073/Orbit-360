@@ -17,7 +17,7 @@ const groups = [
 	require('./productItems.routes'),
 	require('./imports.routes'),
 	require('./presentations.routes'),
-	require('./settings.routes'),
+	require('./access.routes'),
 	require('./reporting.routes'),
 ];
 

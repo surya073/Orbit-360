@@ -7,6 +7,7 @@ export const dashboardService = {
 	projects: (params, o) => api.get('/dashboard/projects', { ...o, params }),
 	product: (params, o) => api.get('/dashboard/product', { ...o, params }),
 	aiUsage: (params, o) => api.get('/dashboard/ai-usage', { ...o, params }),
+	peopleProfiles: (params, o) => api.get('/dashboard/people-profiles', { ...o, params }),
 	freshness: (params, o) => api.get('/dashboard/freshness', { ...o, params }),
 	createSnapshot: (filters) => api.post('/dashboard/snapshots', filters),
 	listSnapshots: (params, o) => api.get('/dashboard/snapshots', { ...o, params }),

@@ -4,9 +4,9 @@ import useOutsideClick from '../../hooks/useOutsideClick';
 /**
  * Trigger + floating panel. `trigger({ open, toggle, props })` renders the control; spread
  * `props` onto it for aria wiring. The panel closes on outside click, Escape, or when children
- * call `close()`. Arrow keys move between `.menu-item`s.
+ * call `close()`. `placement="up"` opens above the trigger (for controls at the bottom of the screen). Arrow keys move between `.menu-item`s.
  */
-export default function Popover({ trigger, children, align = 'right', label }) {
+export default function Popover({ trigger, children, align = 'right', label, placement = 'down' }) {
 	const [open, setOpen] = useState(false);
 	const ref = useRef(null);
 	const id = useId();
@@ -27,7 +27,7 @@ export default function Popover({ trigger, children, align = 'right', label }) {
 		<div className="popover-wrap" ref={ref} onKeyDown={onKeyDown}>
 			{trigger({ open, toggle: () => setOpen((o) => !o), props: { 'aria-haspopup': 'true', 'aria-expanded': open, 'aria-controls': open ? id : undefined } })}
 			{open ? (
-				<div id={id} className={`popover popover--${align}`} role="group" aria-label={label}>
+				<div id={id} className={`popover popover--${align}${placement === 'up' ? ' popover--up' : ''}`} role="group" aria-label={label}>
 					{typeof children === 'function' ? children({ close }) : children}
 				</div>
 			) : null}

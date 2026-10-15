@@ -5,11 +5,10 @@ import ResourcePage from '../resources/ResourcePage';
 export const teamsConfig = defineModule({
 	title: 'Teams',
 	singular: 'team',
-	description: 'Team structure. Managers see their own team; only administrators change teams.',
+	description: 'Team structure. Who can add or change teams is set under Access.',
 	resource: 'teams',
 	search: 'Search by team name',
 	writable: true,
-	adminWrite: true,
 	addLabel: 'Add team',
 	columns: [
 		{ key: 'name', label: 'Team' },

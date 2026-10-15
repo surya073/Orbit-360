@@ -7,6 +7,13 @@ import { MdOutlineAccessTime, MdOutlineAdd, MdOutlineAutoAwesome, MdOutlineCalen
 import { HiAdjustmentsHorizontal, HiArrowDownTray, HiArrowPath, HiArrowRightOnRectangle, HiArrowTopRightOnSquare, HiArrowTrendingUp, HiArrowUpTray, HiBars3, HiBell, HiCalendar, HiCheck, HiChevronDown, HiChevronLeft, HiChevronRight, HiClock, HiCube, HiExclamationTriangle, HiFolder, HiFunnel, HiInformationCircle, HiLockClosed, HiMagnifyingGlass, HiMoon, HiOutlineAdjustmentsHorizontal, HiOutlineArrowDownTray, HiOutlineArrowPath, HiOutlineArrowRightOnRectangle, HiOutlineArrowTopRightOnSquare, HiOutlineArrowTrendingUp, HiOutlineArrowUpTray, HiOutlineBars3, HiOutlineBell, HiOutlineCalendar, HiOutlineCheck, HiOutlineChevronDown, HiOutlineChevronLeft, HiOutlineChevronRight, HiOutlineClock, HiOutlineCube, HiOutlineExclamationTriangle, HiOutlineFolder, HiOutlineFunnel, HiOutlineInformationCircle, HiOutlineLockClosed, HiOutlineMagnifyingGlass, HiOutlineMoon, HiOutlinePencilSquare, HiOutlinePlay, HiOutlinePlus, HiOutlinePresentationChartBar, HiOutlineSparkles, HiOutlineSquares2X2, HiOutlineSun, HiOutlineSwatch, HiOutlineTrash, HiOutlineUser, HiOutlineUserGroup, HiOutlineUsers, HiOutlineXMark, HiPencilSquare, HiPlay, HiPlus, HiPresentationChartBar, HiSparkles, HiSquares2X2, HiSun, HiSwatch, HiTrash, HiUser, HiUserGroup, HiUsers, HiXMark } from 'react-icons/hi2';
 import { IoAddOutline, IoCalendarOutline, IoCheckmarkOutline, IoChevronBackOutline, IoChevronDownOutline, IoChevronForwardOutline, IoCloseOutline, IoCloudDownloadOutline, IoCloudUploadOutline, IoColorPaletteOutline, IoCreateOutline, IoCubeOutline, IoEaselOutline, IoFolderOutline, IoFunnelOutline, IoGridOutline, IoInformationCircleOutline, IoLockClosedOutline, IoLogOutOutline, IoMenuOutline, IoMoonOutline, IoNotificationsOutline, IoOpenOutline, IoOptionsOutline, IoPeopleCircleOutline, IoPeopleOutline, IoPersonOutline, IoPlayOutline, IoRefreshOutline, IoSearchOutline, IoSparklesOutline, IoSunnyOutline, IoTimeOutline, IoTrashOutline, IoTrendingUpOutline, IoWarningOutline } from 'react-icons/io5';
 
+// Spreadsheet toolbar icons (undo / redo / clipboard / fill colour)
+import { TbArrowBackUp, TbArrowForwardUp, TbCut, TbCopy, TbClipboard, TbBucketDroplet } from 'react-icons/tb';
+import { RiArrowGoBackLine, RiArrowGoForwardLine, RiScissorsLine, RiFileCopyLine, RiClipboardLine, RiPaintLine, RiArrowGoBackFill, RiArrowGoForwardFill, RiScissorsFill, RiFileCopyFill, RiClipboardFill, RiPaintFill } from 'react-icons/ri';
+import { MdOutlineUndo, MdOutlineRedo, MdOutlineContentCut, MdOutlineContentCopy, MdOutlineContentPaste, MdOutlineFormatColorFill } from 'react-icons/md';
+import { HiOutlineArrowUturnLeft, HiOutlineArrowUturnRight, HiOutlineScissors, HiOutlineDocumentDuplicate, HiOutlineClipboard, HiOutlinePaintBrush, HiArrowUturnLeft, HiArrowUturnRight, HiScissors, HiDocumentDuplicate, HiClipboard, HiPaintBrush } from 'react-icons/hi2';
+import { IoArrowUndoOutline, IoArrowRedoOutline, IoCutOutline, IoCopyOutline, IoClipboardOutline, IoColorFillOutline } from 'react-icons/io5';
+
 const tabler = {
 	dashboard: TbLayoutDashboard,
 	users: TbUsers,
@@ -44,6 +51,12 @@ const tabler = {
 	external: TbExternalLink,
 	refresh: TbRefresh,
 	lock: TbLock,
+	undo: TbArrowBackUp,
+	redo: TbArrowForwardUp,
+	cut: TbCut,
+	copy: TbCopy,
+	paste: TbClipboard,
+	fill: TbBucketDroplet,
 };
 
 const remix = {
@@ -83,6 +96,12 @@ const remix = {
 	external: RiExternalLinkLine,
 	refresh: RiRefreshLine,
 	lock: RiLockLine,
+	undo: RiArrowGoBackLine,
+	redo: RiArrowGoForwardLine,
+	cut: RiScissorsLine,
+	copy: RiFileCopyLine,
+	paste: RiClipboardLine,
+	fill: RiPaintLine,
 };
 
 const remix_fill = {
@@ -122,6 +141,12 @@ const remix_fill = {
 	external: RiExternalLinkFill,
 	refresh: RiRefreshFill,
 	lock: RiLockFill,
+	undo: RiArrowGoBackFill,
+	redo: RiArrowGoForwardFill,
+	cut: RiScissorsFill,
+	copy: RiFileCopyFill,
+	paste: RiClipboardFill,
+	fill: RiPaintFill,
 };
 
 const material = {
@@ -161,6 +186,12 @@ const material = {
 	external: MdOutlineOpenInNew,
 	refresh: MdOutlineRefresh,
 	lock: MdOutlineLock,
+	undo: MdOutlineUndo,
+	redo: MdOutlineRedo,
+	cut: MdOutlineContentCut,
+	copy: MdOutlineContentCopy,
+	paste: MdOutlineContentPaste,
+	fill: MdOutlineFormatColorFill,
 };
 
 const hero = {
@@ -200,6 +231,12 @@ const hero = {
 	external: HiOutlineArrowTopRightOnSquare,
 	refresh: HiOutlineArrowPath,
 	lock: HiOutlineLockClosed,
+	undo: HiOutlineArrowUturnLeft,
+	redo: HiOutlineArrowUturnRight,
+	cut: HiOutlineScissors,
+	copy: HiOutlineDocumentDuplicate,
+	paste: HiOutlineClipboard,
+	fill: HiOutlinePaintBrush,
 };
 
 const hero_solid = {
@@ -239,6 +276,12 @@ const hero_solid = {
 	external: HiArrowTopRightOnSquare,
 	refresh: HiArrowPath,
 	lock: HiLockClosed,
+	undo: HiArrowUturnLeft,
+	redo: HiArrowUturnRight,
+	cut: HiScissors,
+	copy: HiDocumentDuplicate,
+	paste: HiClipboard,
+	fill: HiPaintBrush,
 };
 
 const ionic = {
@@ -278,6 +321,12 @@ const ionic = {
 	external: IoOpenOutline,
 	refresh: IoRefreshOutline,
 	lock: IoLockClosedOutline,
+	undo: IoArrowUndoOutline,
+	redo: IoArrowRedoOutline,
+	cut: IoCutOutline,
+	copy: IoCopyOutline,
+	paste: IoClipboardOutline,
+	fill: IoColorFillOutline,
 };
 
 export const ICON_SETS = {

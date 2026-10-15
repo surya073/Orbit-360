@@ -14,7 +14,7 @@ const initials = (name = '') =>
 		.join('') || '?';
 
 export default function UserMenu() {
-	const { user, signOut } = useAuth();
+	const { user, can, signOut } = useAuth();
 	return (
 		<Popover
 			label="Account"
@@ -33,7 +33,7 @@ export default function UserMenu() {
 						<strong>{user.displayName}</strong>
 						{user.email}
 						<br />
-						{user.role === 'admin' ? 'Administrator · all teams' : 'Manager · assigned team'}
+						{user.roleName || (user.role === 'admin' ? 'Administrator' : 'Manager')} · {user.teamId ? 'assigned team' : 'all teams'}
 					</div>
 					<Link className="menu-item" to={`${ROUTES.settings}?tab=profile`} onClick={close}>
 						<Icon name="user" size={15} />
@@ -47,6 +47,12 @@ export default function UserMenu() {
 						<Icon name="settings" size={15} />
 						Settings
 					</Link>
+					{can('access.view') ? (
+						<Link className="menu-item" to={ROUTES.access} onClick={close}>
+							<Icon name="lock" size={15} />
+							Access &amp; Permissions
+						</Link>
+					) : null}
 					<div className="menu-sep" />
 					<button type="button" className="menu-item" onClick={signOut}>
 						<Icon name="logout" size={15} />

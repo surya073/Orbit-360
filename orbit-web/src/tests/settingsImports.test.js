@@ -45,32 +45,6 @@ describe('settings', () => {
 		expect(await screen.findByText('Delivery')).toBeInTheDocument();
 		expect(screen.getByRole('tab', { name: 'Profile' })).toHaveAttribute('aria-selected', 'true');
 	});
-
-	test('application settings are read-only for managers', async () => {
-		mockFetch([[/^GET \/settings/, okBody([{ ROWID: '1', setting_key: 'late.grace', scope: 'global', setting_value: '15', value_type: 'number' }])]]);
-		renderWithProviders(<SettingsPage />, { route: '/settings?tab=application' });
-		expect(await screen.findByText('late.grace')).toBeInTheDocument();
-		expect(screen.getByText(/Read-only/)).toBeInTheDocument();
-		expect(screen.queryByRole('button', { name: 'Save setting' })).not.toBeInTheDocument();
-	});
-
-	test('admins can save a setting; server validation errors show beside the field', async () => {
-		mockFetch([
-			[/^GET \/settings/, okBody([])],
-			[/^PUT \/settings/, (l, init) => (JSON.parse(init.body).setting_key === 'Bad Key' ? { status: 422, body: errBody(422, 'VALIDATION_FAILED', 'Input failed validation', [{ field: 'setting_key', code: 'INVALID_VALUE', message: 'Use lowercase letters, digits, "." and "_"' }]) } : okBody({ ROWID: '2' }))],
-		]);
-		renderWithProviders(<SettingsPage />, { route: '/settings?tab=application', user: admin });
-		const key = await screen.findByLabelText(/Key/);
-		await userEvent.type(key, 'Bad Key');
-		await userEvent.click(screen.getByRole('button', { name: 'Save setting' }));
-		expect(await screen.findByText(/Use lowercase letters/)).toBeInTheDocument();
-		await userEvent.clear(key);
-		await userEvent.type(key, 'late.grace');
-		await userEvent.click(screen.getByRole('button', { name: 'Save setting' }));
-		await waitFor(() => expect(global.fetch.calls.filter((c) => c.line === 'PUT /settings')).toHaveLength(2));
-		expect(JSON.parse(global.fetch.calls.filter((c) => c.line === 'PUT /settings')[1].init.body)).toEqual({ scope: 'global', setting_key: 'late.grace', value_type: 'string' });
-		expect(await screen.findByText('Setting saved')).toBeInTheDocument();
-	});
 });
 
 describe('import flow', () => {

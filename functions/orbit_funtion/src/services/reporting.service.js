@@ -2,6 +2,7 @@
 
 const { errors } = require('../utils/errors');
 const { audit } = require('./audit.service');
+const { requirePermission } = require('../middleware/authorization');
 
 const KEY_PREFIX = 'orgtree.';
 
@@ -39,6 +40,7 @@ const publicEmployee = (e, teamName) => ({
 
 /** Saved tree + the team's real roster, in two reads plus the team name. Stale nodes (deleted/moved employees) are dropped. */
 async function get(ctx, requestedTeam) {
+	requirePermission(ctx, 'reporting.view', 'employees.view');
 	const teamId = resolveTeam(ctx, requestedTeam);
 	const repo = ctx.repos.reporting;
 	const team = await repo.team(ctx.scope, teamId);
@@ -58,6 +60,7 @@ async function get(ctx, requestedTeam) {
 }
 
 async function save(ctx, input) {
+	requirePermission(ctx, 'reporting.edit', 'employees.view');
 	const teamId = resolveTeam(ctx, input.teamId);
 	const repo = ctx.repos.reporting;
 	const roster = await repo.roster(ctx.scope, teamId);

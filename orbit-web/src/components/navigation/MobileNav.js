@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../../app/providers/AuthProvider';
 import { visibleNav } from '../../config/navigation';
 import { ROUTES } from '../../config/routes';
 import { IconButton } from '../common/Button';
@@ -8,8 +9,9 @@ import Icon from '../common/Icon';
 import Logo from '../common/Logo';
 
 /** Slide-in navigation for narrow screens. Closes on navigation, Escape, or backdrop press. */
-export default function MobileNav({ role, onClose }) {
+export default function MobileNav({ onClose }) {
 	const { pathname } = useLocation();
+	const { can } = useAuth();
 	const first = useRef(pathname);
 	const ref = useRef(null);
 
@@ -39,7 +41,7 @@ export default function MobileNav({ role, onClose }) {
 					<IconButton icon="x" label="Close navigation" onClick={onClose} />
 				</div>
 				<nav aria-label="Mobile">
-					{visibleNav(role).map((item) =>
+					{visibleNav(can).map((item) =>
 						item.type === 'link' ? (
 							link(item.to, item.label, item.icon, item.end)
 						) : (

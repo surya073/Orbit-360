@@ -17,6 +17,17 @@ function lit(type, value) {
  * WHERE clause for a resource listing. Team scope is applied here, inside the repository
  * layer, from a required Scope. `input` is the output of listQuery() validation.
  */
+/**
+ * `col LIKE '%term%'` that does not depend on the data store's case rules: the (already sanitised)
+ * term is matched as typed, lower case, UPPER case and Title Case, so "asha" finds "Asha Rao".
+ * Returns a flat list of conditions to be OR-ed by the caller (no nested brackets).
+ */
+function likeVariants(col, term) {
+	const title = term.toLowerCase().replace(/(^|[ \-_.@])([a-z])/g, (m, sep, ch) => sep + ch.toUpperCase());
+	const variants = [...new Set([term, term.toLowerCase(), term.toUpperCase(), title])];
+	return variants.map((v) => `${col} LIKE '%${v}%'`);
+}
+
 function buildWhere(resource, input, scope, refIds = {}) {
 	assertScope(scope);
 	const c = [];
@@ -41,7 +52,7 @@ function buildWhere(resource, input, scope, refIds = {}) {
 		// Own text column OR a reference (e.g. employee_id) whose parent record's name matches.
 		// refIds come from a bounded parent lookup done by the repository; q is already sanitised.
 		const parts = [];
-		if (resource.search) parts.push(`${resource.search} LIKE '%${input.q}%'`);
+		if (resource.search) parts.push(...likeVariants(resource.search, input.q));
 		for (const ref of resource.searchRefs || []) {
 			const ids = refIds[ref.fk] || [];
 			if (ids.length) parts.push(`${ref.fk} IN (${ids.map((i) => lit('id', i)).join(', ')})`);
@@ -71,4 +82,4 @@ function buildListQueries(resource, input, scope, refIds) {
 	};
 }
 
-module.exports = { buildListQueries, buildWhere, lit };
+module.exports = { buildListQueries, buildWhere, likeVariants, lit };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { sanitizeCell, sanitizeStore } from './sheetFormat';
 
 const storageKey = (resource) => `company360.sheetFormat.${resource}`;
@@ -43,37 +43,47 @@ export default function useSheetFormat(resource) {
 		persist(resource, formats);
 	}, [resource, formats]);
 
-	/** patch: { b: true } sets, { b: null } removes. cells: [{ key, field }] */
-	const apply = useCallback((cells, patch) => {
-		setFormats((prev) => {
-			const next = { ...prev };
-			for (const { key, field } of cells) {
-				const row = { ...(next[key] || {}) };
-				const merged = { ...(row[field] || {}), ...patch };
-				for (const k of Object.keys(merged)) if (merged[k] === null || merged[k] === undefined || merged[k] === false || merged[k] === '') delete merged[k];
-				const clean = key.startsWith('r:') ? sanitizeCell(merged) : merged; // saved records are validated; transient rows are in-memory only
-				if (clean && Object.keys(clean).length) row[field] = clean;
-				else delete row[field];
-				if (Object.keys(row).length) next[key] = row;
-				else delete next[key];
-			}
-			return next;
-		});
-	}, []);
+	// Writes { key, field, cell } entries (cell null = no formatting) into a copy of the store.
+	const writeCells = (prev, entries) => {
+		const next = { ...prev };
+		for (const { key, field, cell } of entries) {
+			const row = { ...(next[key] || {}) };
+			if (cell && Object.keys(cell).length) row[field] = cell;
+			else delete row[field];
+			if (Object.keys(row).length) next[key] = row;
+			else delete next[key];
+		}
+		return next;
+	};
+	const cellOf = (key, field) => (formats[key] || {})[field] || null;
+	const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
 
-	const clear = useCallback((cells) => {
-		setFormats((prev) => {
-			const next = { ...prev };
-			for (const { key, field } of cells) {
-				if (!next[key]) continue;
-				const row = { ...next[key] };
-				delete row[field];
-				if (Object.keys(row).length) next[key] = row;
-				else delete next[key];
-			}
-			return next;
-		});
-	}, []);
+	/**
+	 * patch: { b: true } sets, { b: null } removes. cells: [{ key, field }].
+	 * Returns what actually changed ([{ key, field, before, after }]) so the caller can record it for undo.
+	 */
+	const apply = (cells, patch) => {
+		const changes = [];
+		for (const { key, field } of cells) {
+			const before = cellOf(key, field);
+			const merged = { ...(before || {}), ...patch };
+			for (const k of Object.keys(merged)) if (merged[k] === null || merged[k] === undefined || merged[k] === false || merged[k] === '') delete merged[k];
+			const clean = key.startsWith('r:') ? sanitizeCell(merged) : merged; // saved records are validated; transient rows are in-memory only
+			const after = clean && Object.keys(clean).length ? clean : null;
+			if (!same(before, after)) changes.push({ key, field, before, after });
+		}
+		if (changes.length) setFormats((prev) => writeCells(prev, changes.map((c) => ({ key: c.key, field: c.field, cell: c.after }))));
+		return changes;
+	};
 
-	return { formats, apply, clear };
+	const clear = (cells) => {
+		const changes = cells.map(({ key, field }) => ({ key, field, before: cellOf(key, field), after: null })).filter((c) => c.before);
+		if (changes.length) setFormats((prev) => writeCells(prev, changes.map((c) => ({ key: c.key, field: c.field, cell: null }))));
+		return changes;
+	};
+
+	/** Re-applies or reverts recorded changes (undo / redo). */
+	const restore = (changes, direction) => setFormats((prev) => writeCells(prev, changes.map((c) => ({ key: c.key, field: c.field, cell: direction === 'undo' ? c.before : c.after }))));
+
+	return { formats, apply, clear, restore };
 }

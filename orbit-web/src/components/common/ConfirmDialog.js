@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import Button from './Button';
 import Modal from './Modal';
 
-/** Confirmation for destructive actions. `onConfirm` may be async; errors are shown inline. */
-export default function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onCancel }) {
+/** Confirmation for destructive or sensitive actions (`confirmVariant` 'primary' for ones that are not destructive). `onConfirm` may be async; errors are shown inline. */
+export default function ConfirmDialog({ title, message, confirmLabel = 'Delete', confirmVariant = 'danger', onConfirm, onCancel }) {
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState(null);
 	const run = async () => {
@@ -26,7 +26,7 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Delete',
 					<Button onClick={onCancel} disabled={busy} data-autofocus>
 						Cancel
 					</Button>
-					<Button variant="danger" loading={busy} onClick={run}>
+					<Button variant={confirmVariant} loading={busy} onClick={run}>
 						{confirmLabel}
 					</Button>
 				</>

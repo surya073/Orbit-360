@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import Button from '../../components/common/Button';
 import Popover from '../../components/common/Popover';
-import { ALIGNS, FILL_COLORS, FONT_SIZES, TEXT_COLORS, ZOOM_STEPS, safeUrl } from './sheetFormat';
+import Icon from '../../components/common/Icon';
+import { ALIGNS, FILL_COLORS, FONT_SIZES, TEXT_COLORS, ZOOM_STEPS, isHexColor, resolveFill, resolveText, safeUrl } from './sheetFormat';
 import { MOD } from './SheetToolbar';
 
 function Swatches({ label, colors, current, onPick, onClear, close }) {
+	// The native colour picker covers any colour; the theme palette above stays one click away.
+	const custom = isHexColor(current) ? current : '#4f46e5';
 	return (
 		<div className="sheet-palette" role="group" aria-label={label}>
 			<div className="sheet-palette__grid">
@@ -24,6 +27,11 @@ function Swatches({ label, colors, current, onPick, onClear, close }) {
 					/>
 				))}
 			</div>
+			<label className="sheet-palette__custom">
+				<input type="color" value={custom} aria-label={`${label}: custom colour`} onChange={(e) => onPick(e.target.value.toLowerCase())} />
+				<span>Custom colour…</span>
+				{isHexColor(current) ? <code>{current}</code> : null}
+			</label>
 			<Button
 				size="sm"
 				variant="ghost"
@@ -136,7 +144,7 @@ export default function SheetFormatBar({ fmt, hasSelection, onSet, onToggle, onC
 					align="left"
 					trigger={({ toggle, props }) => (
 						<Button size="sm" variant="ghost" disabled={!hasSelection} onClick={toggle} aria-label="Text colour" title="Text colour" {...props}>
-							<span className="sheet-format__glyph" style={{ borderBottomColor: (TEXT_COLORS.find((c) => c.id === (fmt && fmt.color)) || {}).css || 'var(--text)' }}>
+							<span className="sheet-format__glyph" style={{ borderBottomColor: (fmt && fmt.color && resolveText(fmt.color) ? resolveText(fmt.color).css : 'var(--text)') }}>
 								A
 							</span>
 						</Button>
@@ -149,8 +157,8 @@ export default function SheetFormatBar({ fmt, hasSelection, onSet, onToggle, onC
 					align="left"
 					trigger={({ toggle, props }) => (
 						<Button size="sm" variant="ghost" disabled={!hasSelection} onClick={toggle} aria-label="Fill colour" title="Fill colour" {...props}>
-							Fill
-							<span className="sheet-format__dot" style={{ background: (FILL_COLORS.find((c) => c.id === (fmt && fmt.fill)) || {}).css || 'transparent' }} aria-hidden="true" />
+							<Icon name="fill" size={16} />
+							<span className="sheet-format__bar" style={{ background: (fmt && fmt.fill && resolveFill(fmt.fill) ? resolveFill(fmt.fill).css : 'transparent') }} aria-hidden="true" />
 						</Button>
 					)}
 				>

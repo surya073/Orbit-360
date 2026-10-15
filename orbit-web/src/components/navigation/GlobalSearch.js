@@ -50,7 +50,7 @@ export default function GlobalSearch() {
 }
 
 function Palette({ onClose }) {
-	const { user } = useAuth();
+	const { can } = useAuth();
 	const navigate = useNavigate();
 	const [q, setQ] = useState('');
 	const [index, setIndex] = useState(0);
@@ -58,14 +58,14 @@ function Palette({ onClose }) {
 	const term = dq.trim();
 	const active = term.length >= SEARCH_MIN_CHARS && q.trim() === term;
 
-	const res = useApiResource((signal) => searchAll(term, signal).then((data) => ({ data })), `search|${term}`, { enabled: active, isEmpty: () => false });
+	const res = useApiResource((signal) => searchAll(term, signal, can).then((data) => ({ data })), `search|${term}`, { enabled: active, isEmpty: () => false });
 	const groups = useMemo(() => (active && res.data ? res.data : []), [active, res.data]);
 
 	const pages = useMemo(() => {
 		const needle = q.trim().toLowerCase();
-		const all = flatDestinations(user.role);
+		const all = flatDestinations(can);
 		return (needle ? all.filter((d) => d.label.toLowerCase().includes(needle)) : all).slice(0, needle ? 6 : 12);
-	}, [q, user.role]);
+	}, [q, can]);
 
 	const options = useMemo(
 		() => [

@@ -100,3 +100,50 @@ test('presentations v2: sections, period and filters; team rules enforced by the
 	assert.equal(after.config.period.preset, 'this_quarter');
 	assert.equal(after.slides.length, 2);
 });
+
+test('people profiles: per-person time, late check-ins, leave, AI, product and projects; scoped and bounded', async () => {
+	const w = buildWorld();
+	const [a, b] = w.e;
+	const ins = (table, row) => w.store.insert(table, { is_deleted: 'false', dedupe_key: `k${Math.random()}`, ...row });
+	ins('time_entries', timeEntry(w, { employee_id: a.ROWID, duration_minutes: 300 }));
+	ins('time_entries', timeEntry(w, { employee_id: a.ROWID, duration_minutes: 120, is_billable: 'false', project_id: w.p[1].ROWID }));
+	ins('time_entries', timeEntry(w, { employee_id: a.ROWID, duration_minutes: 90, approval_status: 'pending' }));
+	ins('time_entries', timeEntry(w, { employee_id: b.ROWID, duration_minutes: 60 }));
+	ins('attendance_records', { employee_id: a.ROWID, team_id: w.t1.ROWID, attendance_date: '2026-10-05', late_status: 'yes' });
+	ins('attendance_records', { employee_id: a.ROWID, team_id: w.t1.ROWID, attendance_date: '2026-10-06', late_status: 'no' });
+	ins('leave_records', { employee_id: a.ROWID, team_id: w.t1.ROWID, leave_type: 'casual', start_date: '2026-10-08', end_date: '2026-10-09', units: 2, unit_type: 'days', status: 'approved' });
+	ins('ai_usage_records', { employee_id: a.ROWID, team_id: w.t1.ROWID, tool_name: 'Claude', tool_category: 'ai', reporting_period: '2026-10', usage_percent_reported: 40 });
+	ins('product_items', { item_type: 'bug', title: 'x', team_id: w.t1.ROWID, status: 'open', assignee_employee_id: a.ROWID });
+	ins('product_items', { item_type: 'feature', title: 'y', team_id: w.t1.ROWID, status: 'done', assignee_employee_id: a.ROWID });
+	const url = `/dashboard/people-profiles?from=2026-10-01&to=2026-10-31&employee_ids=${a.ROWID},${b.ROWID}`;
+	const r = await w.api(w.ids.mgr1, 'GET', url);
+	assert.equal(r.status, 200);
+	const pa = r.body.data.people[a.ROWID];
+	assert.equal(pa.time.billableMinutes, 300);
+	assert.equal(pa.time.nonBillableMinutes, 120);
+	assert.equal(pa.time.completeness, 'partial'); // one pending entry is excluded and reported
+	assert.equal(pa.attendance.lateCount, 1);
+	assert.equal(pa.leave.approvedDays, 2);
+	assert.deepEqual(pa.ai.tools.map((t) => t.tool), ['Claude']);
+	assert.deepEqual(pa.product.byStatus, { open: 1, done: 1 });
+	assert.deepEqual(pa.projects.items.map((p) => [p.name, p.periodMinutes]), [['Alpha', 300], ['Beta', 120]]);
+	// a person with only time entries: the other metrics are insufficient_data, never 0
+	const pb = r.body.data.people[b.ROWID];
+	assert.equal(pb.time.billableMinutes, 60);
+	assert.equal(pb.attendance.completeness, 'insufficient_data');
+	assert.equal(pb.leave.approvedDays, null);
+	// a manager never sees another team's people; unknown ids read as empty
+	const other = await w.api(w.ids.mgr2, 'GET', url);
+	assert.equal(other.body.data.people[a.ROWID].time.completeness, 'insufficient_data');
+	assert.equal(other.body.data.people[a.ROWID].projects.total, 0);
+	assert.equal((await w.api(w.ids.mgr1, 'GET', '/dashboard/people-profiles')).status, 400);
+	assert.equal((await w.api(w.ids.mgr1, 'GET', `/dashboard/people-profiles?employee_ids=${Array.from({ length: 13 }, (_, i) => 1001 + i).join(',')}`)).status, 400);
+	assert.equal((await w.api(w.ids.mgr1, 'GET', '/dashboard/people-profiles?employee_ids=1001;drop')).status, 400);
+});
+
+test('search terms match regardless of the data store case rules (typed, lower, upper and Title case)', () => {
+	const { likeVariants } = require('../repositories/queryBuilder');
+	assert.deepEqual(likeVariants('full_name', 'asha rao'), ["full_name LIKE '%asha rao%'", "full_name LIKE '%ASHA RAO%'", "full_name LIKE '%Asha Rao%'"]);
+	assert.deepEqual(likeVariants('tool_name', 'GitHub'), ["tool_name LIKE '%GitHub%'", "tool_name LIKE '%github%'", "tool_name LIKE '%GITHUB%'", "tool_name LIKE '%Github%'"]);
+	assert.equal(likeVariants('x', '42').length, 1);
+});

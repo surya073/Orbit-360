@@ -1,5 +1,6 @@
 import { SEARCH_RESULTS_PER_GROUP } from '../config/constants';
 import { ROUTES } from '../config/routes';
+import { keyOf, moduleOfResource } from '../config/permissions';
 import { resourceService } from './resourceService';
 
 // Searchable sources = list endpoints that support a text `q` filter. The backend applies
@@ -15,10 +16,12 @@ export const SEARCH_SOURCES = [
  * Runs one request per source in parallel. A failing source is reported as `error` for that
  * group only, so one outage never hides the others. Resolves to [{ source, items, error }].
  */
-export async function searchAll(q, signal) {
-	const settled = await Promise.allSettled(SEARCH_SOURCES.map((s) => resourceService.list(s.resource, { q, pageSize: SEARCH_RESULTS_PER_GROUP }, { signal })));
+export async function searchAll(q, signal, can = () => true) {
+	// Only sources the user may view are queried (the backend would refuse the rest anyway).
+	const sources = SEARCH_SOURCES.filter((s) => can(keyOf(moduleOfResource(s.resource), 'view')));
+	const settled = await Promise.allSettled(sources.map((s) => resourceService.list(s.resource, { q, pageSize: SEARCH_RESULTS_PER_GROUP }, { signal })));
 	if (signal && signal.aborted) throw new DOMException('Aborted', 'AbortError');
-	return SEARCH_SOURCES.map((source, i) => {
+	return sources.map((source, i) => {
 		const r = settled[i];
 		if (r.status === 'fulfilled') return { source, items: r.value.data.map((row) => ({ id: row.ROWID, title: source.title(row), detail: source.detail(row) })), error: null };
 		return { source, items: [], error: r.reason };

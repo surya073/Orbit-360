@@ -7,6 +7,7 @@ const { environment } = require('../config/environment');
 const m = require('./metrics.service');
 const { audit } = require('./audit.service');
 
+const PROFILE_PROJECTS = 5; // projects listed per person
 const PROJECT_FILTER_REASON = 'Not available when filtering by project';
 
 /**
@@ -138,6 +139,72 @@ async function aiUsage(ctx, f) {
 	return { filters: echoFilters(ctx, f), usage: m.aiUsageMetrics(rows, missingPeriod, { truncated: rows.length >= 300 }) };
 }
 
+const byEmployee = (rows, key = 'employee_id') => {
+	const map = new Map();
+	for (const r of rows) {
+		const id = String(r[key]);
+		if (!map.has(id)) map.set(id, []);
+		map.get(id).push(r);
+	}
+	return map;
+};
+
+/**
+ * Everything the presentation's individual profile slides show, for up to PROFILE_MAX people in
+ * one call: approved billable/non-billable time, attendance (late check-ins), leave, reported AI
+ * usage, assigned product items and the projects they logged time on. Eight grouped queries plus
+ * one project-name lookup regardless of how many people; every figure reuses the shared metric
+ * rules, so a person with no records reads insufficient_data (never 0).
+ */
+async function peopleProfiles(ctx, f, ids) {
+	const { scope, repos } = ctx;
+	const d = repos.dashboard;
+	scope.resolveTeam(f.teamId); // 403 for a manager asking for another team
+	const [time, pending, projectRows, att, leave, leaveMissing, ai, product] = await Promise.all([
+		d.peopleTime(scope, f, ids),
+		d.peopleTimePending(scope, f, ids),
+		d.peopleProjects(scope, f, ids),
+		d.peopleAttendance(scope, f, ids),
+		d.peopleLeave(scope, f, ids),
+		d.peopleLeaveMissing(scope, f, ids),
+		d.peopleAi(scope, f, ids),
+		d.peopleProduct(scope, f, ids),
+	]);
+	const g = { time: byEmployee(time), pending: byEmployee(pending), projects: byEmployee(projectRows), att: byEmployee(att), leave: byEmployee(leave), missing: byEmployee(leaveMissing), ai: byEmployee(ai), product: byEmployee(product, 'assignee_employee_id') };
+
+	const topProjects = new Map();
+	for (const id of ids) {
+		const list = (g.projects.get(id) || [])
+			.map((r) => ({ projectId: String(r.project_id), minutes: m.toNum(r.minutes) ?? 0, entries: m.toNum(r.entries) ?? 0 }))
+			.sort((a, b) => b.minutes - a.minutes);
+		topProjects.set(id, { all: list.length, top: list.slice(0, PROFILE_PROJECTS) });
+	}
+	const projectIds = [...new Set([...topProjects.values()].flatMap((p) => p.top.map((t) => t.projectId)))].slice(0, 50);
+	const info = new Map((await d.projectInfo(scope, projectIds)).map((p) => [String(p.ROWID), p]));
+
+	const people = {};
+	for (const id of ids) {
+		const pendingRows = g.pending.get(id) || [];
+		const missing = (g.missing.get(id) || [])[0];
+		const tp = topProjects.get(id);
+		people[id] = {
+			time: m.timeMetrics(g.time.get(id) || [], pendingRows.length ? [{ approval_status: 'pending', entries: pendingRows[0].entries }] : []),
+			attendance: m.attendanceMetrics(g.att.get(id) || []),
+			leave: m.leaveMetrics(g.leave.get(id) || [], missing ? m.toNum(missing.total) ?? 0 : 0),
+			ai: m.aiUsageMetrics(g.ai.get(id) || [], 0),
+			product: m.productMetrics(g.product.get(id) || [], null),
+			projects: {
+				total: tp.all,
+				items: tp.top.map((t) => {
+					const p = info.get(t.projectId);
+					return { projectId: t.projectId, name: p ? p.project_name : null, status: p ? p.current_status || null : null, periodMinutes: t.minutes, entries: t.entries };
+				}),
+			},
+		};
+	}
+	return { filters: echoFilters(ctx, f), people, truncated: [time, projectRows, att, leave, ai, product].some((r) => r.length >= 300) };
+}
+
 /** Newest business date per source so users can judge how current the numbers are. */
 async function freshness(ctx, f) {
 	const [time, attendance, imported] = await ctx.repos.dashboard.freshness(ctx.scope, f);
@@ -149,4 +216,4 @@ async function freshness(ctx, f) {
 	};
 }
 
-module.exports = { overview, trends, createSnapshot, getSnapshot, listSnapshots, projects, product, aiUsage, freshness };
+module.exports = { overview, trends, createSnapshot, getSnapshot, listSnapshots, projects, product, aiUsage, freshness, peopleProfiles };

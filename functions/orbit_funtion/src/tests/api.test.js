@@ -187,7 +187,7 @@ test('trends: bounded range, grouped queries only, gaps are not zeros', async ()
 	assert.equal(r.status, 200);
 	assert.deepEqual(r.body.data.time.map((p) => p.start), ['2026-10-05', '2026-10-19']);
 	assert.equal(r.body.data.truncated, false);
-	const used = w.store.queries.slice(before).filter((s) => !s.startsWith('SELECT ROWID, catalyst_user_id'));
+	const used = w.store.queries.slice(before).filter((s) => !s.startsWith('SELECT ROWID, catalyst_user_id') && !/FROM (user_roles|roles|role_permissions)/.test(s));
 	assert.equal(used.length, 3); // time, pending, attendance - regardless of table size
 	assert.ok(used.every((s) => /GROUP BY/.test(s) && /work_date >= '2026-10-01'|attendance_date >= '2026-10-01'/.test(s)));
 	assert.equal((await w.api(w.ids.mgr1, 'GET', '/dashboard/trends?from=2026-01-01&to=2026-12-31')).status, 400);
@@ -222,15 +222,6 @@ test('presentations: managers see their team\'s; admins see all including team-l
 	assert.equal((await w.api(w.ids.mgr1, 'DELETE', `/presentations/${b}`)).status, 404);
 	assert.equal((await w.api(w.ids.mgr1, 'GET', `/presentations/${a}`)).body.data.slides[0].title, 'Q3');
 	assert.equal((await w.api(w.ids.mgr1, 'POST', '/presentations', { title: 'bad', slides: [{ type: 'snapshot' }] })).status, 422);
-});
-
-test('settings: everyone can read, only admins can write', async () => {
-	const w = buildWorld();
-	assert.equal((await w.api(w.ids.mgr1, 'PUT', '/settings', { setting_key: 'a.b', scope: 'global', setting_value: '1' })).status, 403);
-	assert.equal((await w.api(w.ids.admin, 'PUT', '/settings', { setting_key: 'Bad Key', scope: 'global' })).status, 422);
-	assert.equal((await w.api(w.ids.admin, 'PUT', '/settings', { setting_key: 'a.b', scope: 'global', setting_value: '1' })).status, 200);
-	assert.equal((await w.api(w.ids.admin, 'PUT', '/settings', { setting_key: 'a.b', scope: 'global', setting_value: '2' })).status, 200);
-	assert.equal(w.store.rows('application_settings').length, 1); // upsert, not duplicate
 });
 
 // ---- runtime safeguards ------------------------------------------------------------------

@@ -38,7 +38,7 @@ const playerRoutes = (d = deck()) => [[/^GET \/presentations\/5$/, okBody(d)], [
 describe('presentation player', () => {
 	test('full-screen deck: slides render live data, keyboard navigates, Esc exits', async () => {
 		mockFetch(playerRoutes());
-		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
+		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present?reporting=0' });
 		const dialog = await screen.findByRole('dialog', { name: 'Presentation: Board review' });
 		expect(await within(dialog).findByRole('heading', { name: 'Board review' })).toBeInTheDocument(); // generated opening slide
 		expect(within(dialog).getByText('Slide 1 of 5')).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('presentation player', () => {
 
 	test('shows the period, data freshness and completeness on the slide', async () => {
 		mockFetch(playerRoutes());
-		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
+		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present?reporting=0' });
 		await screen.findByRole('heading', { name: 'Board review' });
 		await userEvent.keyboard('{ArrowRight}');
 		expect(await screen.findByText('This month')).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('presentation player', () => {
 
 	test('fetches only what the deck needs and records that it was presented once', async () => {
 		mockFetch(playerRoutes(deck({ config: { v: 2, period: { preset: 'last_month' }, filters: { teamId: '7', projectId: null }, slides: [{ type: 'section', section: 'ai_usage' }] }, slides: [{ type: 'section', section: 'ai_usage' }] })));
-		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
+		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present?reporting=0' });
 		await screen.findByRole('heading', { name: 'Board review' });
 		await userEvent.keyboard('{ArrowRight}');
 		expect(await screen.findByRole('heading', { name: 'AI usage' })).toBeInTheDocument();
@@ -89,7 +89,7 @@ describe('presentation player', () => {
 	test('the saved team/project filters scope an admin\'s data; managers never send a team', async () => {
 		const scoped = deck({ config: { v: 2, period: { preset: 'this_month' }, filters: { teamId: '7', projectId: '3' }, slides: [{ type: 'section', section: 'billable_hours' }] }, slides: [{ type: 'section', section: 'billable_hours' }] });
 		mockFetch(playerRoutes(scoped));
-		const { unmount } = renderWithProviders(<PlayerRoutes />, { user: admin, route: '/presentations/5/present' });
+		const { unmount } = renderWithProviders(<PlayerRoutes />, { user: admin, route: '/presentations/5/present?reporting=0' });
 		await screen.findByRole('heading', { name: 'Board review' });
 		await userEvent.keyboard('{ArrowRight}');
 		await screen.findByRole('heading', { name: 'Billable hours' });
@@ -100,7 +100,7 @@ describe('presentation player', () => {
 		unmount();
 
 		mockFetch(playerRoutes(scoped));
-		renderWithProviders(<PlayerRoutes />, { user: manager, route: '/presentations/5/present' });
+		renderWithProviders(<PlayerRoutes />, { user: manager, route: '/presentations/5/present?reporting=0' });
 		await screen.findByRole('heading', { name: 'Board review' });
 		await userEvent.keyboard('{ArrowRight}');
 		await screen.findByRole('heading', { name: 'Billable hours' });
@@ -110,7 +110,7 @@ describe('presentation player', () => {
 
 	test('a deck the viewer cannot open shows the backend refusal, with an exit', async () => {
 		mockFetch([[/^GET \/presentations\/5$/, { status: 404, body: errBody(404, 'NOT_FOUND', 'Not found') }]]);
-		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
+		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present?reporting=0' });
 		expect(await screen.findByRole('alert')).toBeInTheDocument();
 		await userEvent.click(screen.getByRole('button', { name: 'Exit' }));
 		expect(await screen.findByText('Presentation list page')).toBeInTheDocument();
@@ -118,11 +118,11 @@ describe('presentation player', () => {
 
 	test('a deck with no slides says so; an unreadable deck is reported', async () => {
 		mockFetch(playerRoutes(deck({ slides: [], config: { v: 2, period: { preset: 'this_month' }, filters: {}, slides: [] } })));
-		const { unmount } = renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
+		const { unmount } = renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present?reporting=0' });
 		expect(await screen.findByText('This presentation has no slides.')).toBeInTheDocument();
 		unmount();
 		mockFetch(playerRoutes(deck({ slidesAvailable: false, config: null, slides: null })));
-		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
+		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present?reporting=0' });
 		expect(await screen.findByText('This presentation could not be read.')).toBeInTheDocument();
 	});
 });

@@ -7,14 +7,14 @@ import { resourceService } from '../../services/resourceService';
 
 /** Read-only view of the verified account as the backend sees it (identity comes from Catalyst). */
 export default function ProfilePanel() {
-	const { user } = useAuth();
-	const teams = useApiResource((signal) => resourceService.list('teams', { pageSize: 100 }, { signal }), 'profile-team', { enabled: user.role !== 'admin', isEmpty: () => false });
-	const team = user.role === 'admin' ? 'All teams' : (teams.data || []).find((t) => String(t.ROWID) === String(user.teamId));
+	const { user, can } = useAuth();
+	const teams = useApiResource((signal) => resourceService.list('teams', { pageSize: 100 }, { signal }), 'profile-team', { enabled: Boolean(user.teamId) && can('teams.view'), isEmpty: () => false });
+	const team = !user.teamId ? 'All teams' : (teams.data || []).find((t) => String(t.ROWID) === String(user.teamId));
 	const rows = [
 		['Name', user.displayName],
 		['Email', user.email],
-		['Role', user.role === 'admin' ? 'Administrator' : 'Manager'],
-		['Team', typeof team === 'string' ? team : team ? team.name : teams.status === 'error' ? 'Unavailable' : '…'],
+		['Role', user.roleName || (user.role === 'admin' ? 'Administrator' : 'Manager')],
+		['Team', typeof team === 'string' ? team : team ? team.name : teams.status === 'error' || !can('teams.view') ? 'Assigned team' : '…'],
 	];
 	return (
 		<Card title="Profile" subtitle="Managed by your administrator and Catalyst sign-in">

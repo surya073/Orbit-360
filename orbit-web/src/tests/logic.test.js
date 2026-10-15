@@ -2,6 +2,7 @@ import { computeInsights } from '../utils/insights';
 import { daysSince, presetLabel, resolvePeriod, trendRange } from '../utils/periods';
 import { toneFor } from '../utils/status';
 import { visibleNav, flatDestinations } from '../config/navigation';
+import { canForRole } from '../config/permissions';
 import { overviewFixture, projectsFixture, productFixture, freshnessFixture } from './helpers';
 
 describe('reporting periods (Asia/Kolkata business dates)', () => {
@@ -62,11 +63,13 @@ describe('status tones and navigation', () => {
 		expect(toneFor(null)).toBe('neutral');
 	});
 	test('navigation exposes every module for both roles, grouped for the compact header', () => {
-		const labels = (role) => flatDestinations(role).map((d) => d.label);
+		const labels = (role) => flatDestinations(canForRole(role)).map((d) => d.label);
 		for (const role of ['admin', 'manager']) {
 			expect(labels(role)).toEqual(expect.arrayContaining(['Dashboard', 'Employees', 'Teams', 'Projects', 'Time entries', 'Attendance', 'Leave', 'Performance', 'Product development', 'AI & GitHub usage', 'Imports', 'Presentations']));
 		}
-		expect(visibleNav('manager').filter((n) => n.type === 'group').map((n) => n.label)).toEqual(['People', 'Delivery']);
-		expect(visibleNav('stranger')).toEqual([]);
+		expect(visibleNav(canForRole('manager')).filter((n) => n.type === 'group').map((n) => n.label)).toEqual(['People', 'Delivery']);
+		expect(labels('manager')).not.toContain('Access'); // only people who may view access settings see it
+		expect(labels('admin')).toContain('Access');
+		expect(visibleNav(canForRole('stranger'))).toEqual([]);
 	});
 });

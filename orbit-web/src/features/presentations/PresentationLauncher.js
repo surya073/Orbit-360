@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useAuth } from '../../app/providers/AuthProvider';
 import Button, { IconButton } from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
 import { Checkbox } from '../../components/forms/Choice';
@@ -19,6 +20,7 @@ const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:n
  */
 export default function PresentationLauncher({ decks, initialId, onClose, onStart }) {
 	const uid = useId();
+	const { can } = useAuth();
 	const ref = useRef(null);
 	const returnTo = useRef(document.activeElement);
 	const [closing, setClosing] = useState(false);
@@ -29,7 +31,11 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 
 	// Which optional detail slides this deck can offer comes from its saved sections.
 	const detail = useApiResource((signal) => presentationsService.get(deckId, { signal }), `launch|${deckId}`, { enabled: Boolean(deckId), isEmpty: () => false });
-	const offered = useMemo(() => (detail.data && detail.data.config ? detailOptions(detail.data.config.slides) : { people: false, records: false }), [detail.data]);
+	// ...and only the ones whose data this user may view (the backend refuses the requests otherwise).
+	const offered = useMemo(() => {
+		const o = detail.data && detail.data.config ? detailOptions(detail.data.config.slides) : { people: false, records: false, reporting: false };
+		return { people: o.people && can('employees.view'), records: o.records && can('projects.view'), reporting: o.reporting && can('reporting.view') && can('employees.view') };
+	}, [detail.data, can]);
 
 	const close = useCallback(() => {
 		const animate = window.matchMedia && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -80,7 +86,7 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 	const start = () => {
 		storeTheme(theme);
 		storeOptions(opts);
-		onStart({ id: deckId, theme, people: offered.people && opts.people, records: offered.records && opts.records });
+		onStart({ id: deckId, theme, people: offered.people && opts.people, records: offered.records && opts.records, reporting: offered.reporting && opts.reporting });
 	};
 
 	const t = themeById(theme);
@@ -145,6 +151,7 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 									</label>
 								) : null}
 								{offered.people ? <Checkbox label="Add team overview and individual profile slides" hint="Real employee records you are allowed to see" checked={opts.people} onChange={(e) => setOpts((o) => ({ ...o, people: e.target.checked }))} /> : null}
+								{offered.reporting ? <Checkbox label="Add the team reporting tree slide" hint="The saved reporting structure of the team (left out if none is saved)" checked={opts.reporting} onChange={(e) => setOpts((o) => ({ ...o, reporting: e.target.checked }))} /> : null}
 								{offered.records ? <Checkbox label="Add project record slides" hint="Detailed project records from the project data" checked={opts.records} onChange={(e) => setOpts((o) => ({ ...o, records: e.target.checked }))} /> : null}
 							</div>
 						</div>

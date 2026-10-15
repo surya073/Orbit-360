@@ -3,6 +3,7 @@
 const { errors } = require('../utils/errors');
 const { isId } = require('../validators/schema');
 const { ROLES } = require('../config/constants');
+const { SCOPE_TYPES } = require('../config/permissions');
 
 /**
  * Resolves the caller from Catalyst Authentication (verified session), then maps them to the
@@ -39,10 +40,18 @@ function createUserCache(ttlSeconds) {
 			if (map.size >= MAX_CACHED_USERS) map.delete(map.keys().next().value);
 			map.set(id, { row, until: Date.now() + ttl });
 		},
+		clear: () => map.clear(),
 	};
 }
 
-async function authenticate(userApp, users, cache) {
+/**
+ * `repos` gives access to the users and access tables; `access` is the role/permission resolver.
+ * The actor it returns carries everything authorization needs: the effective permission set and
+ * the team scope of the user's role. `role` stays as the legacy name ("admin" = sees every team,
+ * "manager" = one team) because existing code and the UI read it.
+ */
+async function authenticate(userApp, repos, { userCache: cache, access }) {
+	const users = repos.users;
 	let current;
 	try {
 		current = await userApp.userManagement().getCurrentUser();
@@ -60,15 +69,23 @@ async function authenticate(userApp, users, cache) {
 	if (!u) throw errors.forbidden('Your account has not been provisioned for Company 360', 'NOT_PROVISIONED');
 	if (u.is_active !== true) throw errors.forbidden('Your account is inactive', 'ACCOUNT_INACTIVE');
 	if (u.app_role !== ROLES.ADMIN && u.app_role !== ROLES.MANAGER) throw errors.forbidden('Your account has no valid role', 'INVALID_ROLE');
-	if (u.app_role === ROLES.MANAGER && !isId(String(u.team_id || ''))) {
-		throw errors.forbidden('Your manager account is not assigned to a team', 'MANAGER_TEAM_MISSING');
+	const role = await access.resolve(repos.access, u);
+	const ownTeam = role.scopeType === SCOPE_TYPES.OWN_TEAM;
+	if (ownTeam && !isId(String(u.team_id || ''))) {
+		throw errors.forbidden('Your account is not assigned to a team', 'MANAGER_TEAM_MISSING');
 	}
 	return {
 		userId: String(u.ROWID),
 		email: u.email,
 		displayName: u.display_name || u.email,
-		role: u.app_role,
-		teamId: u.app_role === ROLES.MANAGER ? String(u.team_id) : null,
+		role: ownTeam ? ROLES.MANAGER : ROLES.ADMIN,
+		roleKey: role.roleKey,
+		roleName: role.roleName,
+		roleId: role.roleId,
+		scopeType: role.scopeType,
+		permissions: role.permissions,
+		accessSource: role.source,
+		teamId: ownTeam ? String(u.team_id) : null,
 	};
 }
 

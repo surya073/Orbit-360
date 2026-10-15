@@ -160,6 +160,10 @@
 	box-shadow: var(--shadow-md);
 	animation: pop-in var(--dur-fast) var(--ease) both;
 }
+.popover--up {
+	top: auto;
+	bottom: calc(100% + 8px);
+}
 .popover--right {
 	right: 0;
 }

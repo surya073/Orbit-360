@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { canForUser } from '../../config/permissions';
 import { clearApiCache } from '../../services/apiClient';
 import { authService } from '../../services/authService';
 import { sessionService } from '../../services/sessionService';
@@ -31,7 +32,8 @@ export function AuthProvider({ children }) {
 		load();
 	}, [load]);
 
-	const value = useMemo(() => ({ ...state, reload: load, signOut: () => authService.signOut() }), [state, load]);
+	// can('employees.edit'): what the signed-in user's role allows. UX only; the backend enforces every call.
+	const value = useMemo(() => ({ ...state, can: canForUser(state.user), reload: load, signOut: () => authService.signOut() }), [state, load]);
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

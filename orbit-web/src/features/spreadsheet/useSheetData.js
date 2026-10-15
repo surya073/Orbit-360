@@ -23,6 +23,10 @@ const withEdit = (edits, id, field, value) => {
 	return next;
 };
 
+const isFormatOp = (op) => op.type === 'format';
+/** Formatting entries (colour, bold...) stay in the history through saves and discards: those only concern record values. */
+const keepFormatOps = (list) => list.filter(isFormatOp);
+
 /** Applies (or reverts) one history entry to the state. */
 function applyOp(state, op, direction) {
 	const forward = direction === 'redo';
@@ -44,7 +48,7 @@ function applyOp(state, op, direction) {
 			const keys = new Set(op.rows.map((r) => r.key));
 			return { ...state, newRows: forward ? state.newRows.filter((r) => !keys.has(r.key)) : [...state.newRows, ...op.rows] };
 		}
-		default:
+		default: // 'format' entries change device-local formatting, applied by the caller, not record values
 			return state;
 	}
 }
@@ -77,15 +81,15 @@ function reducer(state, a) {
 				edits = rest;
 			}
 			const created = new Set(a.createdKeys);
-			return { ...state, edits, newRows: state.newRows.filter((r) => !created.has(r.key)), errors: a.errors, undo: [], redo: [] };
+			return { ...state, edits, newRows: state.newRows.filter((r) => !created.has(r.key)), errors: a.errors, undo: keepFormatOps(state.undo), redo: [] };
 		}
 		case 'drop-edits': {
 			const edits = { ...state.edits };
 			a.ids.forEach((id) => delete edits[id]);
-			return { ...state, edits, undo: [], redo: [] };
+			return { ...state, edits, undo: keepFormatOps(state.undo), redo: [] };
 		}
 		case 'discard':
-			return { ...initial, counter: state.counter };
+			return { ...initial, counter: state.counter, undo: keepFormatOps(state.undo) };
 		default:
 			return state;
 	}
@@ -96,7 +100,7 @@ function reducer(state, a) {
  * (resourceService list/create/update/remove). Edits are tracked per cell and only changed
  * fields are sent. Nothing is reported as saved until the backend confirms it.
  */
-export default function useSheetData({ resource, template, canWrite, search = '', page = 1, pageSize = SHEET_PAGE_SIZE }) {
+export default function useSheetData({ resource, template, canWrite, search = '', page = 1, pageSize = SHEET_PAGE_SIZE, applyFormat }) {
 	const params = useMemo(() => ({ page, pageSize, ...(search ? { q: search } : {}) }), [page, pageSize, search]);
 	const res = useApiResource((signal) => resourceService.list(resource, params, { signal }), `sheet|${resource}|${JSON.stringify(params)}`, { enabled: Boolean(template), isEmpty: () => false });
 	const rows = useMemo(() => res.data || [], [res.data]);
@@ -333,8 +337,18 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 		setCells,
 		addRows,
 		removeNewRows,
-		undo: () => dispatch({ type: 'undo' }),
-		redo: () => dispatch({ type: 'redo' }),
+		// One history for values and formatting: a formatting entry is reverted/re-applied through `applyFormat`.
+		undo: () => {
+			const op = state.undo[state.undo.length - 1];
+			if (op && isFormatOp(op) && applyFormat) applyFormat(op.cells, 'undo');
+			dispatch({ type: 'undo' });
+		},
+		redo: () => {
+			const op = state.redo[state.redo.length - 1];
+			if (op && isFormatOp(op) && applyFormat) applyFormat(op.cells, 'redo');
+			dispatch({ type: 'redo' });
+		},
+		recordFormat: (cells) => dispatch({ type: 'op', op: { type: 'format', cells } }),
 		canUndo: state.undo.length > 0,
 		canRedo: state.redo.length > 0,
 		discard: () => {

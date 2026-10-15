@@ -302,14 +302,14 @@ export function storeTheme(id) {
 export function readStoredOptions() {
 	try {
 		const v = JSON.parse(window.localStorage.getItem(OPTIONS_KEY) || '{}');
-		return { people: v.people !== false, records: v.records !== false };
+		return { people: v.people !== false, records: v.records !== false, reporting: v.reporting !== false };
 	} catch {
-		return { people: true, records: true };
+		return { people: true, records: true, reporting: true };
 	}
 }
 export function storeOptions(o) {
 	try {
-		window.localStorage.setItem(OPTIONS_KEY, JSON.stringify({ people: Boolean(o.people), records: Boolean(o.records) }));
+		window.localStorage.setItem(OPTIONS_KEY, JSON.stringify({ people: Boolean(o.people), records: Boolean(o.records), reporting: Boolean(o.reporting) }));
 	} catch {
 		/* not remembered */
 	}

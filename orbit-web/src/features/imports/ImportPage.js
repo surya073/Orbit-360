@@ -72,7 +72,8 @@ export default function ImportPage() {
 	const running = useRef(false);
 	const hasPreview = useRef(false);
 
-	const importable = (templates.data || []).filter((t) => t.importable);
+	// Only record types this user may create (an import adds records; the backend checks again).
+	const importable = (templates.data || []).filter((t) => t.importable && (!t.permissions || t.permissions.create));
 	const template = importable.find((t) => t.module === module);
 	const list = useMemo(() => Object.values(results).sort((a, b) => a.rowNumber - b.rowNumber), [results]);
 	const counts = countBy(list);

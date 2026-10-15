@@ -40,11 +40,12 @@ const errorText = (err) => {
  * changes the employee source records.
  */
 export default function ReportingBuilderPage() {
-	const { user } = useAuth();
+	const { user, can } = useAuth();
+	const canEditTree = can('reporting.edit'); // View only without it: nothing can be placed, moved, renamed or saved
 	const { notify } = useToast();
 	const [sp, setSp] = useSearchParams();
 	const isAdmin = user.role === 'admin';
-	const teams = useApiResource((signal) => resourceService.list('teams', { pageSize: 100 }, { signal }), 'rs-teams', { enabled: isAdmin, isEmpty: () => false });
+	const teams = useApiResource((signal) => resourceService.list('teams', { pageSize: 100 }, { signal }), 'rs-teams', { enabled: isAdmin && can('teams.view'), isEmpty: () => false });
 	const teamId = isAdmin ? sp.get('team') || (teams.data && teams.data[0] ? String(teams.data[0].ROWID) : '') : String(user.teamId || '');
 	const res = useApiResource((signal) => reportingService.get(teamId, { signal }), `rs|${teamId}`, { enabled: Boolean(teamId), isEmpty: () => false });
 
@@ -96,6 +97,7 @@ export default function ReportingBuilderPage() {
 
 	const place = useCallback(
 		(id, parentId) => {
+			if (!canEditTree) return;
 			const check = canAssign(tree, id, parentId);
 			if (!check.ok) {
 				setNotice({ tone: 'error', text: check.reason });
@@ -105,18 +107,20 @@ export default function ReportingBuilderPage() {
 			hist.apply((t) => assign(t, id, parentId));
 			setSelectedId(id);
 		},
-		[tree, hist]
+		[tree, hist, canEditTree]
 	);
 	const remove = useCallback(
 		(id) => {
+			if (!canEditTree) return;
 			hist.apply((t) => removeNode(t, id));
 			setNotice({ tone: 'info', text: `${nameOf(id)} was removed from the tree. Their direct reports moved up one level. The employee record is unchanged.` });
 		},
-		[hist, nameOf]
+		[hist, nameOf, canEditTree]
 	);
-	const editRole = useCallback((id, label) => hist.apply((t) => setRole(t, id, label), `role:${id}`), [hist]);
+	const editRole = useCallback((id, label) => canEditTree && hist.apply((t) => setRole(t, id, label), `role:${id}`), [hist, canEditTree]);
 
 	const onDragStart = (e) => {
+		if (!canEditTree) return;
 		const [kind, id] = String(e.active.id).split(':');
 		setActive({ kind: kind === 'emp' ? 'emp' : 'node', id });
 		setNotice(null);
@@ -225,6 +229,11 @@ export default function ReportingBuilderPage() {
 						{stats.unmapped} {stats.unmapped === 1 ? 'employee has' : 'employees have'} not been placed yet. Partial structures are fine; they are listed on the left so you can finish progressively.
 					</p>
 				) : null}
+				{!canEditTree ? (
+					<p className="banner banner--info" role="note">
+						You can view this reporting structure but not change it.
+					</p>
+				) : null}
 				<div className="rs-layout">
 					<EmployeePanel
 						employees={employees}
@@ -243,7 +252,7 @@ export default function ReportingBuilderPage() {
 						dragging={active}
 					/>
 					<TreeCanvas ref={canvas} layout={layout} tree={tree} byId={byId} selectedId={selectedId} matches={matches} active={active} collapsed={effectiveCollapsed} onToggle={toggle} onSelect={setSelectedId} fitKey={fitKey} empty={empty} />
-					{selected ? <NodeDetails key={selected.id} employee={selected} tree={tree} byId={byId} canEdit onAssign={place} onRole={editRole} onRemove={remove} onClose={() => setSelectedId(null)} /> : null}
+					{selected ? <NodeDetails key={selected.id} employee={selected} tree={tree} byId={byId} canEdit={canEditTree} onAssign={place} onRole={editRole} onRemove={remove} onClose={() => setSelectedId(null)} /> : null}
 				</div>
 				<DragOverlay dropAnimation={null}>
 					{dragEmployee ? (

@@ -48,8 +48,16 @@ function download(name, text) {
 	URL.revokeObjectURL(url);
 }
 
+/** What the signed-in user may do with a record type, from its field contract (older servers: the legacy admin-only flag). */
+const permsOf = (template, user) => {
+	if (!template) return { view: false, create: false, edit: false, delete: false };
+	if (template.permissions) return template.permissions;
+	const write = !template.adminOnly || (user && user.role === 'admin'); // older server: the legacy admin-only flag
+	return { view: true, create: write, edit: write, delete: write };
+};
+
 /** The sheet for one record type. Remounted per module so each starts clean. */
-function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
+function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZoom, onDirty }) {
 	const { notify } = useToast();
 	// The page belongs to the query it was chosen for, so a new search always starts on page 1
 	// (without first requesting the old query's page N).
@@ -73,32 +81,47 @@ function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
 	const page = pageState.k === pageKey ? pageState.page : 1;
 	const setPage = useCallback((p) => setPageState({ k: pageKey, page: p }), [pageKey]);
 
-	const data = useSheetData({ resource: mod.resource, template, canWrite, search: dsearch, page, pageSize });
+	// Device-local cell formatting (never part of a record, never sent to the API). Its changes join the
+	// same undo/redo history as cell edits, so Ctrl+Z / Ctrl+Y and the toolbar undo colour and style changes too.
+	const fmt = useSheetFormat(mod.resource);
+	const data = useSheetData({ resource: mod.resource, template, canWrite, search: dsearch, page, pageSize, applyFormat: fmt.restore });
 	const { res, rows, columns, state } = data;
 	const labelOf = useLookupLabels(rows, FK_COLUMNS);
-	const view = useSheetView({ rows, state, valueOf: data.valueOf, columns, sort, filters, query: serverSearch ? '' : search, labelOf });
+	// Typing filters the loaded rows at once (the server answer for the whole table follows after the
+	// pause). Once the server has answered, its rows are shown as they are. If the server search itself
+	// fails, the sheet falls back to the loaded rows instead of leaving the search dead.
+	const settling = serverSearch && (search.trim() !== dsearch || res.status === 'loading');
+	const view = useSheetView({ rows, state, valueOf: data.valueOf, columns, sort, filters, query: serverSearch && !settling ? '' : search, labelOf });
+	const searchFailed = serverSearch && dsearch !== '' && res.status === 'error';
+	useEffect(() => {
+		if (!searchFailed) return;
+		setScope('loaded');
+		notify('Searching all records is unavailable right now. Searching the rows loaded in the grid instead.', 'error');
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [searchFailed]);
 	useEffect(() => {
 		onDirty(tabId, data.dirtyCount); // the page guards unsaved work across every open sheet
 	}, [onDirty, tabId, data.dirtyCount]);
 
-	// Device-local cell formatting (never part of a record, never sent to the API).
-	const fmt = useSheetFormat(mod.resource);
 	const cellsOf = () => (gridRef.current ? gridRef.current.selectedCells() : []);
 	const fmtOf = (c) => (fmt.formats[c.key] || {})[c.field] || {};
 	const activeFmt = selInfo && selInfo.active ? fmtOf(selInfo.active) : null;
+	const record = (changes) => {
+		if (changes.length) data.recordFormat(changes);
+	};
 	const setFmt = (patch) => {
 		const cells = cellsOf();
-		if (cells.length) fmt.apply(cells, patch);
+		if (cells.length) record(fmt.apply(cells, patch));
 	};
 	const toggleFmt = (prop) => {
 		const cells = cellsOf();
 		if (!cells.length) return;
 		const on = cells.every((c) => fmtOf(c)[prop]);
-		fmt.apply(cells, { [prop]: on ? null : true });
+		record(fmt.apply(cells, { [prop]: on ? null : true }));
 	};
 	const clearFmt = () => {
 		const cells = cellsOf();
-		if (cells.length) fmt.clear(cells);
+		if (cells.length) record(fmt.clear(cells));
 	};
 
 	const toggleSort = useCallback((field) => setSort((s) => (!s || s.field !== field ? { field, dir: 'asc' } : s.dir === 'asc' ? { field, dir: 'desc' } : null)), []);
@@ -129,7 +152,16 @@ function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
 	const doDelete = () => {
 		if (!canWrite || !selectedViewRows.length) return;
 		if (selectedNew.length) data.removeNewRows(selectedNew);
-		if (selectedExisting.length) setConfirmDelete(true);
+		if (selectedExisting.length && perms.delete) setConfirmDelete(true); // deleting saved records needs the Delete permission
+	};
+
+	// Create lets you add rows; Edit lets you change saved records. Without Edit, saved cells stay as they are.
+	const setCells = (changes) => {
+		if (perms.edit) return data.setCells(changes);
+		const own = changes.filter((c) => c.key.startsWith('n:'));
+		const refused = changes.filter((c) => !c.key.startsWith('n:')).map((c) => ({ key: c.key, field: c.field, reason: 'You do not have permission to change saved records' }));
+		const out = own.length ? data.setCells(own) : { applied: [], rejected: [] };
+		return { ...out, rejected: [...(out.rejected || []), ...refused] };
 	};
 
 	const exportCsv = () => download(`${mod.resource}.csv`, rowsToCsv(columns, view, (r, f) => r.values[f]));
@@ -184,7 +216,8 @@ function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
 				onCopy={() => gridRef.current && gridRef.current.copy()}
 				onPaste={() => gridRef.current && gridRef.current.paste()}
 				onAddRow={addRow}
-				canDelete={selectedViewRows.length > 0}
+				canAddRows={perms.create}
+				canDelete={perms.delete && selectedViewRows.length > 0}
 				onDelete={doDelete}
 				search={search}
 				onSearch={setSearch}
@@ -198,7 +231,7 @@ function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
 				sortLabel={sortCol ? `${sortCol.label} ${sort.dir === 'asc' ? '↑' : '↓'}` : null}
 				onClearSort={() => setSort(null)}
 				onExport={exportCsv}
-				canExport={view.length > 0}
+				canExport={canExport && view.length > 0}
 				onReload={res.reload}
 				loading={res.status === 'loading'}
 				density={density}
@@ -234,7 +267,7 @@ function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
 										? 'Add a row to start entering records.'
 										: 'There are no records to show.'
 								}
-								action={canWrite && !searching ? <Button variant="primary" icon="plus" onClick={addRow}>Add row</Button> : null}
+								action={perms.create && !searching ? <Button variant="primary" icon="plus" onClick={addRow}>Add row</Button> : null}
 							/>
 						</div>
 					) : (
@@ -246,9 +279,9 @@ function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
 								rows={view}
 								labelOf={labelOf}
 								readOnly={!canWrite}
-								canAddRows={canWrite}
-								onSetCells={data.setCells}
-								onAddRows={data.addRows}
+								canAddRows={perms.create}
+								onSetCells={setCells}
+								onAddRows={perms.create ? data.addRows : undefined}
 								onNotice={onNotice}
 								onUndo={data.undo}
 								onRedo={data.redo}
@@ -256,7 +289,7 @@ function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
 								onSort={toggleSort}
 								onSelectRows={setSelected}
 								onSelection={setSelInfo}
-								onDeleteRows={doDelete}
+								onDeleteRows={perms.delete ? doDelete : undefined}
 								density={density}
 								storageKey={mod.resource}
 								formats={fmt.formats}
@@ -319,7 +352,7 @@ function readZoom() {
 
 /** Spreadsheet editor: the third way to enter data, next to the Add form and Sheet import. */
 export default function SpreadsheetPage() {
-	const { user } = useAuth();
+	const { user, can } = useAuth();
 	const templates = useTemplates();
 	const [sp, setSp] = useSearchParams();
 	const available = useMemo(() => SHEET_MODULES.filter((m) => templates.byModule[m.resource]), [templates.byModule]);
@@ -387,7 +420,8 @@ export default function SpreadsheetPage() {
 
 	const activeTab = tabs.find((t) => t.id === activeId);
 	const activeTemplate = activeTab ? templates.byModule[activeTab.resource] : null;
-	const activeCanWrite = Boolean(activeTemplate && (!activeTemplate.adminOnly || user.role === 'admin'));
+	const activePerms = permsOf(activeTemplate, user);
+	const activeCanWrite = activePerms.create || activePerms.edit;
 	const mounted = tabs.filter((t) => t.id === activeId || visited.has(t.id));
 	const closingTab = tabs.find((t) => t.id === closing);
 
@@ -410,7 +444,7 @@ export default function SpreadsheetPage() {
 						<p className="small">Edit existing records and add new ones in a grid. Changes are saved to the same records as the Add form and Sheet import.</p>
 						<p className="small muted">
 							Columns are the fields this record type supports; new columns cannot be added because the schema is fixed. Saved values cannot be cleared, and fields that identify a record cannot be changed after it is created. Use the + tabs below to open more sheets.
-							{activeTab && !activeCanWrite ? ' Only administrators can change this record type.' : ''}
+							{activeTab && !activeCanWrite ? ' Your role cannot change this record type.' : ''}
 						</p>
 						<p className="small muted">Cell formatting (colours, bold, links, zoom) is remembered in this browser only; it is not part of the record.</p>
 					</div>
@@ -426,10 +460,11 @@ export default function SpreadsheetPage() {
 					<div className="sheet-panes">
 						{mounted.map((t) => {
 							const template = templates.byModule[t.resource];
-							const canWrite = Boolean(template && (!template.adminOnly || user.role === 'admin'));
+							const perms = permsOf(template, user);
+							const canWrite = perms.create || perms.edit;
 							return (
 								<div key={t.id} id={`sheet-pane-${t.id}`} role="tabpanel" aria-labelledby={`sheet-tab-${t.id}`} className="sheet-pane" hidden={t.id !== activeId}>
-									<Sheet tabId={t.id} mod={sheetModule(t.resource)} template={template} canWrite={canWrite} zoomPct={zoomPct} onZoom={onZoom} onDirty={onDirty} />
+									<Sheet tabId={t.id} mod={sheetModule(t.resource)} template={template} canWrite={canWrite} perms={perms} canExport={can('spreadsheet.export')} zoomPct={zoomPct} onZoom={onZoom} onDirty={onDirty} />
 								</div>
 							);
 						})}

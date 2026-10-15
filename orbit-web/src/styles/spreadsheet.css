@@ -880,3 +880,48 @@
 .sheet-tabs__menu-title {
 	padding: 4px var(--space-2);
 }
+
+/* custom colour picker + fill indicator */
+.sheet-palette__custom {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 2px;
+	font-size: var(--fs-sm);
+	cursor: pointer;
+}
+.sheet-palette__custom input[type='color'] {
+	width: 34px;
+	height: 26px;
+	padding: 0;
+	border: 1px solid var(--border-strong);
+	border-radius: 6px;
+	background: none;
+	cursor: pointer;
+}
+.sheet-palette__custom code {
+	margin-left: auto;
+	font-size: var(--fs-2xs);
+	color: var(--text-muted);
+}
+.sheet-format__bar {
+	display: inline-block;
+	width: 16px;
+	height: 4px;
+	margin-left: 5px;
+	border-radius: 2px;
+	border: 1px solid var(--border-strong);
+	align-self: flex-end;
+}
+
+/* toolbar icon buttons */
+.sheet-toolbar__sep {
+	width: 1px;
+	align-self: stretch;
+	margin: 4px 4px;
+	background: var(--border);
+}
+.sheet-iconbtn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}

@@ -64,7 +64,7 @@ describe('presentation themes', () => {
 		expect(readStoredTheme()).toBe('sunset');
 		storeTheme('not-a-theme');
 		expect(readStoredTheme()).toBe('sunset');
-		expect(readStoredOptions()).toEqual({ people: true, records: true });
+		expect(readStoredOptions()).toEqual({ people: true, records: true, reporting: true });
 		window.localStorage.clear();
 	});
 });
@@ -112,8 +112,8 @@ describe('slide building', () => {
 	});
 
 	test('detail slides are only offered when the deck has the matching section', () => {
-		expect(detailOptions(deckSlides)).toEqual({ people: true, records: true });
-		expect(detailOptions([{ type: 'section', section: 'ai_usage' }])).toEqual({ people: false, records: false });
+		expect(detailOptions(deckSlides)).toEqual({ people: true, records: true, reporting: true });
+		expect(detailOptions([{ type: 'section', section: 'ai_usage' }])).toEqual({ people: false, records: false, reporting: true });
 		expect(buildSlides([{ type: 'section', section: 'ai_usage' }], { wantPeople: true, people: ok([person(1)]) }).some((s) => s.kind === 'people')).toBe(false);
 	});
 
@@ -184,7 +184,7 @@ describe('presentation center landing page and launcher', () => {
 		await userEvent.click(within(dialog).getByRole('checkbox', { name: /project record/i })); // turn records off
 		expect(people).toBeChecked();
 		await userEvent.click(within(dialog).getByRole('button', { name: 'Start Presentation' }));
-		expect(await screen.findByTestId('where')).toHaveTextContent('/presentations/5/present?theme=obsidian&people=1&records=0');
+		expect(await screen.findByTestId('where')).toHaveTextContent('/presentations/5/present?theme=obsidian&people=1&records=0&reporting=1');
 	});
 
 	test('Escape closes the launcher and Cancel does too; the theme can be changed before starting without a reload', async () => {
@@ -254,7 +254,7 @@ describe('presentation viewer', () => {
 
 	test('the theme in the link is applied to the whole viewer and can be switched on the fly', async () => {
 		mockFetch(viewerRoutes());
-		const { dialog } = await open('?theme=sunset&people=0&records=0');
+		const { dialog } = await open('?theme=sunset&people=0&records=0&reporting=0');
 		expect(dialog).toHaveAttribute('data-ptheme', 'sunset');
 		expect(dialog.style.getPropertyValue('--accent')).toBe(themeById('sunset').tokens['--accent']);
 		await userEvent.click(within(dialog).getByRole('button', { name: /Theme: Sunset Prestige/ }));
@@ -265,7 +265,7 @@ describe('presentation viewer', () => {
 
 	test('people overview and profile slides show real records; missing fields are marked, never invented', async () => {
 		mockFetch(viewerRoutes());
-		const { dialog } = await open('?theme=aurora&people=1&records=0');
+		const { dialog } = await open('?theme=aurora&people=1&records=0&reporting=0');
 		await userEvent.keyboard('{ArrowRight}'); // employee overview section
 		await within(dialog).findByRole('heading', { name: 'Employee overview' });
 		await userEvent.keyboard('{ArrowRight}'); // people overview
@@ -287,7 +287,7 @@ describe('presentation viewer', () => {
 
 	test('project record slides render the real table', async () => {
 		mockFetch(viewerRoutes());
-		const { dialog } = await open('?theme=crystal&people=0&records=1');
+		const { dialog } = await open('?theme=crystal&people=0&records=1&reporting=0');
 		await userEvent.keyboard('{ArrowRight}{ArrowRight}'); // employee overview, project performance
 		await within(dialog).findByRole('heading', { name: 'Project performance' });
 		await userEvent.keyboard('{ArrowRight}');
@@ -301,7 +301,7 @@ describe('presentation viewer', () => {
 	test('a failed people request shows an error slide with Retry instead of fake people', async () => {
 		let fail = true;
 		mockFetch(viewerRoutes([[/^GET \/employees/, () => (fail ? { status: 500, body: errBody(500, 'INTERNAL', 'Boom') } : okBody(employees, meta(2)))]]));
-		const { dialog } = await open('?people=1&records=0');
+		const { dialog } = await open('?people=1&records=0&reporting=0');
 		await userEvent.keyboard('{ArrowRight}{ArrowRight}');
 		const alert = await within(dialog).findByRole('alert');
 		expect(alert).toHaveTextContent(/could not be loaded/);
@@ -313,7 +313,7 @@ describe('presentation viewer', () => {
 
 	test('keys advance exactly one slide, are ignored while typing, and Home/End work', async () => {
 		mockFetch(viewerRoutes());
-		const { dialog } = await open('?people=0&records=0');
+		const { dialog } = await open('?people=0&records=0&reporting=0');
 		await userEvent.keyboard('{ArrowRight}');
 		expect(within(dialog).getByText('Slide 2 of 4')).toBeInTheDocument(); // one press, one slide (single listener)
 		await userEvent.keyboard(' ');
@@ -336,7 +336,7 @@ describe('presentation viewer', () => {
 
 	test('previous / next buttons and the progress bar follow the slide', async () => {
 		mockFetch(viewerRoutes());
-		const { dialog } = await open('?people=0&records=0');
+		const { dialog } = await open('?people=0&records=0&reporting=0');
 		expect(within(dialog).getByRole('button', { name: 'Previous slide' })).toBeDisabled();
 		await userEvent.click(within(dialog).getByRole('button', { name: 'Next slide' }));
 		expect(within(dialog).getByText('Slide 2 of 4')).toBeInTheDocument();
@@ -345,7 +345,7 @@ describe('presentation viewer', () => {
 
 	test('the fullscreen button appears only where the browser allows it and requests fullscreen on the viewer', async () => {
 		mockFetch(viewerRoutes());
-		const { dialog, unmount } = await open('?people=0&records=0');
+		const { dialog, unmount } = await open('?people=0&records=0&reporting=0');
 		expect(within(dialog).queryByRole('button', { name: /Fullscreen/ })).not.toBeInTheDocument(); // jsdom has no fullscreen support
 		unmount();
 
@@ -353,7 +353,7 @@ describe('presentation viewer', () => {
 		const request = jest.fn(() => Promise.resolve());
 		Element.prototype.requestFullscreen = request;
 		mockFetch(viewerRoutes());
-		const second = await open('?people=0&records=0');
+		const second = await open('?people=0&records=0&reporting=0');
 		await userEvent.click(within(second.dialog).getByRole('button', { name: 'Fullscreen' }));
 		expect(request).toHaveBeenCalledTimes(1);
 		await userEvent.keyboard('f');
@@ -364,7 +364,7 @@ describe('presentation viewer', () => {
 
 	test('the toolbar controls stay reachable and reduced motion is honoured in the stylesheet', async () => {
 		mockFetch(viewerRoutes());
-		const { dialog } = await open('?people=0&records=0');
+		const { dialog } = await open('?people=0&records=0&reporting=0');
 		fireEvent.mouseMove(dialog);
 		expect(dialog).toHaveAttribute('data-chrome', 'on');
 		expect(within(dialog).getByRole('toolbar', { name: 'Presentation controls' })).toBeInTheDocument();

@@ -19,7 +19,15 @@ const chunk = (list, n) => {
 };
 
 /** `res` is a useApiResource-like { status, data, meta, error } or null when the option is off. */
-function peopleSlides(res) {
+/** Activity of one person for their profile slide: loading | error | ready (data = backend per-person metrics). */
+function activityFor(profiles, person) {
+	if (!profiles || profiles.status === 'loading' || profiles.status === 'idle') return { status: 'loading' };
+	if (profiles.status === 'error') return { status: 'error', error: profiles.error };
+	const data = profiles.data && profiles.data.people && profiles.data.people[String(person.ROWID)];
+	return data ? { status: 'ready', data } : { status: 'error' };
+}
+
+function peopleSlides(res, profiles) {
 	if (!res || res.status === 'loading' || res.status === 'idle') return [{ kind: 'detail-state', topic: 'people', state: 'loading' }];
 	if (res.status === 'error') return [{ kind: 'detail-state', topic: 'people', state: 'error', error: res.error }];
 	const rows = res.data || [];
@@ -27,8 +35,8 @@ function peopleSlides(res) {
 	const total = res.meta && Number.isFinite(res.meta.total) ? res.meta.total : rows.length;
 	const groups = chunk(rows, PEOPLE_PER_SLIDE);
 	const overview = groups.map((g, i) => ({ kind: 'people', rows: g, part: i + 1, parts: groups.length, total, shown: rows.length, offset: i * PEOPLE_PER_SLIDE }));
-	const profiles = rows.slice(0, PROFILE_LIMIT).map((person, i, all) => ({ kind: 'profile', person, n: i + 1, of: all.length, total }));
-	return [...overview, ...profiles];
+	const profileSlides = rows.slice(0, PROFILE_LIMIT).map((person, i, all) => ({ kind: 'profile', person, n: i + 1, of: all.length, total, activity: activityFor(profiles, person) }));
+	return [...overview, ...profileSlides];
 }
 
 function recordSlides(res) {
@@ -53,17 +61,26 @@ function reportingSlides(reporting) {
 	return model.parts.map((plan, i) => ({ kind: 'reporting', model, plan, part: i + 1, parts: model.parts.length }));
 }
 
-export function buildSlides(deckSlides, { people = null, records = null, wantPeople = false, wantRecords = false, reporting = null } = {}) {
+export function buildSlides(deckSlides, { people = null, records = null, wantPeople = false, wantRecords = false, reporting = null, profiles = null, addReporting = false } = {}) {
 	const out = [{ kind: 'opening' }];
+	// A deck without the Team reporting structure section can still be shown with it (launcher option):
+	// it goes after the employee section (and its detail slides), else just before the closing slide.
+	const hasSection = (deckSlides || []).some((s) => s.type === 'section' && s.section === 'reporting_structure');
+	let pendingReporting = addReporting && !hasSection;
 	for (const s of deckSlides || []) {
 		if (s.type === 'section' && s.section === 'reporting_structure') {
 			out.push(...reportingSlides(reporting));
 			continue;
 		}
 		out.push({ kind: 'deck', slide: s });
-		if (s.type === 'section' && s.section === 'employee_overview' && wantPeople) out.push(...peopleSlides(people));
+		if (s.type === 'section' && s.section === 'employee_overview' && wantPeople) out.push(...peopleSlides(people, profiles));
 		if (s.type === 'section' && s.section === 'project_performance' && wantRecords) out.push(...recordSlides(records));
+		if (pendingReporting && s.type === 'section' && s.section === 'employee_overview') {
+			out.push(...reportingSlides(reporting));
+			pendingReporting = false;
+		}
 	}
+	if (pendingReporting) out.push(...reportingSlides(reporting));
 	out.push({ kind: 'closing' });
 	return out;
 }
@@ -71,7 +88,7 @@ export function buildSlides(deckSlides, { people = null, records = null, wantPeo
 /** Which optional detail slides a deck can offer, from its saved sections. */
 export function detailOptions(deckSlides) {
 	const sections = new Set((deckSlides || []).filter((s) => s.type === 'section').map((s) => s.section));
-	return { people: sections.has('employee_overview'), records: sections.has('project_performance') };
+	return { people: sections.has('employee_overview'), records: sections.has('project_performance'), reporting: !sections.has('reporting_structure') };
 }
 
 export const initials = (name) =>

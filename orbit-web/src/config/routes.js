@@ -20,4 +20,5 @@ export const ROUTES = {
 	presentationEdit: (id = ':id') => `/presentations/${id}/edit`,
 	present: (id = ':id') => `/presentations/${id}/present`,
 	settings: '/settings',
+	access: '/access',
 };

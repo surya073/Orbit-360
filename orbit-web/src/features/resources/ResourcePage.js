@@ -16,6 +16,7 @@ import DataTable from '../../components/tables/DataTable';
 import Pagination from '../../components/tables/Pagination';
 import usePageSize from '../../hooks/usePageSize';
 import { SHEET_MODULES } from '../spreadsheet/spreadsheetModules';
+import { keyOf, moduleOfResource } from '../../config/permissions';
 import { ROUTES } from '../../config/routes';
 import useApiResource from '../../hooks/useApiResource';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
@@ -30,12 +31,12 @@ import { renderCell } from './renderCell';
  * Standard module page: header, optional summary, filters, searchable paginated table, and
  * create/edit/delete in dialogs. Driven by a config object; features add behaviour through
  * `rowExtras(row, helpers)` (extra row buttons), `topSlot` (widgets above the filters) and
- * `extraFilters`. Write controls are hidden when the backend contract is unavailable or the role
- * cannot write (UX only: the backend enforces both).
+ * `extraFilters`. Write controls are hidden when the backend contract is unavailable or the user's role
+ * lacks the matching permission (UX only: the backend enforces both).
  */
 export default function ResourcePage({ config, rowExtras, topSlot, extraFilters }) {
 	const { resource } = config;
-	const { user } = useAuth();
+	const { can } = useAuth();
 	const { notify } = useToast();
 	const [sp, setSp] = useSearchParams();
 	const urlQ = sp.get('q') || '';
@@ -59,7 +60,13 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 	const labelOf = useLookupLabels(res.data, config.fkColumns);
 
 	const template = templates.byModule[resource];
-	const canWrite = Boolean(config.writable && template && (!config.adminWrite || user.role === 'admin'));
+	// Each control follows its own permission (Create / Edit / Delete / Approve), not one all-or-nothing flag.
+	const module = moduleOfResource(resource);
+	const allowed = (action) => Boolean(config.writable && template && module && can(keyOf(module, action)));
+	const canCreate = allowed('create');
+	const canEdit = allowed('edit');
+	const canDelete = allowed('delete');
+	const canApprove = Boolean(config.approvals && can('time_entries.approve'));
 	const rows = res.data || [];
 	const filtered = Boolean(dq || Object.values(filters).some(Boolean));
 
@@ -83,13 +90,13 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 	// "Add form" in the data-entry options links here with ?new=1 to open the create dialog.
 	const wantsNew = sp.get('new') === '1';
 	useEffect(() => {
-		if (!wantsNew || !canWrite) return;
+		if (!wantsNew || !canCreate) return;
 		setDialog({ type: 'form' });
 		setSp((p) => {
 			p.delete('new');
 			return p;
 		}, { replace: true });
-	}, [wantsNew, canWrite, setSp]);
+	}, [wantsNew, canCreate, setSp]);
 
 	const act = useCallback(
 		async (fn, success) => {
@@ -107,29 +114,29 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 	const actions = (row) => (
 		<>
 			{rowExtras ? rowExtras(row, { act, reload: res.reload }) : null}
-			{canWrite && config.approvals && row.approval_status !== 'approved' ? (
+			{canApprove && row.approval_status !== 'approved' ? (
 				<Button size="sm" onClick={() => act(() => resourceService.decideTimeEntry(row.ROWID, 'approved'), 'Entry approved')}>
 					Approve
 				</Button>
 			) : null}
-			{canWrite && config.approvals && row.approval_status !== 'rejected' ? (
+			{canApprove && row.approval_status !== 'rejected' ? (
 				<Button size="sm" onClick={() => act(() => resourceService.decideTimeEntry(row.ROWID, 'rejected'), 'Entry rejected')}>
 					Reject
 				</Button>
 			) : null}
-			{canWrite ? (
-				<>
-					<Button size="sm" variant="ghost" icon="edit" aria-label={`Edit record ${row.ROWID}`} onClick={() => setDialog({ type: 'form', initial: row })}>
-						Edit
-					</Button>
-					<Button size="sm" variant="ghost" icon="trash" aria-label={`Delete record ${row.ROWID}`} onClick={() => setDialog({ type: 'delete', row })}>
-						Delete
-					</Button>
-				</>
+			{canEdit ? (
+				<Button size="sm" variant="ghost" icon="edit" aria-label={`Edit record ${row.ROWID}`} onClick={() => setDialog({ type: 'form', initial: row })}>
+					Edit
+				</Button>
+			) : null}
+			{canDelete ? (
+				<Button size="sm" variant="ghost" icon="trash" aria-label={`Delete record ${row.ROWID}`} onClick={() => setDialog({ type: 'delete', row })}>
+					Delete
+				</Button>
 			) : null}
 		</>
 	);
-	const hasActions = canWrite || Boolean(rowExtras);
+	const hasActions = canEdit || canDelete || canApprove || Boolean(rowExtras);
 
 	return (
 		<>
@@ -138,17 +145,17 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 				description={config.description}
 				actions={
 					<>
-						{canWrite ? (
+						{canCreate ? (
 							<Button variant="primary" icon="plus" onClick={openCreate}>
 								{config.addLabel || 'Add record'}
 							</Button>
 						) : null}
-						{canWrite && SHEET_MODULES.some((m) => m.resource === resource) ? (
+						{(canCreate || canEdit) && can('spreadsheet.view') && SHEET_MODULES.some((m) => m.resource === resource) ? (
 							<Button icon="edit" to={`${ROUTES.spreadsheet}?module=${resource}`}>
 								Spreadsheet
 							</Button>
 						) : null}
-						{config.importable ? (
+						{config.importable && can('imports.view') && canCreate ? (
 							<Button icon="upload" to={ROUTES.imports}>
 								Import
 							</Button>
@@ -210,7 +217,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 						action={
 							filtered ? (
 								<Button onClick={clearAll}>Clear filters</Button>
-							) : canWrite ? (
+							) : canCreate ? (
 								<Button variant="primary" icon="plus" onClick={openCreate}>
 									{config.addLabel || 'Add record'}
 								</Button>
@@ -227,7 +234,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 				)}
 			</StateView>
 
-			{dialog && dialog.type === 'form' && canWrite ? (
+			{dialog && dialog.type === 'form' && (dialog.initial ? canEdit : canCreate) ? (
 				<Modal title={dialog.initial ? `Edit ${config.singular || 'record'}` : `New ${config.singular || 'record'}`} onClose={closeDialog} size="lg">
 					<ResourceForm
 						resource={resource}
@@ -242,7 +249,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 					/>
 				</Modal>
 			) : null}
-			{dialog && dialog.type === 'delete' ? (
+			{dialog && dialog.type === 'delete' && canDelete ? (
 				<ConfirmDialog
 					title={`Delete this ${config.singular || 'record'}?`}
 					message="It is removed from lists and totals. An administrator can restore it from the data store."

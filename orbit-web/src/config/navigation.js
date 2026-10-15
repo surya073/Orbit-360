@@ -30,8 +30,8 @@ export const NAV = [
 			{ to: ROUTES.usage, label: 'AI & GitHub usage', description: 'Tool usage as reported', icon: 'sparkles', permission: 'ai_usage.view' },
 		],
 	},
-	{ type: 'link', to: ROUTES.imports, label: 'Imports', icon: 'upload', permission: 'imports.view' },
-	{ type: 'link', to: ROUTES.spreadsheet, label: 'Spreadsheet', icon: 'edit', permission: 'spreadsheet.view' },
+	// The spreadsheet editor is one of the data-entry modes inside Imports, so Imports stays marked while it is open.
+	{ type: 'link', to: ROUTES.imports, label: 'Imports', icon: 'upload', permission: 'imports.view', alsoActive: [ROUTES.spreadsheet] },
 	{ type: 'link', to: ROUTES.presentations, label: 'Presentations', icon: 'present', permission: 'presentations.view' },
 	{ type: 'link', to: ROUTES.access, label: 'Access', icon: 'lock', permission: 'access.view' },
 ];
@@ -43,6 +43,15 @@ export const visibleNav = (can) =>
 /** Flat list of every destination, used by mobile navigation and the search palette's page shortcuts. */
 export const flatDestinations = (can) =>
 	visibleNav(can).flatMap((n) => (n.type === 'group' ? n.items.map((i) => ({ ...i, group: n.label })) : [{ to: n.to, label: n.label, icon: n.icon, end: n.end }]));
+
+/** Is a top-level link the current page, counting pages that live inside it (the spreadsheet inside Imports)? */
+export const isLinkActive = (item, pathname) => (item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)) || (item.alsoActive || []).some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+/** Is `pathname` one of this group's pages (or below one, like /employees/reporting)? */
+export const isGroupActive = (group, pathname) => group.items.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`));
+
+/** The visible group the current page belongs to, or undefined on a page that is not inside a group. */
+export const activeGroup = (can, pathname) => visibleNav(can).find((n) => n.type === 'group' && isGroupActive(n, pathname));
 
 /** The first page this user may open (where "home" goes when the Dashboard is not allowed). */
 export const firstDestination = (can) => {

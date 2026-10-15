@@ -65,8 +65,9 @@ describe('shell and dashboard', () => {
 		render(<App />);
 		const nav = await screen.findByRole('navigation', { name: 'Primary' });
 		expect(within(nav).getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
-		expect(within(nav).getByRole('button', { name: /People/ })).toBeInTheDocument();
-		expect(within(nav).getByRole('button', { name: /Delivery/ })).toBeInTheDocument();
+		expect(within(nav).getByRole('link', { name: /People/ })).toBeInTheDocument();
+		expect(within(nav).getByRole('link', { name: /Delivery/ })).toBeInTheDocument();
+		expect(screen.queryByRole('navigation', { name: /pages$/ })).not.toBeInTheDocument(); // the Dashboard is not inside a section
 		expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: /Account menu for Maya Rao/ })).toBeInTheDocument();
@@ -133,17 +134,18 @@ describe('shell and dashboard', () => {
 		expect(global.fetch.calls.some((c) => c.line.startsWith('GET /dashboard'))).toBe(false);
 	});
 
-	test('navigation menus work by keyboard and the user menu signs out', async () => {
+	test('a sidebar section opens its first page and the top bar lists its pages; the user menu signs out', async () => {
 		signIn(manager);
 		mockFetch([meRoute(manager), ...dashboardRoutes(), [/^GET \/employees/, okBody([], { page: 1, pageSize: 25, total: 0, totalPages: 0 })], [/^GET \/imports\/templates/, okBody([])]]);
 		render(<App />);
-		const people = await screen.findByRole('button', { name: /People/ });
-		await userEvent.click(people);
-		expect(people).toHaveAttribute('aria-expanded', 'true');
-		await userEvent.keyboard('{ArrowDown}');
-		expect(screen.getByRole('link', { name: /Employees/ })).toHaveFocus();
-		await userEvent.keyboard('{Escape}');
-		expect(screen.queryByRole('link', { name: /Employees/ })).not.toBeInTheDocument();
+		await userEvent.click(await screen.findByRole('link', { name: /People/ })); // no menu: it goes straight to the first page
+		const bar = await screen.findByRole('navigation', { name: 'People pages' });
+		const employees = within(bar).getByRole('link', { name: /Employees/ });
+		expect(employees).toHaveAttribute('aria-current', 'page');
+		expect(within(screen.getByRole('navigation', { name: 'Primary' })).getByRole('link', { name: /People/ })).toHaveAttribute('aria-current', 'true'); // the section stays marked in the sidebar
+		employees.focus();
+		await userEvent.tab(); // the tabs are ordinary links, reachable by keyboard
+		expect(within(bar).getAllByRole('link')[1]).toHaveFocus();
 
 		await userEvent.click(screen.getByRole('button', { name: /Account menu/ }));
 		expect(screen.getByText('maya@example.com', { exact: false })).toBeInTheDocument();
@@ -173,16 +175,19 @@ describe('shell and dashboard', () => {
 	});
 });
 
-describe('theme from the header', () => {
-	test('quick menu switches the whole app theme immediately and it persists', async () => {
+describe('themes live in Settings', () => {
+	test('the header has no theme switch; choosing one in Settings changes the whole app immediately and it persists', async () => {
 		signIn(manager);
 		mockFetch([meRoute(manager), ...dashboardRoutes()]);
+		window.location.hash = '#/settings?tab=appearance';
 		render(<App />);
-		await userEvent.click(await screen.findByRole('button', { name: 'Appearance' }));
-		await userEvent.click(screen.getByRole('radio', { name: 'Black Current' }));
+		await screen.findByRole('navigation', { name: 'Primary' });
+		expect(screen.queryByRole('button', { name: 'Appearance' })).not.toBeInTheDocument();
+		const [themes] = await screen.findAllByRole('radiogroup', { name: 'Theme' }, { timeout: 8000 }); // the Settings page is code-split
+		await userEvent.click(within(themes).getByRole('radio', { name: /^Black Current/ })); // not the "System" option, whose description mentions it
 		expect(document.documentElement.dataset.theme).toBe('blackcurrant');
 		expect(localStorage.getItem('company360.appearance')).toContain('blackcurrant');
-	});
+	}, 20000);
 });
 
 test('freshness fixture sanity', () => {

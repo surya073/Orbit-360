@@ -200,7 +200,11 @@
 }
 .grid--widgets {
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
-	align-items: start;
+	grid-auto-flow: dense; /* a later half-width card fills the gap a full-width one would leave */
+	align-items: stretch; /* cards that share a row end together */
+}
+.grid--widgets > .widget > .card {
+	height: 100%;
 }
 .grid--3 {
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
@@ -691,6 +695,12 @@
 	border-bottom: 1px solid var(--border);
 	margin-bottom: var(--space-4);
 	overflow-x: auto;
+	/* the active tab overlaps the bar's bottom border by 1px, which made the bar draw a tiny vertical scrollbar;
+	   the bar still scrolls sideways when it must, just without showing scrollbars */
+	scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+	display: none;
 }
 .tab {
 	display: inline-flex;

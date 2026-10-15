@@ -821,57 +821,21 @@
 	border-radius: 22px;
 	box-shadow: var(--panel-shadow);
 }
-[data-theme='ember'] .rail {
-	--on-accent: var(--text-muted);
-	background: var(--rail-bg);
-	border: 1px solid var(--panel-border);
-	border-left: 0;
-	box-shadow: var(--panel-shadow);
-}
-[data-theme='ember'] .rail-item__icon {
-	background: transparent;
-	border-radius: 14px;
-}
-[data-theme='ember'] .rail-item:hover .rail-item__icon {
-	background: color-mix(in srgb, var(--text) 8%, transparent);
-}
-[data-theme='ember'] .rail-item.active {
-	background: transparent;
-	color: var(--text);
-}
-[data-theme='ember'] .rail-item.active::before,
-[data-theme='ember'] .rail-item.active::after {
-	display: none;
-}
-[data-theme='ember'] .rail-item.active .rail-item__icon {
-	background: var(--gradient-accent);
-	color: var(--accent-contrast);
-	box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--accent) 90%, transparent);
-}
-[data-theme='ember'] .rail__toggle {
-	background: color-mix(in srgb, var(--text) 7%, transparent);
-	color: var(--text-muted);
-}
-[data-theme='ember'] .rail__brand {
-	color: var(--text);
-}
-[data-theme='ember'] .offcanvas {
-	--on-accent: var(--text);
-	background: var(--rail-bg);
-	border: 1px solid var(--panel-border);
-}
-[data-theme='ember'] .offcanvas .oc-item.active .oc-item__icon {
-	background: var(--gradient-accent);
-	color: var(--accent-contrast);
-}
 @media (min-width: 1101px) {
-	[data-theme='ember'] .search-trigger {
+	[data-theme='ember'] .header-search {
+		--search-w: 240px;
+		--search-w-open: 440px;
 		height: 44px;
-		min-width: min(320px, 40vw);
+	}
+	[data-theme='ember'] .search-trigger {
 		padding: 0 8px 0 16px;
 		border: 1px solid var(--panel-border);
 		border-radius: 999px;
 		background: color-mix(in srgb, var(--text) 5%, transparent);
+	}
+	[data-theme='ember'] .search-trigger:hover,
+	[data-theme='ember'] .search-trigger:focus-visible {
+		border-color: var(--accent);
 	}
 	[data-theme='ember'] .search-trigger kbd {
 		margin-left: auto;
@@ -880,6 +844,13 @@
 		border-radius: 999px;
 		background: color-mix(in srgb, var(--text) 8%, transparent);
 	}
+	/* a narrower bar: keeps its name, rests narrower, still grows on hover (see layout.css) */
+	@container app-header (max-width: 1260px) {
+		[data-theme='ember'] .header-search {
+			--search-w: 132px;
+			--search-w-open: 300px;
+		}
+	}
 }
 [data-theme='ember'] .header-actions .icon-btn {
 	width: 42px;
@@ -887,15 +858,6 @@
 	border-radius: 50%;
 	border: 1px solid var(--panel-border);
 	background: color-mix(in srgb, var(--text) 5%, transparent);
-}
-[data-theme='ember'] .user-trigger {
-	height: 46px;
-	padding: 0 12px 0 4px;
-	border-radius: 999px;
-}
-[data-theme='ember'] .user-trigger .avatar {
-	width: 36px;
-	height: 36px;
 }
 [data-theme='ember'] .app-header {
 	background: color-mix(in srgb, var(--bg) 72%, transparent);

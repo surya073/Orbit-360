@@ -74,10 +74,76 @@
 	padding: 18px 0 8px;
 }
 .rail__bottom {
+	display: grid;
+	gap: 12px;
 	padding-top: 8px;
 }
-.rail-group {
+
+/* account: avatar when collapsed, avatar + name + role when expanded (the menu opens beside the rail) */
+.rail-account {
 	display: grid;
+	margin: 0 14px 0 12px;
+	padding-top: 12px;
+	border-top: 1px solid color-mix(in srgb, var(--on-accent) 24%, transparent);
+}
+.rail-account .rail-item {
+	margin-left: 0;
+	width: 100%;
+}
+.rail-item .rail-account__avatar,
+.rail-item:hover .rail-account__avatar {
+	background: var(--surface);
+	color: var(--accent);
+	font-size: var(--fs-sm);
+	font-weight: 800;
+	box-shadow: 0 6px 14px -8px rgb(var(--shadow-rgb) / 0.55);
+}
+.rail-account__text {
+	display: none;
+	flex-direction: column;
+	justify-content: center;
+	min-width: 0;
+	line-height: 1.2;
+	text-align: left;
+}
+.rail.is-expanded .rail-account__text {
+	display: flex;
+}
+.rail-account__text b {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: var(--fs-sm);
+	font-weight: 700;
+}
+.rail-account__text small {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: var(--fs-2xs);
+	font-weight: 500;
+	opacity: 0.85;
+}
+.rail-account__chev {
+	display: none;
+	flex: none;
+	margin-right: 10px;
+	transition: transform var(--dur) var(--ease);
+}
+.rail.is-expanded .rail-account__chev {
+	display: inline-flex;
+}
+.rail-account__btn[aria-expanded='true'] .rail-account__chev {
+	transform: rotate(-90deg);
+}
+.rail-menu {
+	position: fixed;
+	z-index: var(--z-popover);
+	min-width: 240px;
+	padding: var(--space-1);
+	background: var(--surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-lg);
+	animation: pop-in var(--dur-fast) var(--ease) both;
 }
 .rail-item {
 	position: relative;
@@ -124,17 +190,8 @@
 	flex: 1;
 	white-space: nowrap;
 }
-.rail-item__chev {
-	display: none;
-	margin-right: 14px;
-	transition: transform var(--dur) var(--ease);
-}
-.rail.is-expanded .rail-item__label,
-.rail.is-expanded .rail-item__chev {
+.rail.is-expanded .rail-item__label {
 	display: inline-flex;
-}
-.rail.is-expanded .rail-group.is-open .rail-item__chev {
-	transform: rotate(180deg);
 }
 
 /* the active page: surface-coloured circle, joined to the page by a curved neck */
@@ -198,87 +255,6 @@
 .rail.is-expanded .rail-item {
 	padding-right: 4px;
 }
-.rail-sub {
-	display: grid;
-	gap: 2px;
-	margin: 2px 14px 6px 24px;
-	padding: 4px 0 4px 38px;
-	border-left: 2px solid color-mix(in srgb, var(--on-accent) 28%, transparent);
-}
-.rail-sub__link {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: 8px 12px;
-	border-radius: 12px;
-	color: color-mix(in srgb, var(--on-accent) 92%, transparent);
-	font-size: var(--fs-sm);
-	font-weight: 600;
-	text-decoration: none;
-	transition: background-color var(--dur-fast) var(--ease);
-}
-.rail-sub__link:hover {
-	background: color-mix(in srgb, var(--on-accent) 16%, transparent);
-}
-.rail-sub__link.active {
-	background: color-mix(in srgb, var(--on-accent) 26%, transparent);
-	color: var(--on-accent);
-}
-
-/* group flyout (collapsed rail) */
-.rail-flyout {
-	position: fixed;
-	z-index: var(--z-popover);
-	min-width: 270px;
-	padding: 10px;
-	border: 1px solid var(--border);
-	border-radius: 20px;
-	background: var(--surface);
-	box-shadow: var(--shadow-lg);
-	animation: pop-in var(--dur-fast) var(--ease) both;
-}
-.rail-flyout__title {
-	padding: 4px 10px 8px;
-	font-size: var(--fs-2xs);
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: var(--text-muted);
-}
-.rail-flyout__link {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 8px 10px;
-	border-radius: 14px;
-	color: var(--text);
-	font-weight: 600;
-	text-decoration: none;
-}
-.rail-flyout__link small {
-	display: block;
-	font-weight: 400;
-	color: var(--text-muted);
-	font-size: var(--fs-xs);
-}
-.rail-flyout__link:hover {
-	background: var(--surface-2);
-}
-.rail-flyout__link.active {
-	background: var(--accent-soft);
-	color: var(--accent);
-}
-.rail-flyout__icon {
-	display: grid;
-	place-items: center;
-	flex: none;
-	width: 34px;
-	height: 34px;
-	border-radius: 50%;
-	background: var(--gradient-accent);
-	color: var(--on-accent);
-}
-
 /* top bar next to the rail */
 .app-header {
 	background: transparent;
@@ -305,9 +281,7 @@
 @media (prefers-reduced-motion: reduce) {
 	.rail,
 	.rail-item__icon,
-	.rail-item__chev,
-	.rail:not(.is-expanded) .rail-item__icon::after,
-	.rail-flyout {
+	.rail:not(.is-expanded) .rail-item__icon::after {
 		transition: none !important;
 		animation: none !important;
 	}

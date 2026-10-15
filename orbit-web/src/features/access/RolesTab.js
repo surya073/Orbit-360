@@ -11,6 +11,13 @@ import { describeKey, diff, setAll, touchesAccessControl } from './accessModel';
 import PermissionMatrix from './PermissionMatrix';
 
 export const SCOPE_LABEL = { all_teams: 'Every team', own_team: 'One team' };
+const initialsOf = (name = '') =>
+	name
+		.split(/\s+/)
+		.filter(Boolean)
+		.slice(0, 2)
+		.map((w) => w[0].toUpperCase())
+		.join('') || '?';
 const SCOPE_HINT = { all_teams: 'Sees and manages the data of every team.', own_team: "Works only with the data of the team they are assigned to." };
 
 function RoleBadges({ role }) {
@@ -226,12 +233,17 @@ export default function RolesTab({ catalog, data, reload }) {
 					{shown.map((r) => (
 						<li key={r.key}>
 							<button type="button" className={`access-role ${r.key === role.key ? 'is-selected' : ''}`.trim()} aria-current={r.key === role.key ? 'true' : undefined} onClick={() => setSelectedKey(r.key)}>
-								<span className="access-role__name">{r.name}</span>
-								<span className="access-role__meta">
-									<RoleBadges role={r} />
+								<span className="access-role__avatar" aria-hidden="true">
+									{initialsOf(r.name)}
 								</span>
-								<span className="access-role__count">
-									{r.userCount} {r.userCount === 1 ? 'user' : 'users'} · {r.permissions.length} permissions
+								<span className="access-role__text">
+									<span className="access-role__name">{r.name}</span>
+									<span className="access-role__meta">
+										<RoleBadges role={r} />
+									</span>
+									<span className="access-role__count">
+										{r.userCount} {r.userCount === 1 ? 'user' : 'users'} · {r.permissions.length} permissions
+									</span>
 								</span>
 							</button>
 						</li>
@@ -294,9 +306,21 @@ export default function RolesTab({ catalog, data, reload }) {
 				) : null}
 
 				<PermissionMatrix catalog={catalog} value={editable ? draft : saved} saved={editable ? saved : null} revoked={new Set(role.revoked)} onChange={editable ? setDraft : null} label={`Permissions of ${role.name}`} />
-				<p className="muted small access-legend">
-					<span className="pm__legend pm__legend--on" /> granted <span className="pm__legend" /> not granted <span className="pm__legend pm__legend--revoked" /> granted before, then revoked. There are no per-person exceptions: everyone with this role has exactly these permissions. Anything not granted is denied.
-				</p>
+				<ul className="access-legend" aria-label="Legend">
+					<li>
+						<span className="pm__legend pm__legend--on" aria-hidden="true" />
+						Granted
+					</li>
+					<li>
+						<span className="pm__legend" aria-hidden="true" />
+						Not granted
+					</li>
+					<li>
+						<span className="pm__legend pm__legend--revoked" aria-hidden="true" />
+						Granted before, then revoked
+					</li>
+				</ul>
+				<p className="muted small access-legend__note">There are no per-person exceptions: everyone with this role has exactly these permissions. Anything not granted is denied.</p>
 			</section>
 
 			{creating ? (

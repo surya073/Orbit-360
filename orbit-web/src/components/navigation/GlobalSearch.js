@@ -34,7 +34,10 @@ export default function GlobalSearch() {
 		<>
 			<button type="button" ref={trigger} data-tour="search" className="search-trigger" onClick={() => setOpen(true)} aria-label="Search" aria-haspopup="dialog">
 				<Icon name="search" size={15} />
-				<span>Search</span>
+				<span className="search-trigger__label">Search</span>
+				<span className="search-trigger__hint" aria-hidden="true">
+					pages, people, projects…
+				</span>
 				<kbd>{isMac ? '⌘K' : 'Ctrl K'}</kbd>
 			</button>
 			{open ? (

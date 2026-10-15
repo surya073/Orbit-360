@@ -29,7 +29,7 @@ export default function ProjectHealthCard({ res, drill = false }) {
 				{d && d.status.total === null && wl.projects.length === 0 ? (
 					<EmptyState icon="folder" title="No projects in this selection" message="Import or add projects to see their status and workload." />
 				) : d ? (
-					<div className="grid grid--2" style={{ alignItems: 'start' }}>
+					<div className="ph">
 						<div>
 							<h3 className="block__title">Projects by status</h3>
 							{segments.length ? <DonutChart segments={segments} centerLabel="projects" ariaLabel="Projects by status" /> : <p className="muted small">No project statuses recorded.</p>}

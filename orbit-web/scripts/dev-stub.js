@@ -28,16 +28,30 @@ const me =
 const teams = [
 	{ ROWID: '7', team_code: 'DEL', name: 'Delivery', description: 'Delivery team', is_active: true },
 	{ ROWID: '8', team_code: 'PLT', name: 'Platform', description: 'Platform team', is_active: true },
+	{ ROWID: '9', team_code: 'GRW', name: 'Growth', description: 'Marketing, finance and people operations', is_active: true },
 ];
 const people = [
 	{ ROWID: '1', full_name: 'Asha Rao', employee_code: 'E-100', job_role: 'Senior Engineer', employment_status: 'active', primary_team_id: '7', joining_date: '2022-03-14', reports_to_employee_id: '2' },
 	{ ROWID: '2', full_name: 'Bala Iyer', employee_code: 'E-101', job_role: 'Delivery Lead', employment_status: 'active', primary_team_id: '7', joining_date: '2020-01-06' },
 	{ ROWID: '3', full_name: 'Chitra Nair', employee_code: 'E-102', job_role: 'Business Analyst', employment_status: 'on_leave', primary_team_id: '7', joining_date: '2023-07-01', reports_to_employee_id: '2' },
 	{ ROWID: '4', full_name: 'Dev Patel', employee_code: 'E-103', job_role: 'QA Engineer', employment_status: 'active', primary_team_id: '8', joining_date: '2021-11-22' },
+	{ ROWID: '5', full_name: 'Esha Kumar', employee_code: 'E-104', job_role: 'Backend Engineer', employment_status: 'active', primary_team_id: '8', joining_date: '2021-09-10', reports_to_employee_id: '4' },
+	{ ROWID: '6', full_name: 'Farhan Ali', employee_code: 'E-105', job_role: 'DevOps Engineer', employment_status: 'active', primary_team_id: '8', joining_date: '2022-01-15' },
+	{ ROWID: '7', full_name: 'Garvit Singh', employee_code: 'E-106', job_role: 'Frontend Engineer', employment_status: 'active', primary_team_id: '7', joining_date: '2023-05-22', reports_to_employee_id: '2' },
+	{ ROWID: '8', full_name: 'Harini Desai', employee_code: 'E-107', job_role: 'Product Manager', employment_status: 'active', primary_team_id: '7', joining_date: '2020-11-01' },
+	{ ROWID: '9', full_name: 'Iris Wong', employee_code: 'E-108', job_role: 'Marketing Manager', employment_status: 'active', primary_team_id: '9', joining_date: '2022-06-15' },
+	{ ROWID: '10', full_name: 'Jatin Patel', employee_code: 'E-109', job_role: 'Finance Analyst', employment_status: 'inactive', primary_team_id: '9', joining_date: '2021-03-08' },
+	{ ROWID: '11', full_name: 'Kavya Menon', employee_code: 'E-110', job_role: 'HR Manager', employment_status: 'active', primary_team_id: '9', joining_date: '2019-07-20' },
+	{ ROWID: '12', full_name: "Liam O'Brien", employee_code: 'E-111', job_role: 'Senior Engineer', employment_status: 'active', primary_team_id: '8', joining_date: '2020-04-12', reports_to_employee_id: '4' },
 ];
 const projects = [
 	{ ROWID: '1', project_name: 'Atlas Platform Migration', project_code: 'PRJ-ATLAS', team_id: '7', current_status: 'active', estimated_hours: 400 },
-	{ ROWID: '2', project_name: 'Orion', project_code: 'PRJ-ORION', team_id: '7', current_status: 'on_hold', estimated_hours: 120 },
+	{ ROWID: '2', project_name: 'Billing Revamp', project_code: 'PRJ-BILL', team_id: '7', current_status: 'active', estimated_hours: 120 },
+	{ ROWID: '3', project_name: 'Customer Portal', project_code: 'PRJ-PORTAL', team_id: '7', current_status: 'active', estimated_hours: null },
+	{ ROWID: '4', project_name: 'Data Lake', project_code: 'PRJ-LAKE', team_id: '8', current_status: 'on_hold', estimated_hours: 200 },
+	{ ROWID: '5', project_name: 'Mobile App v2', project_code: 'PRJ-MOBILE', team_id: '7', current_status: 'active', estimated_hours: 300 },
+	{ ROWID: '6', project_name: 'Security Audit', project_code: 'PRJ-SEC', team_id: '8', current_status: 'active', estimated_hours: 60 },
+	{ ROWID: '7', project_name: 'Orion', project_code: 'PRJ-ORION', team_id: '9', current_status: 'completed', estimated_hours: 150 },
 ];
 const tools = [
 	{ tool: 'ChatGPT', category: 'ai', records: 4, avgReportedPercent: 33 },
@@ -51,7 +65,7 @@ const overview = {
 	time: { completeness: 'complete', billableMinutes: 6000, nonBillableMinutes: 2000, totalMinutes: 8000, billablePercent: 75, approvedEntries: 30, excluded: { pending: 0, rejected: 0 } },
 	attendance: { completeness: 'complete', lateCount: 3, onTimeCount: 17, unknownCount: 0, lateRatePercent: 15, records: 20 },
 	leave: { completeness: 'complete', approvedDays: 3, approvedHours: 0, byStatus: { approved: 2 }, records: 2 },
-	headcount: { completeness: 'complete', total: 4, byStatus: { active: 3, on_leave: 1 } },
+	headcount: { completeness: 'complete', total: people.length, byStatus: people.reduce((m, e) => ({ ...m, [e.employment_status]: (m[e.employment_status] || 0) + 1 }), {}) },
 };
 const field = (f, type, extra = {}) => ({ field: f, type, required: false, ...extra });
 const templateOf = (module, columns, write = ROLE === 'admin' || module !== 'teams') => ({
@@ -111,9 +125,67 @@ const workload = [
 	['6', 'Security Audit', 'active', 1800, 60, 4500],
 ].map(([projectId, name, status, periodMinutes, estimatedHours, lifetimeMinutes]) => ({ projectId, name, status, periodMinutes, entries: Math.round(periodMinutes / 300), estimatedHours, lifetimeMinutes, burnPercent: estimatedHours ? Math.round((lifetimeMinutes / 60 / estimatedHours) * 100) : null })).sort((a, b) => b.periodMinutes - a.periodMinutes);
 
+// ---- sample records for every searchable module. `_emp`/`_project` are search-only helpers: the real API
+// matches employee/project names by joining, the stub precomputes them (they are never rendered).
+const nameOf = (id) => (people.find((p) => p.ROWID === String(id)) || {}).full_name || '';
+const projectName = (id) => (projects.find((p) => p.ROWID === String(id)) || {}).project_name || '';
+const day = (d) => `2026-10-${String(d).padStart(2, '0')}`;
+const timeEntries = [
+	[1, '1', '1', 480, true, 'approved', 'API gateway refactor', 'development'], [2, '2', '1', 360, true, 'approved', 'Sprint planning and review', 'meetings'],
+	[3, '3', '7', 240, false, 'approved', 'Requirements workshop', 'analysis'], [5, '4', '3', 450, true, 'approved', 'Regression test suite', 'testing'],
+	[6, '5', '3', 420, true, 'pending', 'Rate limiter implementation', 'development'], [7, '6', '6', 300, false, 'approved', 'CI pipeline upgrade', 'devops'],
+	[8, '7', '5', 480, true, 'approved', 'Mobile navigation redesign', 'design'], [9, '8', '5', 180, false, 'pending', 'Roadmap grooming', 'planning'],
+	[12, '1', '1', 450, true, 'approved', 'Migration scripts', 'development'], [13, '2', '1', 300, true, 'rejected', 'Duplicate entry for review', 'meetings'],
+	[14, '9', '2', 360, true, 'approved', 'Billing campaign assets', 'marketing'], [15, '12', '6', 480, true, 'approved', 'Auth service hardening', 'development'],
+].map(([d, emp, proj, mins, bill, status, desc, cat], i) => ({ ROWID: String(i + 1), work_date: day(d), employee_id: emp, project_id: proj, duration_minutes: mins, is_billable: bill, work_category: cat, approval_status: status, work_description: desc, _emp: nameOf(emp), _project: projectName(proj) }));
+const attendanceRecords = [
+	['1', '09:02', 'no', ''], ['2', '08:55', 'no', ''], ['3', '10:21', 'yes', 'Doctor appointment'], ['4', '09:48', 'yes', 'Traffic'], ['5', '09:10', 'no', ''], ['6', '09:35', 'unknown', ''],
+	['7', '09:05', 'no', ''], ['8', '10:05', 'yes', 'Client call overran'], ['9', '08:58', 'no', ''], ['10', '09:15', 'no', ''], ['11', '09:00', 'no', ''], ['12', '10:12', 'yes', 'Public transport delay'],
+].map(([emp, t, late, why], i) => ({ ROWID: String(i + 1), attendance_date: day(8 + (i % 4)), employee_id: emp, check_in_time_local: t, late_status: late, late_reason: why, _emp: nameOf(emp) }));
+const leaveRecords = [
+	['3', 'Sick leave', day(5), day(7), 3, 'days', 'approved'], ['1', 'Annual leave', day(19), day(23), 5, 'days', 'requested'], ['5', 'Casual leave', day(2), day(2), 1, 'days', 'approved'],
+	['9', 'Annual leave', '2026-09-28', day(1), 4, 'days', 'approved'], ['7', 'Personal leave', day(12), day(12), 4, 'hours', 'rejected'], ['12', 'Casual leave', day(14), day(14), 1, 'days', 'cancelled'],
+].map(([emp, type, from, to, units, unit, status], i) => ({ ROWID: String(i + 1), employee_id: emp, leave_type: type, start_date: from, end_date: to, units, unit_type: unit, status, _emp: nameOf(emp) }));
+const performanceRecords = [
+	['1', 4.5, 'Exceeds expectations', 'finalized'], ['2', 4.2, 'Strong delivery lead', 'finalized'], ['4', 3.8, 'Solid QA coverage', 'submitted'],
+	['5', 4.0, 'Reliable backend contributor', 'submitted'], ['7', 3.6, 'Growing quickly', 'draft'], ['12', 4.4, 'Technical mentor', 'finalized'],
+].map(([emp, value, text, status], i) => ({ ROWID: String(i + 1), employee_id: emp, review_cycle: 'H1 2026', period_start: '2026-01-01', period_end: '2026-06-30', metric_value: value, metric_text: text, review_status: status, _emp: nameOf(emp) }));
+const aiUsageRecords = [
+	['1', 'ChatGPT', 'ai', 40, 'Drafting and research'], ['2', 'Claude', 'ai', 35, 'Code review'], ['3', 'GitHub Copilot', 'github', null, 'Code completion'], ['4', 'Cursor', 'ai', 50, 'Refactoring'],
+	['5', 'Claude', 'ai', 30, 'Test generation'], ['7', 'Figma AI', 'other', 25, 'Design variations'], ['8', 'ChatGPT', 'ai', 20, 'Roadmap summaries'], ['12', 'GitHub Copilot', 'github', null, 'Pull request summaries'],
+].map(([emp, tool, cat, pct, purpose], i) => ({ ROWID: String(i + 1), employee_id: emp, tool_name: tool, tool_category: cat, usage_percent_reported: pct, reporting_period: '2026-09', usage_purpose: purpose, _emp: nameOf(emp) }));
+const productItems = [
+	['feature', 'API rate limiting', '3', 'open', 'high', '5', day(30)], ['bug', 'Fix search pagination bug', '1', 'open', 'critical', '1', day(10)], ['feature', 'Dark mode theme', '5', 'done', 'medium', '7', null],
+	['task', 'Dashboard performance tuning', '1', 'open', 'high', '2', day(9)], ['release', 'Release v2.0', '5', 'open', 'high', '8', day(31)], ['milestone', 'Beta launch', '3', 'open', 'medium', '8', day(25)],
+	['bug', 'Login redirect loop', '6', 'done', 'critical', '12', null], ['task', 'Write onboarding guide', '2', 'open', 'low', '9', day(28)],
+].map(([type, title, proj, status, priority, assignee, due], i) => ({ ROWID: String(i + 1), item_type: type, title, project_id: proj, status, priority, assignee_employee_id: assignee, due_date: due, completed_date: status === 'done' ? day(3) : null }));
+const assignments = [
+	['1', '1', 'Tech lead', 60], ['1', '2', 'Delivery manager', 40], ['3', '4', 'QA engineer', 100], ['3', '5', 'Backend engineer', 80], ['5', '7', 'Frontend engineer', 100], ['6', '12', 'Security engineer', 50], ['2', '9', 'Campaign owner', 30],
+].map(([proj, emp, role, alloc], i) => ({ ROWID: String(i + 1), project_id: proj, employee_id: emp, role_in_project: role, allocation_percent: alloc, is_active: true, start_date: '2026-09-01', end_date: null, _emp: nameOf(emp), _project: projectName(proj) }));
+
 function route(method, p, url) {
 	if (method !== 'GET') return { status: method === 'POST' ? 201 : 200, body: ok({ ROWID: '999', id: '999', key: 'new_role', granted: 0, revoked: 0 }) };
-	const list = (rows) => ({ body: ok(rows, meta(rows.length)) });
+	const sp = url.searchParams;
+	const page = Math.max(1, Number(sp.get('page')) || 1);
+	const pageSize = Math.min(100, Math.max(1, Number(sp.get('pageSize')) || 25));
+	// One page of rows with accurate totals, so pagination and page-size controls work locally.
+	const list = (rows) => ({ body: ok(rows.slice((page - 1) * pageSize, page * pageSize), { ...meta(rows.length, pageSize), page }) });
+	const NOT_FILTERS = new Set(['page', 'pageSize', 'q', 'from', 'to', 'ids', 'employee_ids']);
+	// Mirrors the real list endpoints: `ids` lookups, exact-match column filters, date range, then text search over `fields`.
+	const query = (rows, fields) => {
+		let out = rows;
+		const ids = (sp.get('ids') || '').split(',').filter(Boolean);
+		if (ids.length) out = out.filter((r) => ids.includes(String(r.ROWID)));
+		for (const [k, v] of sp.entries()) {
+			if (NOT_FILTERS.has(k) || v === '' || !rows.length || !(k in rows[0])) continue;
+			out = out.filter((r) => String(r[k]) === v);
+		}
+		const dateKey = rows.length ? ['work_date', 'attendance_date', 'start_date', 'period_start'].find((d) => d in rows[0]) : null;
+		if (dateKey && sp.get('from')) out = out.filter((r) => r[dateKey] >= sp.get('from'));
+		if (dateKey && sp.get('to')) out = out.filter((r) => r[dateKey] <= sp.get('to'));
+		const q = (sp.get('q') || '').toLowerCase().trim();
+		return q ? out.filter((r) => fields.some((f) => String(r[f] ?? '').toLowerCase().includes(q))) : out;
+	};
 	switch (true) {
 		case p === '/me': return { body: ok(me) };
 		case p === '/dashboard/overview': return { body: ok(overview) };
@@ -127,16 +199,23 @@ function route(method, p, url) {
 			return { body: ok({ filters: {}, people: Object.fromEntries(ids.map((i) => [i, profile])), truncated: false }) };
 		}
 		case p === '/imports/templates': return { body: ok(templates) };
-		case p === '/employees': return list(people);
-		case /^\/employees\/\d+$/.test(p): return { body: ok(people[0]) };
-		case p === '/teams': return list(ROLE === 'admin' ? teams : teams.slice(0, 1));
-		case p === '/projects': return list(projects);
+		case p === '/employees': return list(query(people, ['full_name', 'employee_code', 'job_role']));
+		case /^\/employees\/\d+$/.test(p): return { body: ok(people.find((e) => `/employees/${e.ROWID}` === p) || people[0]) };
+		case p === '/teams': return list(query(ROLE === 'admin' ? teams : teams.slice(0, 1), ['name', 'team_code', 'description']));
+		case p === '/projects': return list(query(projects, ['project_name', 'project_code']));
+		case p === '/project-assignments': return list(query(assignments, ['_emp', '_project', 'role_in_project']));
+		case p === '/time-entries': return list(query(timeEntries, ['_emp', '_project', 'work_category', 'work_description']));
+		case p === '/attendance': return list(query(attendanceRecords, ['_emp']));
+		case p === '/leave': return list(query(leaveRecords, ['_emp', 'leave_type']));
+		case p === '/performance': return list(query(performanceRecords, ['_emp', 'review_cycle']));
+		case p === '/ai-usage': return list(query(aiUsageRecords, ['tool_name', 'tool_category', '_emp']));
+		case p === '/product-items': return list(query(productItems, ['title', 'item_type']));
 		case p === '/presentations': return list([deck]);
 		case p === '/presentations/5': return { body: ok(deck) };
 		case p === '/reporting-structure': return { body: ok({ team: { id: '7', name: 'Delivery' }, employees: people.filter((e) => e.primary_team_id === '7').map((e) => ({ id: e.ROWID, name: e.full_name, jobRole: e.job_role, code: e.employee_code, sheetManagerId: e.reports_to_employee_id || null })), nodes: [{ employeeId: '2', parentId: null, roleLabel: 'Delivery Lead' }, { employeeId: '1', parentId: '2', roleLabel: null }] }) };
 		case p === '/access/catalog': return { body: ok(perm.catalog()) };
 		case p === '/access/roles': return { body: ok({ tablesReady: TABLES_READY, you: { roleKey: me.roleKey, canManageRoles: true, canManageUsers: true }, roles: roles() }) };
-		case p === '/access/users': return { body: ok(accessUsers, meta(accessUsers.length, 20)) };
+		case p === '/access/users': return list(query(accessUsers.map((u) => ({ ...u, ROWID: u.id })), ['displayName', 'email', 'roleName']));
 		default: return list([]);
 	}
 }

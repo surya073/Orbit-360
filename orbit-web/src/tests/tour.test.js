@@ -30,7 +30,7 @@ const ui = () => (
 describe('tour steps', () => {
 	test('a step for every part of the app the user can open, then search, appearance and account', () => {
 		const all = buildSteps(canForUser(admin)).map((s) => s.id);
-		expect(all).toEqual(['nav-dashboard', 'nav-people', 'nav-delivery', 'nav-imports', 'nav-spreadsheet', 'nav-presentations', 'nav-access', 'search', 'appearance', 'account']);
+		expect(all).toEqual(['nav-dashboard', 'nav-people', 'nav-delivery', 'nav-imports', 'nav-presentations', 'nav-access', 'search', 'appearance', 'account']);
 		const mgr = buildSteps(canForUser(manager)).map((s) => s.id);
 		expect(mgr).not.toContain('nav-access'); // managers cannot open Access, so the tour does not show it
 		expect(mgr).toContain('nav-people');

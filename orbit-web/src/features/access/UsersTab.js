@@ -138,6 +138,14 @@ function EditAccessModal({ person, roles, teams, canPickTeam, onClose, onSaved }
 	);
 }
 
+const personInitials = (name = '') =>
+	name
+		.split(/[\s@.]+/)
+		.filter(Boolean)
+		.slice(0, 2)
+		.map((p) => p[0].toUpperCase())
+		.join('') || '?';
+
 /** People who can sign in, with the role each holds. Managers of a team only ever see their own team. */
 export default function UsersTab({ data, reload: reloadRoles }) {
 	const { can, user } = useAuth();
@@ -173,6 +181,13 @@ export default function UsersTab({ data, reload: reloadRoles }) {
 						setPage(1);
 					}}
 				/>
+				<span className="access-toolbar__spacer" />
+				{res.meta ? (
+					<span className="muted small" role="status" aria-live="polite">
+						{res.meta.total} {res.meta.total === 1 ? 'person' : 'people'}
+						{dq ? ` match “${dq}”` : ''}
+					</span>
+				) : null}
 			</div>
 			<StateView res={res} loadingLines={6} emptyTitle="No users">
 				{rows.length === 0 ? (
@@ -186,9 +201,14 @@ export default function UsersTab({ data, reload: reloadRoles }) {
 									key: 'displayName',
 									label: 'User',
 									render: (r) => (
-										<span className="access-user">
-											<b>{r.displayName}</b>
-											<small>{r.email}</small>
+										<span className="access-user access-user--avatar">
+											<span className="access-avatar" aria-hidden="true">
+												{personInitials(r.displayName)}
+											</span>
+											<span className="access-user">
+												<b>{r.displayName}</b>
+												<small>{r.email}</small>
+											</span>
 										</span>
 									),
 								},

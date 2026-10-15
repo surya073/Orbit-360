@@ -755,3 +755,40 @@ a.projlist__name:hover {
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
+
+/* ---- Wide widgets lay their content out in columns, so a full-width card has no empty half ---- */
+.ph {
+	display: grid;
+	grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+	gap: var(--space-5);
+	align-items: start;
+}
+.ph .projlist {
+	grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	gap: var(--space-4) var(--space-5);
+}
+.ph .projlist__row:last-child {
+	padding-bottom: var(--space-3);
+	border-bottom: 1px dashed var(--border);
+}
+.ai {
+	display: grid;
+	grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+	gap: var(--space-5);
+	align-items: start;
+}
+.ai__summary {
+	display: grid;
+	align-content: start;
+	gap: var(--space-4);
+}
+.ai .toollist {
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: var(--space-4) var(--space-5);
+}
+@media (max-width: 900px) {
+	.ph,
+	.ai {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

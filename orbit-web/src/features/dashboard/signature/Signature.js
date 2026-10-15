@@ -150,7 +150,7 @@ export function SidePanel({ overview, projects, onCustomize }) {
 	const status = projects.data && projects.data.status;
 	const wl = projects.data && projects.data.workload;
 	const active = head && head.byStatus ? head.byStatus.active : null;
-	const rows = wl ? wl.projects.slice(0, 3) : [];
+	const rows = wl ? wl.projects.slice(0, 4) : []; // four rows fill the panel beside the chart and the two cards
 	return (
 		<section className="sig-card sig-side" aria-label="Team snapshot">
 			<header className="sig-head">

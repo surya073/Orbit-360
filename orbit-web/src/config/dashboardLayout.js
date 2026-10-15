@@ -1,14 +1,15 @@
 // Dashboard widgets the user may reorder or hide (below the signature overview, whose billable-hours chart
-// replaced the old billable trend widget). The default order matches the original layout.
+// replaced the old billable trend widget). The default order pairs the half-width cards (Attendance trend with
+// Product status) and keeps the full-width ones together, so no row is left half empty.
 // The layout is a per-device cosmetic preference (like theme) kept in localStorage; it never
 // changes which data a user may see: every widget still loads its own backend-scoped data.
 export const DASHBOARD_WIDGETS = [
 	{ id: 'kpis', label: 'Key metrics', description: 'Headline employee, project, time and attendance figures' },
-	{ id: 'attendance-trend', label: 'Attendance trend', description: 'Late check-in rate over the period' },
 	{ id: 'time-breakdown', label: 'Approved time breakdown', description: 'Billable share, approved entries and what is not counted yet' },
 	{ id: 'people-leave', label: 'People, attendance and leave', description: 'Headcount by status, check-in punctuality and leave records' },
-	{ id: 'project-health', label: 'Project health', description: 'Project status mix and delivery health' },
+	{ id: 'attendance-trend', label: 'Attendance trend', description: 'Late check-in rate over the period' },
 	{ id: 'product-status', label: 'Product status', description: 'Product backlog by status' },
+	{ id: 'project-health', label: 'Project health', description: 'Project status mix and delivery health' },
 	{ id: 'ai-usage', label: 'AI usage', description: 'AI tool adoption and cost' },
 	{ id: 'insights', label: 'Insights', description: 'Plain-language observations from the data above' },
 ];

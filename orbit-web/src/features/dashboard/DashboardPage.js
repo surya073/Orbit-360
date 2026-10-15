@@ -21,8 +21,8 @@ import PeopleLeaveCard from './widgets/PeopleLeaveCard';
 import TimeBreakdownCard from './widgets/TimeBreakdownCard';
 import { AttendanceTrendCard } from './widgets/TrendCards';
 
-// Widgets with enough content to use the full row.
-const WIDE = ['time-breakdown', 'people-leave', 'project-health', 'insights'];
+// Widgets that use the full row (their content is laid out in columns); the others share a row in pairs.
+const WIDE = ['time-breakdown', 'people-leave', 'project-health', 'ai-usage', 'insights'];
 
 /**
  * Executive overview. The signature section (billable hours, team snapshot, needs attention, workload)

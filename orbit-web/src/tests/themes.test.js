@@ -60,20 +60,20 @@ const dark = (matches) => {
 	window.matchMedia = (q) => ({ matches: q.includes('dark') ? matches : false, media: q, addEventListener() {}, removeEventListener() {} });
 };
 
-test('defaults to Light Blueberry, applies attributes, and persists a selection', async () => {
+test('defaults to Ember, applies attributes, and persists a selection', async () => {
 	render(
 		<ThemeProvider>
 			<ThemeSelector />
 		</ThemeProvider>
 	);
-	expect(document.documentElement.dataset.theme).toBe('blueberry');
+	expect(document.documentElement.dataset.theme).toBe('ember');
 	await userEvent.click(screen.getByRole('radio', { name: /sunset/i }));
 	expect(document.documentElement.dataset.theme).toBe('sunset');
 	expect(JSON.parse(localStorage.getItem(APPEARANCE_KEY)).theme).toBe('sunset');
 	expect(screen.getByRole('radio', { name: /sunset/i })).toHaveAttribute('aria-checked', 'true');
 });
 
-test('the selector offers exactly six themes plus an explicit System option, each with a preview', () => {
+test('the selector offers exactly seven themes plus an explicit System option, each with a preview', () => {
 	render(
 		<ThemeProvider>
 			<ThemeSelector />
@@ -81,8 +81,8 @@ test('the selector offers exactly six themes plus an explicit System option, eac
 	);
 	const group = screen.getByRole('radiogroup', { name: 'Theme' });
 	const names = within(group).getAllByRole('radio').map((r) => r.querySelector('b').textContent);
-	expect(names).toEqual(['Light Blueberry', 'Black Current', 'Volcano', 'Sunset', 'Ocean', 'Forest', 'System']);
-	expect(group.querySelectorAll('.theme-preview[data-theme]').length).toBe(7);
+	expect(names).toEqual(['Ember', 'Light Blueberry', 'Black Current', 'Volcano', 'Sunset', 'Ocean', 'Forest', 'System']);
+	expect(group.querySelectorAll('.theme-preview[data-theme]').length).toBe(8);
 });
 
 test('a stored theme is restored on startup; invalid stored data falls back safely', () => {
@@ -91,9 +91,9 @@ test('a stored theme is restored on startup; invalid stored data falls back safe
 	expect(document.documentElement.dataset.theme).toBe('volcano');
 	expect(document.documentElement.dataset.density).toBe('compact');
 	localStorage.setItem(APPEARANCE_KEY, '{not json');
-	expect(readAppearance()).toEqual({ theme: 'blueberry', density: 'comfortable', iconStyle: 'tabler' });
+	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler' });
 	localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'neon', density: 'huge' }));
-	expect(readAppearance()).toEqual({ theme: 'blueberry', density: 'comfortable', iconStyle: 'tabler' });
+	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler' });
 });
 
 test('System follows the device preference only when selected', async () => {
@@ -103,7 +103,7 @@ test('System follows the device preference only when selected', async () => {
 			<ThemeSelector />
 		</ThemeProvider>
 	);
-	expect(document.documentElement.dataset.theme).toBe('blueberry'); // explicit default is not "system"
+	expect(document.documentElement.dataset.theme).toBe('ember'); // explicit default is not "system"
 	await userEvent.click(screen.getByRole('radio', { name: /system/i }));
 	expect(document.documentElement.dataset.theme).toBe('blackcurrant');
 	expect(document.documentElement.dataset.themePref).toBe('system');

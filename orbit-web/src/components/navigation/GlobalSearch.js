@@ -32,7 +32,7 @@ export default function GlobalSearch() {
 	const trigger = useRef(null);
 	return (
 		<>
-			<button type="button" ref={trigger} className="search-trigger" onClick={() => setOpen(true)} aria-label="Search" aria-haspopup="dialog">
+			<button type="button" ref={trigger} data-tour="search" className="search-trigger" onClick={() => setOpen(true)} aria-label="Search" aria-haspopup="dialog">
 				<Icon name="search" size={15} />
 				<span>Search</span>
 				<kbd>{isMac ? '⌘K' : 'Ctrl K'}</kbd>

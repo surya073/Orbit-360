@@ -1,7 +1,8 @@
 // Theme registry. The color tokens live in styles/themes.css, keyed by [data-theme="<id>"]; this file
-// only describes the options the UI offers. Exactly six themes exist. "System" is not a theme: it
+// only describes the options the UI offers. Seven themes exist; Ember is the default. "System" is not a theme: it
 // picks Light Blueberry or Black Current to match the device.
 export const THEMES = [
+	{ id: 'ember', label: 'Ember', description: 'Cinematic warm black with glass panels and an orange glow', scheme: 'dark' },
 	{ id: 'blueberry', label: 'Light Blueberry', description: 'Clean white and cool blue-grey with blueberry accents', scheme: 'light' },
 	{ id: 'blackcurrant', label: 'Black Current', description: 'Layered charcoal surfaces with a restrained berry accent', scheme: 'dark' },
 	{ id: 'volcano', label: 'Volcano', description: 'Volcanic dark with ember red and molten orange', scheme: 'dark' },
@@ -13,7 +14,7 @@ export const THEMES = [
 export const SYSTEM_THEME = { id: 'system', label: 'System', description: 'Follow your device: Light Blueberry or Black Current' };
 
 export const THEME_IDS = THEMES.map((t) => t.id);
-export const DEFAULT_THEME = 'blueberry';
+export const DEFAULT_THEME = 'ember';
 // Used when "System" is selected: which theme matches the OS preference.
 export const SYSTEM_MAP = { light: 'blueberry', dark: 'blackcurrant' };
 

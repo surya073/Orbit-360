@@ -11,7 +11,7 @@ import Popover from '../common/Popover';
 export default function ThemeQuickMenu({ showSettingsLink = true }) {
 	const { theme, setTheme } = useTheme();
 	return (
-		<Popover label="Appearance" trigger={({ toggle, props }) => <IconButton icon="palette" label="Appearance" onClick={toggle} {...props} />}>
+		<Popover label="Appearance" trigger={({ toggle, props }) => <IconButton icon="palette" label="Appearance" data-tour="appearance" onClick={toggle} {...props} />}>
 			{({ close }) => (
 				<div style={{ minWidth: 220 }} role="radiogroup" aria-label="Theme">
 					{[...THEMES, SYSTEM_THEME].map((t) => (

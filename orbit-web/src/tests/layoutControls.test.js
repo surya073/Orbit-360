@@ -38,11 +38,11 @@ describe('dashboard layout editor', () => {
 		const { unmount } = render(<EditorHarness />);
 		expect(rowLabels()[0]).toBe('Key metrics');
 		await userEvent.click(screen.getByRole('button', { name: 'Move Key metrics down' }));
-		expect(rowLabels().slice(0, 2)).toEqual(['Billable hours trend', 'Key metrics']);
-		expect(stored().order.slice(0, 2)).toEqual(['billable-trend', 'kpis']);
+		expect(rowLabels().slice(0, 2)).toEqual(['Attendance trend', 'Key metrics']);
+		expect(stored().order.slice(0, 2)).toEqual(['attendance-trend', 'kpis']);
 		unmount();
 		render(<EditorHarness />);
-		expect(rowLabels().slice(0, 2)).toEqual(['Billable hours trend', 'Key metrics']);
+		expect(rowLabels().slice(0, 2)).toEqual(['Attendance trend', 'Key metrics']);
 	});
 
 	test('first/last rows cannot move past the ends', () => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
+import { useTour } from '../../app/providers/TourProvider';
 import { ROUTES } from '../../config/routes';
 import Icon from '../common/Icon';
 import Popover from '../common/Popover';
@@ -15,13 +16,18 @@ const initials = (name = '') =>
 
 export default function UserMenu() {
 	const { user, can, signOut } = useAuth();
+	const tour = useTour();
 	return (
 		<Popover
 			label="Account"
 			trigger={({ toggle, props }) => (
-				<button type="button" className="user-trigger" onClick={toggle} aria-label={`Account menu for ${user.displayName}`} {...props}>
+				<button type="button" data-tour="account" className="user-trigger" onClick={toggle} aria-label={`Account menu for ${user.displayName}`} {...props}>
 					<span className="avatar" aria-hidden="true">
 						{initials(user.displayName)}
+					</span>
+					<span className="user-trigger__text" aria-hidden="true">
+						<b>{user.displayName}</b>
+						<small>{user.roleName || (user.role === 'admin' ? 'Administrator' : 'Manager')}</small>
 					</span>
 					<Icon name="chevronDown" size={13} />
 				</button>
@@ -53,6 +59,17 @@ export default function UserMenu() {
 							Access &amp; Permissions
 						</Link>
 					) : null}
+					<button
+						type="button"
+						className="menu-item"
+						onClick={() => {
+							close();
+							tour.start();
+						}}
+					>
+						<Icon name="sparkles" size={15} />
+						Take the tour
+					</button>
 					<div className="menu-sep" />
 					<button type="button" className="menu-item" onClick={signOut}>
 						<Icon name="logout" size={15} />

@@ -1,0 +1,388 @@
+/*
+ * Dashboard entrance (animation only: no colour, size or layout of the dashboard changes).
+ *
+ *   .dash--cinematic  first visit of a browser session: the full sequence below (see features/dashboard/entrance.js)
+ *   .dash--quick      later visits: the original quick fade (nothing here applies)
+ *
+ * Hierarchy and timing (ms from page open): light bloom 0 > hero card 60 > eyebrow 200, title 280, lede 380,
+ * actions 460, chips 520+, gauges 420/520, flags 700 > filters 440+ > KPI cards 520 + 80 each, left to right >
+ * widgets 900 + 90 each, then their charts and rows. Everything is done by ~2s and never blocks input.
+ *
+ * Performance: only transform, opacity and (during the entrance only) a small blur. Entrance animations use
+ * fill-mode `backwards`, so once they finish the element returns to its normal styles and hover effects
+ * work. Reduced motion switches the whole thing off.
+ */
+
+.dash--cinematic,
+.dash--quick {
+	--cine: cubic-bezier(0.16, 1, 0.3, 1); /* expo-out: fast start, long soft landing, no bounce */
+}
+
+/* ---------- keyframes ---------- */
+@keyframes dash-bloom {
+	0% {
+		opacity: 0;
+	}
+	38% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+@keyframes dash-rise {
+	from {
+		opacity: 0;
+		transform: translate3d(0, 16px, 0);
+		filter: blur(5px);
+	}
+}
+@keyframes dash-card {
+	from {
+		opacity: 0;
+		transform: perspective(900px) translate3d(0, 26px, 0) rotateX(9deg) scale(0.96);
+		filter: blur(7px);
+	}
+}
+@keyframes dash-panel {
+	from {
+		opacity: 0;
+		transform: perspective(1100px) translate3d(0, 22px, 0) rotateX(5deg) scale(0.985);
+		filter: blur(4px);
+	}
+}
+@keyframes dash-flip {
+	from {
+		opacity: 0;
+		transform: perspective(900px) translate3d(0, 30px, 0) rotateY(-90deg);
+	}
+	55% {
+		opacity: 1;
+	}
+}
+@keyframes dash-icon {
+	from {
+		opacity: 0;
+		transform: scale(0.45) rotate(-16deg);
+	}
+}
+@keyframes dash-row {
+	from {
+		opacity: 0;
+		transform: translate3d(-10px, 0, 0);
+	}
+}
+@keyframes dash-fill {
+	from {
+		transform: scaleX(0);
+	}
+}
+@keyframes dash-donut {
+	from {
+		opacity: 0;
+		transform: rotate(-70deg) scale(0.86);
+	}
+}
+
+/* ---------- atmosphere: a soft light bloom that settles (nothing remains afterwards) ---------- */
+.dash--cinematic {
+	position: relative;
+	isolation: isolate;
+}
+.dash--cinematic::before {
+	content: '';
+	position: absolute;
+	inset: -48px 0 auto 0; /* never wider than the page: no sideways scroll on tablets and phones */
+	height: 380px;
+	z-index: -1;
+	pointer-events: none;
+	background: radial-gradient(55% 100% at 72% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%), radial-gradient(38% 80% at 8% 0%, color-mix(in srgb, var(--chart-4, var(--accent)) 14%, transparent), transparent 72%);
+	/* soft edges on every side, so no rectangle is ever visible */
+	-webkit-mask-image: linear-gradient(to right, transparent, #000 22%, #000 78%, transparent), linear-gradient(to bottom, transparent, #000 30%, #000 50%, transparent);
+	-webkit-mask-composite: source-in;
+	mask-image: linear-gradient(to right, transparent, #000 22%, #000 78%, transparent), linear-gradient(to bottom, transparent, #000 30%, #000 50%, transparent);
+	mask-composite: intersect;
+	animation: dash-bloom 2400ms var(--cine) both;
+}
+
+/* ---------- signature cards: each flips in from its own side and travels into place ---------- */
+@keyframes sig-flip-down {
+	from {
+		opacity: 0;
+		transform: perspective(1400px) translate3d(0, -40px, -80px) rotateX(-58deg);
+		filter: blur(6px);
+	}
+	60% {
+		opacity: 1;
+		filter: blur(0);
+	}
+}
+@keyframes sig-flip-left {
+	from {
+		opacity: 0;
+		transform: perspective(1400px) translate3d(-70px, 30px, -60px) rotateY(64deg);
+		filter: blur(6px);
+	}
+	60% {
+		opacity: 1;
+		filter: blur(0);
+	}
+}
+@keyframes sig-flip-right {
+	from {
+		opacity: 0;
+		transform: perspective(1400px) translate3d(80px, 0, -60px) rotateY(-70deg);
+		filter: blur(6px);
+	}
+	60% {
+		opacity: 1;
+		filter: blur(0);
+	}
+}
+@keyframes sig-flip-up {
+	from {
+		opacity: 0;
+		transform: perspective(1400px) translate3d(0, 60px, -60px) rotateX(62deg);
+		filter: blur(6px);
+	}
+	60% {
+		opacity: 1;
+		filter: blur(0);
+	}
+}
+/* the stacked cards are dealt like a hand: each flips over (back to front) and slides up */
+@keyframes sig-deal {
+	from {
+		opacity: 0;
+		transform: translate3d(0, 120px, 0) rotateX(-180deg) rotateZ(-8deg);
+	}
+	45% {
+		opacity: 1;
+	}
+}
+@keyframes sig-grow {
+	from {
+		transform: scaleY(0);
+	}
+}
+@keyframes sig-pop {
+	from {
+		opacity: 0;
+		transform: translate3d(0, 10px, 0) scale(0.6);
+	}
+}
+@keyframes sig-orb {
+	from {
+		opacity: 0;
+		transform: translate3d(40px, 50px, 0) scale(0.4) rotate(-40deg);
+	}
+}
+
+.dash--cinematic .sig-grid {
+	perspective: 1600px;
+}
+.dash--cinematic .sig-card {
+	transform-origin: 50% 0%;
+	backface-visibility: hidden;
+}
+.dash--cinematic .sig-balance {
+	animation: sig-flip-down 1100ms var(--cine) 120ms backwards;
+}
+.dash--cinematic .sig-side {
+	transform-origin: 100% 50%;
+	animation: sig-flip-right 1150ms var(--cine) 300ms backwards;
+}
+.dash--cinematic .sig-promo {
+	transform-origin: 0% 50%;
+	animation: sig-flip-left 1100ms var(--cine) 520ms backwards;
+}
+.dash--cinematic .sig-bars {
+	transform-origin: 50% 100%;
+	animation: sig-flip-up 1100ms var(--cine) 640ms backwards;
+}
+.dash--cinematic .sig-head,
+.dash--cinematic .sig-foot {
+	animation: dash-rise 700ms var(--cine) 520ms backwards;
+}
+.dash--cinematic .sig-side .sig-head {
+	animation-delay: 640ms;
+}
+.dash--cinematic .glow-chart__line {
+	animation-delay: 700ms;
+	animation-duration: 1500ms;
+}
+.dash--cinematic .glow-chart__area {
+	animation-delay: 1100ms;
+}
+.dash--cinematic .glow-chart__mark {
+	animation: sig-pop 600ms var(--cine) 1700ms backwards;
+}
+.dash--cinematic .glow-chart__tip {
+	animation: fade-in 500ms var(--cine) 1800ms backwards;
+}
+.dash--cinematic .sig-timeline__seg i {
+	animation: dash-fill 900ms var(--cine) 1200ms backwards;
+}
+.dash--cinematic .sig-stack__card {
+	transform-origin: 50% 100%;
+	animation: sig-deal 1000ms var(--cine) backwards;
+}
+.dash--cinematic .sig-stack__card--3 {
+	animation-delay: 620ms;
+}
+.dash--cinematic .sig-stack__card--2 {
+	animation-delay: 760ms;
+}
+.dash--cinematic .sig-stack__card--1 {
+	animation-delay: 900ms;
+}
+.dash--cinematic .sig-actions > * {
+	animation: sig-pop 600ms var(--cine) 1150ms backwards;
+}
+.dash--cinematic .sig-actions > :nth-child(2) {
+	animation-delay: 1230ms;
+}
+.dash--cinematic .sig-row:nth-child(1) { animation: dash-row 600ms var(--cine) 1300ms backwards; }
+.dash--cinematic .sig-row:nth-child(2) { animation: dash-row 600ms var(--cine) 1380ms backwards; }
+.dash--cinematic .sig-row:nth-child(n + 3) { animation: dash-row 600ms var(--cine) 1460ms backwards; }
+.dash--cinematic .sig-promo__orb {
+	animation: sig-orb 1300ms var(--cine) 900ms backwards;
+}
+.dash--cinematic .sig-promo__orb--b {
+	animation-delay: 1000ms;
+}
+.dash--cinematic .sig-promo__orb--c {
+	animation-delay: 1100ms;
+}
+.dash--cinematic .sig-promo__body,
+.dash--cinematic .sig-promo__btn {
+	animation: dash-rise 700ms var(--cine) 900ms backwards;
+}
+.dash--cinematic .sig-promo__bubbles li {
+	animation: sig-pop 500ms var(--cine) 1150ms backwards;
+}
+.dash--cinematic .sig-col__bar {
+	animation: sig-grow 1000ms var(--cine) calc(1000ms + var(--n, 0) * 70ms) backwards;
+}
+.dash--cinematic .sig-col__val,
+.dash--cinematic .sig-col__chip {
+	animation: sig-pop 500ms var(--cine) calc(1400ms + var(--n, 0) * 70ms) backwards;
+}
+
+/* ---------- filters ---------- */
+.dash--cinematic .filter-bar {
+	animation: dash-rise 700ms var(--cine) 440ms backwards;
+}
+.dash--cinematic .filter-bar > :nth-child(1) {
+	animation: dash-rise 600ms var(--cine) 520ms backwards;
+}
+.dash--cinematic .filter-bar > :nth-child(2) {
+	animation: dash-rise 600ms var(--cine) 580ms backwards;
+}
+.dash--cinematic .filter-bar > :nth-child(3) {
+	animation: dash-rise 600ms var(--cine) 640ms backwards;
+}
+.dash--cinematic .filter-bar > :nth-child(n + 4) {
+	animation: dash-rise 600ms var(--cine) 700ms backwards;
+}
+
+/* ---------- KPI cards: left to right ---------- */
+.dash--cinematic .grid--kpi > .kpi:nth-child(1) { --d: 520ms; }
+.dash--cinematic .grid--kpi > .kpi:nth-child(2) { --d: 600ms; }
+.dash--cinematic .grid--kpi > .kpi:nth-child(3) { --d: 680ms; }
+.dash--cinematic .grid--kpi > .kpi:nth-child(4) { --d: 760ms; }
+.dash--cinematic .grid--kpi > .kpi:nth-child(5) { --d: 840ms; }
+.dash--cinematic .grid--kpi > .kpi:nth-child(n + 6) { --d: 920ms; }
+.dash--cinematic .grid--kpi > .kpi {
+	transform-origin: 0% 50%;
+	animation: dash-flip 950ms var(--cine) calc(var(--d, 520ms) + 600ms) backwards;
+}
+.dash--cinematic .grid--kpi > .kpi .kpi__icon {
+	animation: dash-icon 600ms var(--cine) calc(var(--d, 520ms) + 280ms) backwards;
+}
+/* sparklines, bars and progress inside a card draw after the card has landed */
+.dash--cinematic .grid--kpi > .kpi .spark__line,
+.dash--cinematic .grid--kpi > .kpi .progress__fill {
+	animation-delay: calc(var(--d, 520ms) + 380ms);
+	animation-duration: 1000ms;
+}
+
+/* ---------- widgets: charts and panels ---------- */
+.dash--cinematic .widget {
+	--wd: calc(1500ms + var(--i, 0) * 90ms);
+	animation: dash-panel 800ms var(--cine) var(--wd) backwards;
+}
+.dash--cinematic .widget .card__icon {
+	animation: dash-icon 600ms var(--cine) calc(var(--wd) + 260ms) backwards;
+}
+.dash--cinematic .widget .chart__line {
+	animation-delay: calc(var(--wd) + 260ms);
+	animation-duration: 1200ms;
+}
+.dash--cinematic .widget .chart__area {
+	animation-delay: calc(var(--wd) + 700ms);
+	animation-duration: 800ms;
+}
+.dash--cinematic .widget .progress__fill,
+.dash--cinematic .widget .barlist__fill {
+	animation: dash-fill 900ms var(--cine) calc(var(--wd) + 360ms) backwards;
+}
+.dash--cinematic .widget .stackbar span {
+	transform-origin: left;
+	animation: dash-fill 900ms var(--cine) calc(var(--wd) + 360ms) backwards;
+}
+.dash--cinematic .widget .donut svg {
+	animation: dash-donut 1000ms var(--cine) calc(var(--wd) + 300ms) backwards;
+}
+.dash--cinematic .widget .ring__arc {
+	animation-delay: calc(var(--wd) + 300ms);
+	animation-duration: 1100ms;
+}
+
+/* rows inside the panels appear one after another */
+.dash--cinematic .widget :is(.toollist__row, .projlist__row, .typelist__row, .barlist__row, .stat-tile, .insights > *):nth-child(1) { animation: dash-row 560ms var(--cine) calc(var(--wd) + 320ms) backwards; }
+.dash--cinematic .widget :is(.toollist__row, .projlist__row, .typelist__row, .barlist__row, .stat-tile, .insights > *):nth-child(2) { animation: dash-row 560ms var(--cine) calc(var(--wd) + 380ms) backwards; }
+.dash--cinematic .widget :is(.toollist__row, .projlist__row, .typelist__row, .barlist__row, .stat-tile, .insights > *):nth-child(3) { animation: dash-row 560ms var(--cine) calc(var(--wd) + 440ms) backwards; }
+.dash--cinematic .widget :is(.toollist__row, .projlist__row, .typelist__row, .barlist__row, .stat-tile, .insights > *):nth-child(4) { animation: dash-row 560ms var(--cine) calc(var(--wd) + 500ms) backwards; }
+.dash--cinematic .widget :is(.toollist__row, .projlist__row, .typelist__row, .barlist__row, .stat-tile, .insights > *):nth-child(5) { animation: dash-row 560ms var(--cine) calc(var(--wd) + 560ms) backwards; }
+.dash--cinematic .widget :is(.toollist__row, .projlist__row, .typelist__row, .barlist__row, .stat-tile, .insights > *):nth-child(n + 6) { animation: dash-row 560ms var(--cine) calc(var(--wd) + 620ms) backwards; }
+
+/* ---------- hover refinements (dimensions never change) ---------- */
+.dash .widget .card {
+	transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.dash .widget .card:hover {
+	transform: translateY(-2px);
+}
+.dash .kpi .kpi__icon,
+.dash .widget .card__icon {
+	transition: transform var(--dur) var(--ease);
+}
+.dash .kpi:hover .kpi__icon,
+.dash .widget .card:hover .card__icon {
+	transform: scale(1.1) rotate(-4deg);
+}
+.dash .btn {
+	transition: transform var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.dash .btn:hover:not(:disabled) {
+	transform: translateY(-1px);
+}
+.dash .btn:active:not(:disabled) {
+	transform: none;
+}
+
+/* ---------- reduced motion: no entrance, no movement ---------- */
+@media (prefers-reduced-motion: reduce) {
+	.dash--cinematic::before,
+	.dash--cinematic *,
+	.dash--cinematic *::before {
+		animation: none !important;
+	}
+	.dash .widget .card:hover,
+	.dash .kpi:hover .kpi__icon,
+	.dash .widget .card:hover .card__icon,
+	.dash .btn:hover:not(:disabled) {
+		transform: none;
+	}
+}

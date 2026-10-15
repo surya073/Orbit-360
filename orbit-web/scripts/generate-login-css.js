@@ -14,7 +14,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const css = fs.readFileSync(path.join(ROOT, 'src/styles/themes.css'), 'utf8');
-const ids = ['blueberry', 'blackcurrant', 'volcano', 'sunset', 'ocean', 'forest'];
+const ids = ['ember', 'blueberry', 'blackcurrant', 'volcano', 'sunset', 'ocean', 'forest'];
 
 function tokens(id) {
 	const re = id === 'blueberry' ? /:root,\s*\[data-theme='blueberry'\]\s*\{([^}]*)\}/ : new RegExp(`\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`);

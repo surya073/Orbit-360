@@ -4,6 +4,7 @@ import { metricNote } from '../../utils/format';
 import ProgressBar from '../charts/ProgressBar';
 import Sparkline from '../charts/Sparkline';
 import Icon from '../common/Icon';
+import { CountUp, prefersReducedMotion, useCinematic } from '../../features/dashboard/entrance';
 import CompletenessBadge from './CompletenessBadge';
 
 /**
@@ -23,8 +24,11 @@ export default function KpiCard({ label, value, unit, sub, icon, metric, loading
 	const rich = Boolean(spark || progress || hint || to);
 	const live = !loading && !error;
 	const labelId = useId();
+	// Only inside a dashboard playing its cinematic entrance (never in tests or with reduced motion).
+	const cinematic = useCinematic();
+	const countUp = cinematic && process.env.NODE_ENV !== 'test' && !prefersReducedMotion();
 	return (
-		<section className={`card kpi ${rich ? 'kpi--rich' : ''}`.trim()} aria-label={label} style={{ animationDelay: `${delay}ms`, '--kpi-accent': accent }} aria-busy={loading || undefined}>
+		<section className={`card kpi ${rich ? 'kpi--rich' : ''}`.trim()} aria-label={label} style={cinematic ? { '--kpi-accent': accent } : { animationDelay: `${delay}ms`, '--kpi-accent': accent }} aria-busy={loading || undefined}>
 			<div className="kpi__label" id={labelId}>
 				{icon ? (
 					<span className="kpi__icon" aria-hidden="true">
@@ -41,7 +45,7 @@ export default function KpiCard({ label, value, unit, sub, icon, metric, loading
 				</div>
 			) : (
 				<div className={`kpi__value ${missing ? 'kpi__value--empty' : ''}`}>
-					{missing ? '—' : value}
+					{missing ? '—' : <CountUp text={value} enabled={countUp} />}
 					{!missing && unit ? <span className="kpi__unit">{unit}</span> : null}
 				</div>
 			)}

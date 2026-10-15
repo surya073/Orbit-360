@@ -11,7 +11,8 @@
  *   status     success / warning / danger / info (+ -soft)
  *   charts     chart-1..6, chart-grid
  *   chrome     header-bg, gradient-accent, gradient-wash (page/panel backdrop), scrollbar, shadow-rgb
- * Only the six themes below exist; "System" simply picks Light Blueberry or Black Current.
+ * Seven themes exist; "System" simply picks Light Blueberry or Black Current. Ember is the default.
+ *   panels     panel-bg, panel-border, panel-shadow, panel-radius, promo-bg, promo-ink, rail-bg (defaults in tokens.css)
  */
 
 /* ============ Light Blueberry (default light) ============ */
@@ -93,6 +94,55 @@
 	--gradient-wash: radial-gradient(900px 420px at 85% -10%, rgb(124 95 224 / 0.16), transparent 70%);
 	--scrollbar: #44445a;
 	--shadow-rgb: 0 0 0;
+}
+
+/* ============ Ember (cinematic warm dark: the default) ============ */
+[data-theme='ember'] {
+	color-scheme: dark;
+	--bg: #0c0907;
+	--surface: #15100d;
+	--surface-2: #1f1612;
+	--surface-3: #2b1f18;
+	--border: #2f231c;
+	--border-strong: #54402f;
+	--text: #f7eee8;
+	--text-muted: #b6a79d;
+	--on-accent: #1c0d04;
+	--accent: #ff8a3d;
+	--accent-hover: #ffa566;
+	--accent-contrast: #1c0d04;
+	--accent-soft: #3b2113;
+	--focus: #ffb27a;
+	--ring: rgb(255 138 61 / 0.3);
+	--success: #45dc97;
+	--success-soft: #10271b;
+	--warning: #ffc15a;
+	--warning-soft: #33260e;
+	--danger: #ff7c6d;
+	--danger-soft: #3a1815;
+	--info: #7fb6f2;
+	--info-soft: #14243a;
+	--chart-1: #ff8a3d;
+	--chart-2: #45dc97;
+	--chart-3: #7fb6f2;
+	--chart-4: #f27a98;
+	--chart-5: #b99bff;
+	--chart-6: #b6a79d;
+	--chart-grid: #2a1f19;
+	--header-bg: rgb(12 9 7 / 0.72);
+	--gradient-accent: linear-gradient(135deg, #f26a1b 0%, #ff9a4d 100%);
+	--gradient-wash: radial-gradient(900px 480px at 80% -10%, rgb(255 138 61 / 0.14), transparent 70%);
+	--scrollbar: #54402f;
+	--shadow-rgb: 0 0 0;
+
+	/* glass panels and the orange promo card (non-colour-pair tokens: not part of the contrast contract) */
+	--panel-bg: linear-gradient(150deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.014) 55%), #130e0b;
+	--panel-border: rgb(255 255 255 / 0.075);
+	--panel-shadow: 0 26px 60px -30px rgb(0 0 0 / 0.9), inset 0 1px 0 rgb(255 255 255 / 0.06);
+	--panel-radius: 26px;
+	--promo-bg: linear-gradient(155deg, #f4a255 0%, #dc732c 40%, #8f4719 100%);
+	--promo-ink: #fff8f1;
+	--rail-bg: linear-gradient(180deg, #17110e, #100b09);
 }
 
 /* ============ Volcano (bold, warm dark) ============ */

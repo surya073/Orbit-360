@@ -93,14 +93,32 @@ const profile = {
 	projects: { total: 2, items: [{ projectId: '1', name: 'Atlas Platform Migration', periodMinutes: 3600 }, { projectId: '2', name: 'Orion', periodMinutes: 2400 }] },
 };
 
+// Sample weekly buckets and project workload so the local preview draws real-looking charts.
+const WEEKLY = [38, 44, 41, 52, 47, 58, 50, 61, 55, 49, 63, 57, 66];
+const trendTime = WEEKLY.map((h, i) => {
+	const d = new Date(Date.UTC(2026, 6, 13 + i * 7));
+	const billableMinutes = h * 60;
+	const nonBillableMinutes = Math.round(h * 60 * (0.25 + (i % 4) * 0.05));
+	return { start: d.toISOString().slice(0, 10), completeness: 'complete', billableMinutes, nonBillableMinutes, billablePercent: Math.round((billableMinutes / (billableMinutes + nonBillableMinutes)) * 1000) / 10, approvedEntries: 8 + (i % 5), pendingEntries: i % 3 };
+});
+const trendAttendance = trendTime.map((b, i) => ({ start: b.start, completeness: 'complete', records: 20, late: 2 + (i % 4), unknown: 0, lateRatePercent: (2 + (i % 4)) * 5 }));
+const workload = [
+	['1', 'Atlas Platform Migration', 'active', 3600, 400, 14400],
+	['2', 'Billing Revamp', 'active', 2400, 120, 8100],
+	['3', 'Customer Portal', 'active', 3000, null, 6000],
+	['4', 'Data Lake', 'on_hold', 1200, 200, 4200],
+	['5', 'Mobile App v2', 'active', 4800, 300, 16200],
+	['6', 'Security Audit', 'active', 1800, 60, 4500],
+].map(([projectId, name, status, periodMinutes, estimatedHours, lifetimeMinutes]) => ({ projectId, name, status, periodMinutes, entries: Math.round(periodMinutes / 300), estimatedHours, lifetimeMinutes, burnPercent: estimatedHours ? Math.round((lifetimeMinutes / 60 / estimatedHours) * 100) : null })).sort((a, b) => b.periodMinutes - a.periodMinutes);
+
 function route(method, p, url) {
 	if (method !== 'GET') return { status: method === 'POST' ? 201 : 200, body: ok({ ROWID: '999', id: '999', key: 'new_role', granted: 0, revoked: 0 }) };
 	const list = (rows) => ({ body: ok(rows, meta(rows.length)) });
 	switch (true) {
 		case p === '/me': return { body: ok(me) };
 		case p === '/dashboard/overview': return { body: ok(overview) };
-		case p === '/dashboard/trends': return { body: ok({ filters: { granularity: 'week' }, truncated: false, time: [], attendance: [] }) };
-		case p === '/dashboard/projects': return { body: ok({ filters: {}, status: { completeness: 'complete', total: 2, byStatus: { active: 1, on_hold: 1 } }, workload: { completeness: 'complete', projectsWithTime: 1, truncated: false, projects: [{ projectId: '1', name: 'Atlas Platform Migration', status: 'active', periodMinutes: 3600, entries: 12, estimatedHours: 400, lifetimeMinutes: 14400, burnPercent: 60 }] } }) };
+		case p === '/dashboard/trends': return { body: ok({ filters: { granularity: 'week' }, truncated: false, time: trendTime, attendance: trendAttendance }) };
+		case p === '/dashboard/projects': return { body: ok({ filters: {}, status: { completeness: 'complete', total: 7, byStatus: { active: 5, on_hold: 1, completed: 1 } }, workload: { completeness: 'complete', projectsWithTime: workload.length, truncated: false, projects: workload } }) };
 		case p === '/dashboard/product': return { body: ok({ asOf: '2026-10-13', product: { completeness: 'complete', total: 9, byStatus: { open: 4, done: 5 }, byType: { bug: { open: 2, done: 1 }, feature: { open: 2, done: 4 } }, overdue: 2 } }) };
 		case p === '/dashboard/ai-usage': return { body: ok({ usage: { completeness: 'complete', totalRecords: 20, toolCount: 5, byCategory: { ai: 12, other: 4, github: 4 }, missingPeriod: 0, tools } }) };
 		case p === '/dashboard/freshness': return { body: ok({ asOf: '2026-10-13 10:00:00', timeEntries: { latestDate: '2026-10-12' }, attendance: { latestDate: '2026-10-12' }, imports: { lastCompletedAt: '2026-10-10 09:00:00' } }) };

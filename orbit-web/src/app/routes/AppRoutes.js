@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AppShell from '../../components/layout/AppShell';
 import LoadingState from '../../components/feedback/LoadingState';
 import { firstDestination } from '../../config/navigation';
@@ -31,6 +31,14 @@ const AccessPage = lazy(() => import('../../features/access/AccessPage'));
 /** A page behind a permission. UX only: every API call behind it is authorized again by the backend. */
 const guard = (permission, element) => <RequirePermission permission={permission}>{element}</RequirePermission>;
 
+/** The sign-in page, unless the user is already signed in (then straight back to where they were going, or home). */
+function LoginRoute() {
+	const { status } = useAuth();
+	const location = useLocation();
+	if (status === 'ready') return <Navigate to={(location.state && location.state.from && location.state.from.pathname) || ROUTES.dashboard} replace />;
+	return <LoginPage />;
+}
+
 /** "Home": the Dashboard when allowed, otherwise the first page this user may open. */
 function Home() {
 	const { can } = useAuth();
@@ -48,7 +56,7 @@ export default function AppRoutes() {
 	return (
 		<Suspense fallback={<LoadingState lines={4} label="Loading page" />}>
 			<Routes>
-				<Route path={ROUTES.login} element={<LoginPage />} />
+				<Route path={ROUTES.login} element={<LoginRoute />} />
 				<Route element={<RequireAuth />}>
 					{/* Full-screen presentation mode lives outside the application shell. */}
 					<Route path={ROUTES.present()} element={guard('presentations.view', <PresentationPlayer />)} />

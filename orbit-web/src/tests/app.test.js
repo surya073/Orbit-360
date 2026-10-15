@@ -32,7 +32,7 @@ describe('authentication', () => {
 		render(<App />);
 		expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
 		expect(global.fetch).not.toHaveBeenCalled();
-		expect(authService.renderLogin).toHaveBeenCalledWith('login-container', expect.objectContaining({ cssUrl: expect.stringMatching(/login-iframe-blueberry\.css$/) }));
+		expect(authService.renderLogin).toHaveBeenCalledWith('login-container', expect.objectContaining({ cssUrl: expect.stringMatching(/login-iframe-ember\.css$/) }));
 	});
 	test('an unprovisioned user is told so and gets no data', async () => {
 		authService.isSignedIn.mockResolvedValue(true);
@@ -96,7 +96,7 @@ describe('shell and dashboard', () => {
 		signIn(manager);
 		mockFetch([meRoute(manager), [/^GET \/dashboard\/projects/, { status: 503, body: errBody(503, 'QUERY_BUDGET_EXCEEDED', 'Too many queries') }], ...dashboardRoutes()]);
 		render(<App />);
-		expect(await screen.findByText('Too many queries')).toBeInTheDocument();
+		expect((await screen.findAllByText('Too many queries')).length).toBeGreaterThan(0);
 		expect(within(await screen.findByRole('region', { name: 'Billable hours' })).getByText('10')).toBeInTheDocument();
 		expect(screen.getByRole('region', { name: 'Late check-in rate' })).toHaveTextContent('25.0%');
 	});
@@ -118,7 +118,7 @@ describe('shell and dashboard', () => {
 		const billable = await screen.findByRole('region', { name: 'Billable hours' });
 		await waitFor(() => expect(within(billable).getByText('—')).toBeInTheDocument());
 		expect(within(billable).queryByText('0')).not.toBeInTheDocument();
-		expect(await screen.findByText('No approved time in this period')).toBeInTheDocument();
+		expect(await within(screen.getByRole('region', { name: 'Billable hours trend' })).findByText(/No approved time in this period/)).toBeInTheDocument();
 		expect(screen.getByText('No attendance recorded in this period')).toBeInTheDocument();
 		expect(screen.getByText('No product items yet')).toBeInTheDocument();
 		expect(await screen.findByText('No time entries have been recorded yet')).toBeInTheDocument();

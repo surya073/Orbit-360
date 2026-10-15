@@ -12,6 +12,7 @@ readPolicy.maxParallel = 100;
 beforeEach(() => {
 	clearApiCache(); // the app keeps a short read cache; tests must never see another test's responses
 	window.localStorage.clear();
+	window.localStorage.setItem('company360.tour.v1', 'seen'); // the first-visit welcome tour has its own tests
 	document.documentElement.removeAttribute('data-theme');
 	document.documentElement.removeAttribute('data-density');
 	window.matchMedia = (query) => ({

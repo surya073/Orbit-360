@@ -38,7 +38,7 @@ describe('sign-in page', () => {
 
 	test('both hosted pages (sign-in and forgot password) get the stylesheet for the active theme', async () => {
 		renderLogin();
-		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledWith('login-container', options('blueberry')));
+		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledWith('login-container', options('ember')));
 		expect(document.getElementById('login-container')).toBeInTheDocument();
 	});
 
@@ -55,7 +55,7 @@ describe('sign-in page', () => {
 		renderLogin();
 		await userEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 		const menu = screen.getByRole('radiogroup', { name: 'Theme' });
-		expect(within(menu).getAllByRole('radio')).toHaveLength(7);
+		expect(within(menu).getAllByRole('radio')).toHaveLength(8);
 		expect(screen.queryByRole('link', { name: /Appearance settings/ })).not.toBeInTheDocument();
 	});
 

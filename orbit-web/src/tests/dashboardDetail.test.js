@@ -75,16 +75,19 @@ describe('detailed dashboard', () => {
 		return renderWithProviders(<DashboardPage />, { user: manager });
 	};
 
-	test('hero states the period, summary and freshness, and links each flag to where it is handled', async () => {
+	test('the signature overview shows backend figures, the period pills and links each flag to where it is handled', async () => {
 		setup();
-		const hero = await screen.findByRole('region', { name: 'Overview summary' });
-		expect(within(hero).getByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
-		expect(await within(hero).findByText(/15h 00m of approved time across 9 entries, 66\.7% billable/)).toBeInTheDocument();
-		expect(within(hero).getByText(/Time entries: 12 Oct 2026/)).toBeInTheDocument();
-		const flag = await within(hero).findByRole('link', { name: /2 time entries are awaiting approval/ });
-		expect(flag).toHaveAttribute('href', '/time-entries');
-		expect(within(hero).getByRole('img', { name: /Billable share of approved time: 67%/ })).toBeInTheDocument();
-		expect(within(hero).getByRole('img', { name: /Late check-in rate: 25%/ })).toBeInTheDocument();
+		expect(await screen.findByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
+		const chart = await screen.findByRole('region', { name: 'Billable hours trend' });
+		expect(await within(chart).findByText('66.7% billable')).toBeInTheDocument();
+		expect(within(chart).getByRole('button', { name: 'This month' })).toHaveAttribute('aria-pressed', 'true');
+		expect(await within(chart).findByRole('img', { name: 'Billable hours per week' })).toBeInTheDocument();
+		const attention = screen.getByRole('region', { name: 'Needs attention' });
+		expect(await within(attention).findByRole('link', { name: 'Review now' })).toHaveAttribute('href', '/time-entries');
+		const side = screen.getByRole('region', { name: 'Team snapshot' });
+		const rows = await within(side).findByRole('list', { name: 'Busiest projects' });
+		expect(within(rows).getByText('No estimate')).toBeInTheDocument();
+		expect(within(screen.getByRole('region', { name: 'Workload' })).getByRole('img', { name: /Approved hours by project: Alpha/ })).toBeInTheDocument();
 	});
 
 	test('KPI cards carry sparklines from real trend buckets, explanations and drill links', async () => {
@@ -137,13 +140,13 @@ describe('detailed dashboard', () => {
 		expect(within(usage).getByText(/1 records without a reporting period are excluded/)).toBeInTheDocument();
 	});
 
-	test('no data: nothing is invented, and there is no gauge arc or sparkline', async () => {
+	test('no data: nothing is invented, and there is no chart line or sparkline', async () => {
 		const noTime = { completeness: 'insufficient_data', billableMinutes: null, nonBillableMinutes: null, totalMinutes: null, billablePercent: null, approvedEntries: 0, excluded: { pending: 0, rejected: 0 } };
 		const empty = { ...overviewFixture, time: noTime, attendance: { completeness: 'insufficient_data', lateRatePercent: null, records: 0, unknownCount: 0 }, leave: { completeness: 'insufficient_data', approvedDays: null, approvedHours: null, records: 0 }, headcount: { completeness: 'insufficient_data', total: null, byStatus: {} } };
 		setup([[/^GET \/dashboard\/overview/, okBody(empty)], [/^GET \/dashboard\/trends/, okBody({ filters: { granularity: 'week' }, truncated: false, time: [], attendance: [] })]]);
-		const hero = await screen.findByRole('region', { name: 'Overview summary' });
-		expect(await within(hero).findByText('No approved time in this selection yet.')).toBeInTheDocument();
-		expect(hero.querySelector('.ring__arc')).toBeNull();
+		const chart = await screen.findByRole('region', { name: 'Billable hours trend' });
+		expect(await within(chart).findByText(/No approved time in this period/)).toBeInTheDocument();
+		expect(within(chart).queryByText(/billable$/)).toBeNull();
 		expect(await screen.findByText('No approved time to break down')).toBeInTheDocument();
 		expect(screen.getByRole('region', { name: 'Billable hours' }).querySelector('.spark')).toBeNull();
 	});

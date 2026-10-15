@@ -21,11 +21,28 @@ function createTableRepository(db, resource) {
 		return rows[0] ? rows[0].team_id : null;
 	}
 
+	/** Parents whose name matches the search term (<= 50 ids each, one query per reference) so records can be found by employee/project name. */
+	async function searchRefIds(scope, input) {
+		const refs = resource.searchRefs;
+		if (!input.q || !refs) return {};
+		assertScope(scope);
+		const out = {};
+		await Promise.all(
+			refs.map(async (ref) => {
+				const parent = resources[ref.parent];
+				const soft = parent.softDelete ? ' AND is_deleted = false' : '';
+				const rows = await db.select(`SELECT ROWID FROM ${parent.table} WHERE ${ref.col} LIKE '%${input.q}%'${soft} LIMIT 0, 50`, parent.table);
+				out[ref.fk] = rows.map((r) => String(r.ROWID));
+			})
+		);
+		return out;
+	}
+
 	return {
 		resource,
 
 		async list(scope, input) {
-			const q = buildListQueries(resource, input, scope);
+			const q = buildListQueries(resource, input, scope, await searchRefIds(scope, input));
 			const rows = await db.select(q.listSql, resource.table, resource.bools);
 			// A short page already tells us the total, so the count query (a billed request) is only
 			// needed when the page is full or the requested page is past the end.

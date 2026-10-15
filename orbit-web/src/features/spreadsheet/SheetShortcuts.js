@@ -1,4 +1,5 @@
 import React from 'react';
+import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import { MOD } from './SheetToolbar';
 
@@ -38,6 +39,8 @@ const GROUPS = [
 			[`${MOD}C / ${MOD}X / ${MOD}V`, 'Copy / cut / paste (tab-separated, works with Excel and Google Sheets)'],
 			[`${MOD}Z / ${MOD}Y`, 'Undo / redo'],
 			[`${MOD}S`, 'Save changes'],
+			[`${MOD}B / ${MOD}I`, 'Bold / italic for the selected cells (this device only)'],
+			[`${MOD}Wheel`, 'Zoom the grid in and out'],
 			[`${MOD}F`, 'Search this sheet'],
 			['Right-click', 'Cut, copy, paste, clear, delete rows'],
 		],
@@ -47,7 +50,16 @@ const GROUPS = [
 /** Only shortcuts that are implemented in SheetGrid / SpreadsheetPage are listed. */
 export default function SheetShortcuts({ onClose }) {
 	return (
-		<Modal title="Keyboard shortcuts" onClose={onClose} size="lg">
+		<Modal
+			title="Keyboard shortcuts"
+			onClose={onClose}
+			size="lg"
+			footer={
+				<Button variant="primary" onClick={onClose} data-autofocus>
+					Close
+				</Button>
+			}
+		>
 			<div className="shortcuts">
 				{GROUPS.map((g) => (
 					<section key={g.title}>

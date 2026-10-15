@@ -50,7 +50,7 @@ function listQuery(resource) {
 			if (present(raw.to)) out.to = parseFilterValue('date', raw.to, 'to');
 			if (out.from && out.to && out.to < out.from) throw errors.badRequest('to must not be before from');
 		}
-		if (resource.search && present(raw.q)) {
+		if ((resource.search || resource.searchRefs) && present(raw.q)) {
 			const q = String(raw.q).replace(/[^A-Za-z0-9 _.\-@]/g, '').trim().slice(0, 60);
 			if (q) out.q = q;
 		}

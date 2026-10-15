@@ -5,6 +5,8 @@ export const DASHBOARD_WIDGETS = [
 	{ id: 'kpis', label: 'Key metrics', description: 'Headline employee, project, time and attendance figures' },
 	{ id: 'billable-trend', label: 'Billable hours trend', description: 'Billable versus non-billable time over the period' },
 	{ id: 'attendance-trend', label: 'Attendance trend', description: 'Late check-in rate over the period' },
+	{ id: 'time-breakdown', label: 'Approved time breakdown', description: 'Billable share, approved entries and what is not counted yet' },
+	{ id: 'people-leave', label: 'People, attendance and leave', description: 'Headcount by status, check-in punctuality and leave records' },
 	{ id: 'project-health', label: 'Project health', description: 'Project status mix and delivery health' },
 	{ id: 'product-status', label: 'Product status', description: 'Product backlog by status' },
 	{ id: 'ai-usage', label: 'AI usage', description: 'AI tool adoption and cost' },

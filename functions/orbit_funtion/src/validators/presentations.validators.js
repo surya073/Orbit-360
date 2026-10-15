@@ -6,7 +6,7 @@ const { isValidDate } = require('../utils/dateUtils');
 const { LIMITS } = require('../config/constants');
 
 // `section` slides render live data for the saved period/filters at presentation time.
-const SECTIONS = ['executive_summary', 'employee_overview', 'attendance_leave', 'project_performance', 'billable_hours', 'product_development', 'ai_usage', 'key_insights'];
+const SECTIONS = ['executive_summary', 'employee_overview', 'attendance_leave', 'project_performance', 'billable_hours', 'product_development', 'ai_usage', 'key_insights', 'reporting_structure'];
 const SLIDE_TYPES = ['section', 'title', 'snapshot', 'text'];
 const PERIOD_PRESETS = ['this_month', 'last_month', 'last_30_days', 'this_quarter', 'custom'];
 const FIELDS = { title: f.str(200, { req: true }), team_id: f.id(), status: f.oneOf(['draft', 'ready']) };

@@ -18,6 +18,7 @@ const groups = [
 	require('./imports.routes'),
 	require('./presentations.routes'),
 	require('./settings.routes'),
+	require('./reporting.routes'),
 ];
 
 function compile(route, path) {

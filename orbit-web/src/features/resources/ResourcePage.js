@@ -14,7 +14,7 @@ import ResourceForm from '../../components/forms/ResourceForm';
 import PageHeader from '../../components/layout/PageHeader';
 import DataTable from '../../components/tables/DataTable';
 import Pagination from '../../components/tables/Pagination';
-import { PAGE_SIZE } from '../../config/constants';
+import usePageSize from '../../hooks/usePageSize';
 import { SHEET_MODULES } from '../spreadsheet/spreadsheetModules';
 import { ROUTES } from '../../config/routes';
 import useApiResource from '../../hooks/useApiResource';
@@ -41,6 +41,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 	const urlQ = sp.get('q') || '';
 
 	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = usePageSize(resource);
 	const [filters, setFilters] = useState({});
 	const [q, setQ] = useState(urlQ);
 	const [dialog, setDialog] = useState(null); // { type: 'form', initial? } | { type: 'delete', row }
@@ -53,7 +54,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 		setPage(1);
 	}, [urlQ]);
 
-	const params = useMemo(() => ({ page, pageSize: PAGE_SIZE, q: dq, ...filters }), [page, dq, filters]);
+	const params = useMemo(() => ({ page, pageSize, q: dq, ...filters }), [page, pageSize, dq, filters]);
 	const res = useApiResource((signal) => resourceService.list(resource, params, { signal }), `${resource}|${JSON.stringify(params)}`, { isEmpty: () => false });
 	const labelOf = useLookupLabels(res.data, config.fkColumns);
 
@@ -221,7 +222,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 						<div style={{ opacity: res.status === 'loading' ? 0.6 : 1, transition: 'opacity var(--dur) var(--ease)' }} aria-busy={res.status === 'loading'}>
 							<DataTable caption={config.title} columns={config.columns.map((c) => ({ key: c.key, label: c.label, render: (row) => renderCell(c, row, labelOf) }))} rows={rows} rowActions={hasActions ? actions : undefined} />
 						</div>
-						<Pagination meta={res.meta} onPage={setPage} />
+						<Pagination meta={res.meta} onPage={setPage} pageSize={pageSize} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
 					</>
 				)}
 			</StateView>

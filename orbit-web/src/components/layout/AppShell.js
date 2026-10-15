@@ -6,8 +6,8 @@ import AppHeader from '../navigation/AppHeader';
 
 export default function AppShell() {
 	const { pathname } = useLocation();
-	// The spreadsheet is a workspace: it fills the viewport under the header instead of scrolling the page.
-	const workspace = pathname === ROUTES.spreadsheet;
+	// The spreadsheet and the reporting-structure builder are workspaces: it fills the viewport under the header instead of scrolling the page.
+	const workspace = pathname === ROUTES.spreadsheet || pathname === ROUTES.reporting;
 	return (
 		<div className={`shell ${workspace ? 'shell--workspace' : ''}`.trim()}>
 			<a href="#main" className="skip-link">

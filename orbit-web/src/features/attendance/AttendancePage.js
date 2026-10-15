@@ -7,6 +7,7 @@ export const attendanceConfig = defineModule({
 	singular: 'attendance record',
 	description: 'Daily check-ins. Check-in time and late status are kept separate; an unknown status is never treated as on time.',
 	resource: 'attendance_records',
+	search: 'Search by employee name',
 	dateRange: true,
 	writable: true,
 	importable: true,

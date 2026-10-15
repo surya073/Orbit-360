@@ -6,6 +6,8 @@ import StateView from '../../components/feedback/StateView';
 import { useToast } from '../../components/feedback/ToastProvider';
 import Field from '../../components/forms/Field';
 import DataTable from '../../components/tables/DataTable';
+import Pagination from '../../components/tables/Pagination';
+import useClientPagination from '../../hooks/useClientPagination';
 import useApiResource from '../../hooks/useApiResource';
 import { settingsService } from '../../services/settingsService';
 
@@ -17,6 +19,7 @@ export default function ApplicationSettings() {
 	const isAdmin = user.role === 'admin';
 	const { notify } = useToast();
 	const res = useApiResource((signal) => settingsService.list({ signal }), 'settings');
+	const paged = useClientPagination(res.data || [], 'settings', 10);
 	const [form, setForm] = useState(EMPTY_FORM);
 	const [errors, setErrors] = useState({});
 	const [saving, setSaving] = useState(false);
@@ -47,6 +50,7 @@ export default function ApplicationSettings() {
 			<Card title="Application settings" subtitle={isAdmin ? 'Global values used across the application' : 'Read-only. Administrators can change these.'}>
 				<StateView res={res} emptyTitle="No settings defined" emptyMessage="No application settings have been created yet." loadingLines={3}>
 					{res.data ? (
+						<>
 						<DataTable
 							caption="Application settings"
 							columns={[
@@ -55,9 +59,11 @@ export default function ApplicationSettings() {
 								{ key: 'setting_value', label: 'Value' },
 								{ key: 'value_type', label: 'Type' },
 							]}
-							rows={res.data}
+							rows={paged.rows}
 							rowActions={isAdmin ? (row) => (row.scope === 'global' ? <Button size="sm" icon="edit" onClick={() => setForm({ setting_key: row.setting_key, setting_value: row.setting_value || '', value_type: row.value_type || 'string', description: row.description || '' })}>Edit</Button> : null) : undefined}
 						/>
+						<Pagination {...paged.pagination} />
+						</>
 					) : null}
 				</StateView>
 			</Card>

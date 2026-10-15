@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import Button from '../../components/common/Button';
@@ -11,10 +11,15 @@ import LoadingState from '../../components/feedback/LoadingState';
 import { useToast } from '../../components/feedback/ToastProvider';
 import Pagination from '../../components/tables/Pagination';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
+import usePageSize from '../../hooks/usePageSize';
 import useLookupLabels from '../../hooks/useLookup';
 import useTemplates from '../../hooks/useTemplates';
 import useUnsavedGuard from '../../hooks/useUnsavedGuard';
 import DataEntryModes from './DataEntryModes';
+import SheetFormatBar from './SheetFormatBar';
+import SheetTabBar from './SheetTabBar';
+import { addTab, loadStore, reconcile, removeTab, renameTab, saveStore } from './tabStore';
+import useSheetFormat from './useSheetFormat';
 import { rowsToCsv } from './gridModel';
 import SheetGrid from './SheetGrid';
 import SheetShortcuts from './SheetShortcuts';
@@ -44,11 +49,12 @@ function download(name, text) {
 }
 
 /** The sheet for one record type. Remounted per module so each starts clean. */
-function Sheet({ mod, template, canWrite }) {
+function Sheet({ tabId, mod, template, canWrite, zoomPct, onZoom, onDirty }) {
 	const { notify } = useToast();
 	// The page belongs to the query it was chosen for, so a new search always starts on page 1
 	// (without first requesting the old query's page N).
-	const [pageState, setPageState] = useState({ q: '', page: 1 });
+	const [pageSize, setPageSize] = usePageSize('spreadsheet', 50);
+	const [pageState, setPageState] = useState({ k: '', page: 1 });
 	const [search, setSearch] = useState('');
 	const [scope, setScope] = useState(mod.search ? 'server' : 'loaded');
 	const [filters, setFilters] = useState([]);
@@ -63,14 +69,37 @@ function Sheet({ mod, template, canWrite }) {
 
 	const serverSearch = Boolean(mod.search) && scope === 'server';
 	const dsearch = useDebouncedValue(serverSearch ? search.trim() : '', 350); // one request per pause, not per keystroke
-	const page = pageState.q === dsearch ? pageState.page : 1;
-	const setPage = useCallback((p) => setPageState({ q: dsearch, page: p }), [dsearch]);
+	const pageKey = `${dsearch}|${pageSize}`; // a new query or page size starts on page 1
+	const page = pageState.k === pageKey ? pageState.page : 1;
+	const setPage = useCallback((p) => setPageState({ k: pageKey, page: p }), [pageKey]);
 
-	const data = useSheetData({ resource: mod.resource, template, canWrite, search: dsearch, page });
+	const data = useSheetData({ resource: mod.resource, template, canWrite, search: dsearch, page, pageSize });
 	const { res, rows, columns, state } = data;
 	const labelOf = useLookupLabels(rows, FK_COLUMNS);
 	const view = useSheetView({ rows, state, valueOf: data.valueOf, columns, sort, filters, query: serverSearch ? '' : search, labelOf });
-	useUnsavedGuard(data.dirtyCount > 0);
+	useEffect(() => {
+		onDirty(tabId, data.dirtyCount); // the page guards unsaved work across every open sheet
+	}, [onDirty, tabId, data.dirtyCount]);
+
+	// Device-local cell formatting (never part of a record, never sent to the API).
+	const fmt = useSheetFormat(mod.resource);
+	const cellsOf = () => (gridRef.current ? gridRef.current.selectedCells() : []);
+	const fmtOf = (c) => (fmt.formats[c.key] || {})[c.field] || {};
+	const activeFmt = selInfo && selInfo.active ? fmtOf(selInfo.active) : null;
+	const setFmt = (patch) => {
+		const cells = cellsOf();
+		if (cells.length) fmt.apply(cells, patch);
+	};
+	const toggleFmt = (prop) => {
+		const cells = cellsOf();
+		if (!cells.length) return;
+		const on = cells.every((c) => fmtOf(c)[prop]);
+		fmt.apply(cells, { [prop]: on ? null : true });
+	};
+	const clearFmt = () => {
+		const cells = cellsOf();
+		if (cells.length) fmt.clear(cells);
+	};
 
 	const toggleSort = useCallback((field) => setSort((s) => (!s || s.field !== field ? { field, dir: 'asc' } : s.dir === 'asc' ? { field, dir: 'desc' } : null)), []);
 	const onNotice = useCallback((message, tone = 'error') => notify(message, tone), [notify]);
@@ -176,6 +205,7 @@ function Sheet({ mod, template, canWrite }) {
 				onDensity={changeDensity}
 				onShortcuts={() => setShortcuts(true)}
 			/>
+			<SheetFormatBar fmt={activeFmt} hasSelection={Boolean(selInfo)} onSet={setFmt} onToggle={toggleFmt} onClearFormat={clearFmt} zoomPct={zoomPct} onZoom={onZoom} />
 			{res.status === 'error' ? (
 				<ErrorState error={res.error} onRetry={res.reload} />
 			) : res.status === 'loading' && !res.data ? (
@@ -229,6 +259,10 @@ function Sheet({ mod, template, canWrite }) {
 								onDeleteRows={doDelete}
 								density={density}
 								storageKey={mod.resource}
+								formats={fmt.formats}
+								zoom={zoomPct / 100}
+								onZoom={onZoom}
+								onFormatShortcut={(kind) => toggleFmt(kind === 'bold' ? 'b' : 'i')}
 							/>
 						</div>
 					)}
@@ -248,7 +282,7 @@ function Sheet({ mod, template, canWrite }) {
 							{search.trim() && !serverSearch ? ' · searching loaded rows only' : ''}
 						</span>
 						<span className="muted sheet-foot__hint">Type or Enter edits · Tab moves · {`Shift+Arrows`} select · Right-click for more</span>
-						<Pagination meta={res.meta} onPage={setPage} />
+						<Pagination meta={res.meta} onPage={setPage} pageSize={pageSize} onPageSize={setPageSize} />
 					</div>
 				</>
 			)}
@@ -273,34 +307,96 @@ function Sheet({ mod, template, canWrite }) {
 	);
 }
 
+const ZOOM_KEY = 'company360.sheetZoom';
+function readZoom() {
+	try {
+		const n = Number(window.localStorage.getItem(ZOOM_KEY));
+		return n >= 50 && n <= 200 ? n : 100;
+	} catch {
+		return 100;
+	}
+}
+
 /** Spreadsheet editor: the third way to enter data, next to the Add form and Sheet import. */
 export default function SpreadsheetPage() {
 	const { user } = useAuth();
 	const templates = useTemplates();
 	const [sp, setSp] = useSearchParams();
 	const available = useMemo(() => SHEET_MODULES.filter((m) => templates.byModule[m.resource]), [templates.byModule]);
+	const availableIds = useMemo(() => available.map((m) => m.resource), [available]);
 	const wanted = sp.get('module');
-	const mod = (wanted && available.find((m) => m.resource === wanted)) || available[0] || null;
-	const template = mod ? templates.byModule[mod.resource] : null;
-	const canWrite = Boolean(template && (!template.adminOnly || user.role === 'admin'));
+	const ready = Boolean(templates.data);
+
+	// Tabs: every open sheet is its own record-type sheet. Only ids/types/names are remembered (this device).
+	const [store, setStore] = useState(loadStore);
+	useEffect(() => {
+		if (ready) setStore((s) => reconcile(s, availableIds, wanted));
+	}, [ready, availableIds, wanted]);
+	useEffect(() => {
+		saveStore(store);
+	}, [store]);
+	const tabs = useMemo(() => store.tabs.filter((t) => availableIds.includes(t.resource)).map((t) => ({ ...t, title: sheetModule(t.resource).title })), [store.tabs, availableIds]);
+	const activeId = tabs.some((t) => t.id === store.active) ? store.active : tabs[0] && tabs[0].id;
+
+	// A tab's pane mounts the first time it is shown and then stays mounted (hidden), so unsaved edits,
+	// selection, search and sort survive switching tabs. Unvisited tabs cost no requests.
+	const [visited, setVisited] = useState(() => new Set());
+	useEffect(() => {
+		if (activeId) setVisited((v) => (v.has(activeId) ? v : new Set(v).add(activeId)));
+	}, [activeId]);
+
+	const [dirty, setDirty] = useState({});
+	const onDirty = useCallback((id, n) => setDirty((d) => (d[id] === n ? d : { ...d, [id]: n })), []);
+	useUnsavedGuard(Object.values(dirty).reduce((a, b) => a + b, 0) > 0);
+
+	const [zoomPct, setZoom] = useState(readZoom);
+	const onZoom = useCallback((pct) => {
+		setZoom(pct);
+		try {
+			window.localStorage.setItem(ZOOM_KEY, String(pct));
+		} catch {
+			/* zoom just is not remembered */
+		}
+	}, []);
+
+	const select = (id) => {
+		const t = tabs.find((x) => x.id === id);
+		if (!t) return;
+		setStore((s) => ({ ...s, active: id }));
+		setSp({ module: t.resource }, { replace: true }); // the URL follows the sheet you are on
+	};
+	const add = (resource) => {
+		setStore((s) => addTab(s, resource));
+		setSp({ module: resource }, { replace: true });
+	};
+	const [closing, setClosing] = useState(null);
+	const doClose = (id) => {
+		setStore((s) => removeTab(s, id));
+		setDirty((d) => {
+			const { [id]: _gone, ...rest } = d;
+			return rest;
+		});
+		setVisited((v) => {
+			const n = new Set(v);
+			n.delete(id);
+			return n;
+		});
+		setClosing(null);
+	};
+	const requestClose = (id) => (dirty[id] > 0 ? setClosing(id) : doClose(id));
+
+	const activeTab = tabs.find((t) => t.id === activeId);
+	const activeTemplate = activeTab ? templates.byModule[activeTab.resource] : null;
+	const activeCanWrite = Boolean(activeTemplate && (!activeTemplate.adminOnly || user.role === 'admin'));
+	const mounted = tabs.filter((t) => t.id === activeId || visited.has(t.id));
+	const closingTab = tabs.find((t) => t.id === closing);
 
 	return (
 		<div className="sheet-page">
 			<div className="sheet-head">
 				<h1 className="sheet-head__title">Spreadsheet editor</h1>
-				<DataEntryModes current="sheet" resource={mod && mod.resource} />
-				{mod ? (
-					<label className="sheet-head__picker">
-						<span>Record type</span>
-						<select value={mod.resource} onChange={(e) => setSp({ module: e.target.value }, { replace: true })}>
-							{available.map((m) => (
-								<option key={m.resource} value={m.resource}>
-									{m.title}
-								</option>
-							))}
-						</select>
-					</label>
-				) : null}
+				<DataEntryModes current="sheet" resource={activeTab && activeTab.resource} />
+				<span className="sheet-head__spacer" />
 				<Popover
 					label="About the spreadsheet editor"
 					align="right"
@@ -313,9 +409,10 @@ export default function SpreadsheetPage() {
 					<div className="sheet-filter" style={{ maxWidth: 340 }}>
 						<p className="small">Edit existing records and add new ones in a grid. Changes are saved to the same records as the Add form and Sheet import.</p>
 						<p className="small muted">
-							Columns are the fields this record type supports; new columns cannot be added because the schema is fixed. Saved values cannot be cleared, and fields that identify a record cannot be changed after it is created.
-							{!canWrite && mod ? ' Only administrators can change this record type.' : ''}
+							Columns are the fields this record type supports; new columns cannot be added because the schema is fixed. Saved values cannot be cleared, and fields that identify a record cannot be changed after it is created. Use the + tabs below to open more sheets.
+							{activeTab && !activeCanWrite ? ' Only administrators can change this record type.' : ''}
 						</p>
+						<p className="small muted">Cell formatting (colours, bold, links, zoom) is remembered in this browser only; it is not part of the record.</p>
 					</div>
 				</Popover>
 			</div>
@@ -324,7 +421,33 @@ export default function SpreadsheetPage() {
 					The spreadsheet is unavailable: {templates.error.message}
 				</p>
 			) : null}
-			{mod ? <Sheet key={mod.resource} mod={sheetModule(mod.resource)} template={template} canWrite={canWrite} /> : templates.status === 'loading' ? <LoadingState lines={6} label="Loading spreadsheet" /> : null}
+			{activeTab ? (
+				<>
+					<div className="sheet-panes">
+						{mounted.map((t) => {
+							const template = templates.byModule[t.resource];
+							const canWrite = Boolean(template && (!template.adminOnly || user.role === 'admin'));
+							return (
+								<div key={t.id} id={`sheet-pane-${t.id}`} role="tabpanel" aria-labelledby={`sheet-tab-${t.id}`} className="sheet-pane" hidden={t.id !== activeId}>
+									<Sheet tabId={t.id} mod={sheetModule(t.resource)} template={template} canWrite={canWrite} zoomPct={zoomPct} onZoom={onZoom} onDirty={onDirty} />
+								</div>
+							);
+						})}
+					</div>
+					<SheetTabBar tabs={tabs} activeId={activeId} dirty={dirty} modules={available} onSelect={select} onAdd={add} onRename={(id, name) => setStore((s) => renameTab(s, id, name))} onClose={requestClose} />
+				</>
+			) : templates.status === 'loading' ? (
+				<LoadingState lines={6} label="Loading spreadsheet" />
+			) : null}
+			{closingTab ? (
+				<ConfirmDialog
+					title={`Close ${closingTab.name}?`}
+					message="This sheet has unsaved changes. Closing it discards them."
+					confirmLabel="Close and discard"
+					onCancel={() => setClosing(null)}
+					onConfirm={() => doClose(closingTab.id)}
+				/>
+			) : null}
 		</div>
 	);
 }

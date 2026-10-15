@@ -9,6 +9,7 @@ import { RequireAuth, RequireRole } from './guards';
 
 // Module pages are code-split so the first load only ships the shell and the dashboard.
 const EmployeesPage = lazy(() => import('../../features/employees/EmployeesPage'));
+const ReportingBuilderPage = lazy(() => import('../../features/reporting/ReportingBuilderPage'));
 const TeamsPage = lazy(() => import('../../features/teams/TeamsPage'));
 const ProjectsPage = lazy(() => import('../../features/projects/ProjectsPage'));
 const TimeEntriesPage = lazy(() => import('../../features/time-entries/TimeEntriesPage'));
@@ -40,6 +41,7 @@ export default function AppRoutes() {
 						<Route element={<RequireRole roles={BOTH} />}>
 							<Route index element={<DashboardPage />} />
 							<Route path={ROUTES.employees} element={<EmployeesPage />} />
+							<Route path={ROUTES.reporting} element={<ReportingBuilderPage />} />
 							<Route path={ROUTES.teams} element={<TeamsPage />} />
 							<Route path={ROUTES.projects} element={<ProjectsPage />} />
 							<Route path={ROUTES.time} element={<TimeEntriesPage />} />

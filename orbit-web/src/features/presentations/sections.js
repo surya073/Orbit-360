@@ -23,6 +23,7 @@ export const SECTION_NEEDS = {
 	product_development: ['product'],
 	ai_usage: ['ai'],
 	key_insights: ['overview', 'projects', 'product', 'freshness'],
+	reporting_structure: [], // rendered by the viewer from GET /reporting-structure
 };
 
 const st = (res) => ({ loading: res.status === 'loading' && !res.data, error: res.status === 'error' ? res.error : null });

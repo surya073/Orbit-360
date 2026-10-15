@@ -107,7 +107,7 @@ export default function ResourceForm({ resource, template, initial, defaults = {
 					);
 				})}
 			</div>
-			<div className="modal__foot" style={{ margin: 'var(--space-4) calc(var(--space-4) * -1) calc(var(--space-4) * -1)' }}>
+			<div className="modal__foot modal__foot--sticky">
 				<Button onClick={onCancel} disabled={saving}>
 					Cancel
 				</Button>

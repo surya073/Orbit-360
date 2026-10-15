@@ -300,3 +300,24 @@ test('500 logs carry stack frames and error class but never the error message (m
 	assert.ok(lines.length >= 1);
 	assert.doesNotMatch(lines.join(' | '), /ann@example\.com/);
 });
+
+// ---- search by employee / project name on tables without their own name column -------------
+test('time entries and attendance are searchable by employee and project name, within the callers team', async () => {
+	const w = buildWorld();
+	const [asha, bala, , dev] = w.e;
+	w.store.insert('time_entries', timeEntry(w, { employee_id: asha.ROWID, work_description: 'a' }));
+	w.store.insert('time_entries', timeEntry(w, { employee_id: bala.ROWID, project_id: w.p[1].ROWID }));
+	w.store.insert('time_entries', timeEntry(w, { employee_id: dev.ROWID, project_id: w.p[2].ROWID, team_id: w.t2.ROWID }));
+	w.store.insert('attendance_records', { employee_id: asha.ROWID, team_id: w.t1.ROWID, attendance_date: '2026-10-05', late_status: 'no', is_deleted: 'false' });
+
+	const byEmployee = await w.api(w.ids.mgr1, 'GET', '/time-entries?q=asha');
+	assert.equal(byEmployee.status, 200);
+	assert.deepEqual(byEmployee.body.data.map((r) => r.employee_id), [asha.ROWID]);
+	const byProject = await w.api(w.ids.mgr1, 'GET', '/time-entries?q=beta');
+	assert.deepEqual(byProject.body.data.map((r) => r.employee_id), [bala.ROWID]);
+	assert.equal((await w.api(w.ids.mgr1, 'GET', '/time-entries?q=dev')).body.data.length, 0); // another team's record stays invisible
+	assert.equal((await w.api(w.ids.admin, 'GET', '/time-entries?q=dev')).body.data.length, 1);
+	assert.equal((await w.api(w.ids.mgr1, 'GET', '/time-entries?q=nobody')).body.data.length, 0);
+	assert.equal((await w.api(w.ids.mgr1, 'GET', '/attendance?q=asha')).body.data.length, 1);
+	assert.equal((await w.api(w.ids.mgr1, 'GET', '/attendance?q=bala')).body.data.length, 0);
+});

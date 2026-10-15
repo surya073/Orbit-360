@@ -279,3 +279,123 @@ html[data-theme='volcano'] .field input[type='date']::-webkit-calendar-picker-in
 	display: grid;
 	gap: var(--space-3);
 }
+
+/* ---------- Searchable dropdown (Combobox) ---------- */
+.combo {
+	position: relative;
+	display: flex;
+	align-items: center;
+	width: 100%;
+}
+.combo .combo__input,
+.field .combo input.combo__input:not([type='checkbox']):not([type='radio']):not([type='file']) {
+	width: 100%;
+	height: var(--control-h);
+	padding: 0 34px 0 32px !important; /* beats the generic .field input padding */
+	font-size: var(--fs-sm);
+	color: var(--text);
+	background-color: var(--surface);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-md);
+	text-overflow: ellipsis;
+	transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.combo .combo__input:hover:not(:disabled) {
+	border-color: var(--text-muted);
+}
+.combo.is-open .combo__input,
+.combo .combo__input:focus-visible {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--ring);
+	outline: none;
+}
+.combo .combo__input:disabled {
+	background: var(--surface-2);
+	color: var(--text-muted);
+	cursor: not-allowed;
+}
+.combo__icon {
+	position: absolute;
+	left: 10px;
+	color: var(--text-muted);
+	pointer-events: none;
+}
+.combo__chevron {
+	position: absolute;
+	right: 10px;
+	color: var(--text-muted);
+	pointer-events: none;
+	transition: transform var(--dur-fast) var(--ease);
+}
+.combo.is-open .combo__chevron {
+	transform: rotate(180deg);
+}
+.combo__spin {
+	position: absolute;
+	right: 34px;
+}
+.combo__clear {
+	position: absolute;
+	right: 6px;
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: var(--surface-2);
+	color: var(--text-muted);
+	cursor: pointer;
+}
+.combo__clear:hover {
+	background: var(--danger-soft);
+	color: var(--danger);
+}
+.combo__list {
+	position: fixed;
+	z-index: var(--z-listbox);
+	margin: 0;
+	padding: 4px;
+	list-style: none;
+	overflow: auto;
+	background: var(--surface);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-lg);
+	animation: fade-in var(--dur-fast) var(--ease) both;
+}
+.combo__opt {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: 7px var(--space-3);
+	border-radius: var(--radius-sm);
+	font-size: var(--fs-sm);
+	color: var(--text);
+	cursor: pointer;
+}
+.combo__opt span {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.combo__opt small {
+	color: var(--text-muted);
+	font-size: var(--fs-xs);
+}
+.combo__opt.is-active {
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+.combo__opt.is-selected {
+	font-weight: 650;
+}
+.combo__empty {
+	padding: var(--space-3);
+	font-size: var(--fs-sm);
+	color: var(--text-muted);
+	text-align: center;
+}

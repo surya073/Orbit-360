@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import Icon from '../../components/common/Icon';
 import CellEditor from './CellEditor';
 import { columnLetter, displayText, jumpTarget, parseTsv, rangeLabel, toTsv } from './gridModel';
+import { cellStyle, linkFor, zoomIn, zoomOut } from './sheetFormat';
 
 const WIDTHS = { text: 240, str: 170, enum: 130, bool: 90, date: 120, datetime: 170, int: 110, num: 110, id: 190 };
 const MIN_WIDTH = 60;
@@ -29,7 +30,7 @@ function saveWidths(k, w) {
 	}
 }
 
-const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom, activeC, editingC, editInitial, readOnly, handlers }) {
+const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom, activeC, editingC, editInitial, readOnly, fmt, handlers }) {
 	return (
 		<div role="row" aria-rowindex={r + 2} className={`sheet__row ${row.isNew ? 'is-new' : ''} ${r % 2 ? 'is-odd' : ''}`.trim()}>
 			<div role="rowheader" className={`sheet__gutter ${c0 !== -1 ? 'is-selected' : ''}`.trim()} title={row.isNew ? 'New, unsaved record' : `Record ${row.id}`} onMouseDown={(e) => handlers.rowHeader(r, e)}>
@@ -38,13 +39,16 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom,
 				{row.rowError ? <i className="sheet__rowerr" role="img" aria-label={row.rowError} title={row.rowError} /> : null}
 			</div>
 			{columns.map((col, c) => {
+				const f = fmt && fmt[col.field];
 				const selected = c >= c0 && c <= c1 && c0 !== -1;
 				const active = c === activeC;
 				const dirty = row.dirty[col.field];
 				const error = row.errors[col.field];
 				const locked = readOnly || (!row.isNew && col.immutable);
-				const cls = ['sheet__cell', selected && 'is-selected', selected && rTop && 'edge-t', selected && rBottom && 'edge-b', selected && c === c0 && 'edge-l', selected && c === c1 && 'edge-r', active && 'is-active', dirty && 'is-dirty', error && 'has-error', locked && 'is-locked', col.type === 'int' || col.type === 'num' ? 'is-num' : ''].filter(Boolean).join(' ');
+				const cls = ['sheet__cell', f && f.wrap && 'is-wrap', f && f.fill && 'has-fill', selected && 'is-selected', selected && rTop && 'edge-t', selected && rBottom && 'edge-b', selected && c === c0 && 'edge-l', selected && c === c1 && 'edge-r', active && 'is-active', dirty && 'is-dirty', error && 'has-error', locked && 'is-locked', col.type === 'int' || col.type === 'num' ? 'is-num' : ''].filter(Boolean).join(' ');
 				const text = displayText(col, row.values[col.field], labelOf);
+				const shown = text || (f && f.link ? f.link : '');
+				const href = linkFor(f, row.values[col.field]);
 				return (
 					<div
 						key={col.field}
@@ -55,7 +59,7 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom,
 						aria-readonly={locked || undefined}
 						aria-invalid={error ? true : undefined}
 						className={cls}
-						style={{ width: `var(--col-${c})` }}
+						style={{ width: `calc(var(--col-${c}) * var(--sheet-zoom, 1))`, ...cellStyle(f) }}
 						title={error || undefined}
 						onMouseDown={(e) => handlers.cellDown(r, c, e)}
 						onMouseEnter={() => handlers.cellEnter(r, c)}
@@ -64,7 +68,23 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom,
 						{editingC === c ? (
 							<CellEditor col={col} initial={editInitial ?? row.values[col.field] ?? ''} onCommit={(t, nav) => handlers.commit(r, c, t, nav)} onCancel={handlers.cancel} />
 						) : (
-							<span className="sheet__text">{text}</span>
+							href ? (
+								<a
+									className="sheet__text sheet__link"
+									href={href}
+									target="_blank"
+									rel="noopener noreferrer"
+									tabIndex={-1}
+									title="Ctrl+Click to open the link"
+									onClick={(e) => {
+										if (!(e.ctrlKey || e.metaKey)) e.preventDefault(); // a plain click only selects the cell
+									}}
+								>
+									{shown}
+								</a>
+							) : (
+								<span className="sheet__text">{shown}</span>
+							)
 						)}
 					</div>
 				);
@@ -134,7 +154,7 @@ function ContextMenu({ at, items, onClose }) {
  * to edit, Delete clears, Ctrl+C / Ctrl+V copy and paste tab-separated text, Ctrl+Z / Ctrl+Y undo
  * and redo, Ctrl+A selects all. While a cell is being edited the editor owns the keyboard.
  */
-const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows, onSetCells, onAddRows, onNotice, onUndo, onRedo, sort, onSort, onSelectRows, onSelection, onDeleteRows, density = 'compact', storageKey, label }, ref) {
+const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows, onSetCells, onAddRows, onNotice, onUndo, onRedo, sort, onSort, onSelectRows, onSelection, onDeleteRows, density = 'compact', storageKey, label, formats, zoom = 1, onZoom, onFormatShortcut }, ref) {
 	const uid = useId().replace(/:/g, '');
 	const scrollRef = useRef(null);
 	const gridRef = useRef(null);
@@ -150,7 +170,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 	const colCount = columns.length;
 	const widthOf = (c) => widths[columns[c].field] || defaultWidth(columns[c]);
 	const cssVars = useMemo(() => Object.fromEntries(columns.map((c, i) => [`--col-${i}`, `${widths[c.field] || defaultWidth(c)}px`])), [columns, widths]);
-	const gridWidth = columns.reduce((n, c) => n + (widths[c.field] || defaultWidth(c)), 0) + 56;
+	const gridWidth = (columns.reduce((n, c) => n + (widths[c.field] || defaultWidth(c)), 0) + 56) * zoom;
 
 	// Keep a ref of the latest props/state so handlers stay referentially stable (rows are memoised).
 	const live = useRef({});
@@ -179,12 +199,19 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 		}
 	}, [sel, rows, onSelectRows]);
 
-	// Tell the page what is selected (name-box style label) for its status bar.
+	// Tell the page what is selected (name-box style label, active cell) for its status bar and format toolbar.
+	const lastSel = useRef('');
 	useEffect(() => {
 		if (!onSelection) return;
 		const n = (Math.abs(sel.r1 - sel.r0) + 1) * (Math.abs(sel.c1 - sel.c0) + 1);
-		onSelection(rowCount && colCount ? { label: rangeLabel(sel), cells: n } : null);
-	}, [sel, rowCount, colCount, onSelection]);
+		const row = rows[sel.r1];
+		const col = columns[sel.c1];
+		const active = row && col ? { key: row.key, field: col.field } : null;
+		const sig = `${rowCount && colCount ? rangeLabel(sel) : ''}|${n}|${active ? `${active.key}|${active.field}` : ''}`;
+		if (sig === lastSel.current) return;
+		lastSel.current = sig;
+		onSelection(rowCount && colCount ? { label: rangeLabel(sel), cells: n, active } : null);
+	}, [sel, rows, columns, rowCount, colCount, onSelection]);
 
 	const cellId = useCallback((r, c) => `${uid}-${r}-${c}`, [uid]);
 	const activeId = rowCount && colCount ? cellId(sel.r1, sel.c1) : undefined;
@@ -368,6 +395,13 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 	useImperativeHandle(ref, () => {
 		apiRef.current = {
 			focus: focusGrid,
+			/** The selected cells as stable { key, field } pairs (used to apply device-local formatting). */
+			selectedCells: () => {
+				const bb = bounds();
+				const out = [];
+				for (let r = bb.ra; r <= bb.rb && out.length < 5000; r++) for (let c = bb.ca; c <= bb.cb; c++) if (rows[r] && columns[c]) out.push({ key: rows[r].key, field: columns[c].field });
+				return out;
+			},
 			selectAll: () => setSel({ r0: 0, c0: 0, r1: Math.max(rowCount - 1, 0), c1: Math.max(colCount - 1, 0) }),
 			clear: () => clearSelection(),
 			copy: () => {
@@ -397,8 +431,38 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 	const rowHeight = ROW_HEIGHT[density] || ROW_HEIGHT.compact;
 	const pageRows = () => {
 		const h = scrollRef.current ? scrollRef.current.clientHeight : 400;
-		return Math.max(1, Math.floor((h - 40) / rowHeight) - 1);
+		return Math.max(1, Math.floor((h - 40 * zoom) / (rowHeight * zoom)) - 1);
 	};
+
+	// Zoom: Ctrl/Cmd + wheel over the grid. The listener must be non-passive to stop the browser's own page zoom.
+	const zoomPct = Math.round(zoom * 100);
+	const zoomRef = useRef({ zoomPct, onZoom });
+	zoomRef.current = { zoomPct, onZoom };
+	useEffect(() => {
+		const node = scrollRef.current;
+		if (!node) return undefined;
+		const onWheel = (e) => {
+			if (!(e.ctrlKey || e.metaKey)) return;
+			const { zoomPct: z, onZoom: set } = zoomRef.current;
+			if (!set) return;
+			e.preventDefault();
+			set(e.deltaY < 0 ? zoomIn(z) : zoomOut(z));
+		};
+		node.addEventListener('wheel', onWheel, { passive: false });
+		return () => node.removeEventListener('wheel', onWheel);
+	}, []);
+
+	// Keep the same part of the sheet in view when the scale changes.
+	const prevZoom = useRef(zoom);
+	useLayoutEffect(() => {
+		const node = scrollRef.current;
+		if (node && prevZoom.current !== zoom) {
+			const k = zoom / prevZoom.current;
+			node.scrollTop *= k;
+			node.scrollLeft *= k;
+		}
+		prevZoom.current = zoom;
+	}, [zoom]);
 	const filled = (r, c) => String((rows[r] && rows[r].values[columns[c].field]) ?? '') !== '';
 
 	const onKeyDown = (e) => {
@@ -456,6 +520,10 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 			e.preventDefault();
 			return setSel({ r0: 0, c0: 0, r1: rowCount - 1, c1: colCount - 1 });
 		}
+		if (mod && (k === 'b' || k === 'i') && !e.shiftKey && !e.altKey && onFormatShortcut) {
+			e.preventDefault();
+			return onFormatShortcut(k === 'b' ? 'bold' : 'italic');
+		}
 		if (mod && k === 'z') {
 			e.preventDefault();
 			return e.shiftKey ? onRedo() : onUndo();
@@ -500,13 +568,13 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 		const startW = widthOf(c);
 		const node = scrollRef.current;
 		const move = (ev) => {
-			const w = Math.max(MIN_WIDTH, Math.round(startW + ev.clientX - startX));
+			const w = Math.max(MIN_WIDTH, Math.round(startW + (ev.clientX - startX) / zoom));
 			if (node) node.style.setProperty(`--col-${c}`, `${w}px`);
 		};
 		const up = (ev) => {
 			window.removeEventListener('pointermove', move);
 			window.removeEventListener('pointerup', up);
-			const w = Math.max(MIN_WIDTH, Math.round(startW + ev.clientX - startX));
+			const w = Math.max(MIN_WIDTH, Math.round(startW + (ev.clientX - startX) / zoom));
 			setWidths((prev) => ({ ...prev, [columns[c].field]: w }));
 		};
 		window.addEventListener('pointermove', move);
@@ -527,7 +595,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 	};
 
 	return (
-		<div className="sheet__scroll" ref={scrollRef} style={{ ...cssVars, '--sheet-row-h': `${rowHeight}px` }}>
+		<div className="sheet__scroll" ref={scrollRef} style={{ ...cssVars, '--sheet-zoom': zoom, '--sheet-row-h': `${rowHeight * zoom}px` }}>
 			<div
 				ref={gridRef}
 				className="sheet__grid"
@@ -552,7 +620,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 						const dir = sort && sort.field === col.field ? sort.dir : null;
 						const inSel = c >= ca && c <= cb;
 						return (
-							<div key={col.field} role="columnheader" aria-colindex={c + 2} aria-sort={dir ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={`sheet__col ${inSel ? 'is-selected' : ''}`.trim()} style={{ width: `var(--col-${c})` }} onMouseDown={(e) => selectColumn(c, e)}>
+							<div key={col.field} role="columnheader" aria-colindex={c + 2} aria-sort={dir ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={`sheet__col ${inSel ? 'is-selected' : ''}`.trim()} style={{ width: `calc(var(--col-${c}) * var(--sheet-zoom, 1))` }} onMouseDown={(e) => selectColumn(c, e)}>
 								<span className="sheet__letter" aria-hidden="true">
 									{columnLetter(c)}
 								</span>
@@ -585,6 +653,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 							editingC={editing && editing.r === r ? editing.c : -1}
 							editInitial={editing && editing.r === r ? editing.initial : undefined}
 							readOnly={readOnly}
+							fmt={formats ? formats[row.key] : undefined}
 							handlers={handlers}
 						/>
 					);

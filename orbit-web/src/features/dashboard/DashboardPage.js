@@ -5,19 +5,23 @@ import DateRangeFilter from '../../components/filters/DateRangeFilter';
 import FilterBar from '../../components/filters/FilterBar';
 import ProjectFilter from '../../components/filters/ProjectFilter';
 import TeamFilter from '../../components/filters/TeamFilter';
-import PageHeader from '../../components/layout/PageHeader';
 import { ROUTES } from '../../config/routes';
 import useDashboardFilters from '../../hooks/useDashboardFilters';
 import useDashboardLayout from '../../hooks/useDashboardLayout';
 import DashboardLayoutEditor from './DashboardLayoutEditor';
 import useDashboardData from './useDashboardData';
 import AiUsageCard from './widgets/AiUsageCard';
-import FreshnessBar from './widgets/FreshnessBar';
+import DashboardHero from './widgets/DashboardHero';
 import InsightsCard from './widgets/InsightsCard';
 import KpiRow from './widgets/KpiRow';
 import ProductStatusCard from './widgets/ProductStatusCard';
 import ProjectHealthCard from './widgets/ProjectHealthCard';
+import PeopleLeaveCard from './widgets/PeopleLeaveCard';
+import TimeBreakdownCard from './widgets/TimeBreakdownCard';
 import { AttendanceTrendCard, BillableTrendCard } from './widgets/TrendCards';
+
+// Widgets with enough content to use the full row.
+const WIDE = ['time-breakdown', 'people-leave', 'project-health', 'insights'];
 
 /**
  * Executive overview. Everything shown is computed by the backend for the caller's scope
@@ -31,20 +35,25 @@ export default function DashboardPage() {
 	const reset = () => f.update({ period: { preset: 'this_month' }, team: '', project: '' });
 
 	const widgets = {
-		'billable-trend': <BillableTrendCard res={data.trends} clamped={data.trendClamped} />,
-		'attendance-trend': <AttendanceTrendCard res={data.trends} />,
-		'project-health': <ProjectHealthCard res={data.projects} />,
-		'product-status': <ProductStatusCard res={data.product} />,
-		'ai-usage': <AiUsageCard res={data.ai} />,
-		insights: <InsightsCard overview={data.overview} projects={data.projects} product={data.product} freshness={data.freshness} />,
+		'billable-trend': <BillableTrendCard res={data.trends} clamped={data.trendClamped} highlights />,
+		'attendance-trend': <AttendanceTrendCard res={data.trends} highlights />,
+		'time-breakdown': <TimeBreakdownCard res={data.overview} />,
+		'people-leave': <PeopleLeaveCard res={data.overview} />,
+		'project-health': <ProjectHealthCard res={data.projects} drill />,
+		'product-status': <ProductStatusCard res={data.product} drill />,
+		'ai-usage': <AiUsageCard res={data.ai} drill />,
+		insights: <InsightsCard overview={data.overview} projects={data.projects} product={data.product} freshness={data.freshness} drill />,
 	};
 
 	return (
-		<>
-			<PageHeader
-				title="Overview"
-				description="Company performance at a glance"
-				meta={<FreshnessBar res={data.freshness} period={f.valid ? f.params : null} />}
+		<div className="dash">
+			<DashboardHero
+				period={f.valid ? f.params : null}
+				preset={f.period.preset}
+				overview={data.overview}
+				projects={data.projects}
+				product={data.product}
+				freshness={data.freshness}
 				actions={
 					<>
 						<Button icon="settings" onClick={() => setCustomizing(true)}>
@@ -76,11 +85,19 @@ export default function DashboardPage() {
 							All widgets are hidden. Use Customize to show them again.
 						</p>
 					) : null}
-					{layout.visible.includes('kpis') ? <KpiRow overview={data.overview} projects={data.projects} /> : null}
-					<div className="grid grid--widgets">{layout.visible.filter((id) => id !== 'kpis').map((id) => <React.Fragment key={id}>{widgets[id]}</React.Fragment>)}</div>
+					{layout.visible.includes('kpis') ? <KpiRow overview={data.overview} projects={data.projects} trends={data.trends} /> : null}
+					<div className="grid grid--widgets">
+						{layout.visible
+							.filter((id) => id !== 'kpis')
+							.map((id, i) => (
+								<div key={id} className={`widget ${WIDE.includes(id) ? 'widget--wide' : ''}`.trim()} style={{ '--i': i }}>
+									{widgets[id]}
+								</div>
+							))}
+					</div>
 				</div>
 			)}
-		{customizing ? (
+			{customizing ? (
 				<Modal
 					title="Customize dashboard"
 					onClose={() => setCustomizing(false)}
@@ -96,6 +113,6 @@ export default function DashboardPage() {
 					<DashboardLayoutEditor layout={layout} />
 				</Modal>
 			) : null}
-		</>
+		</div>
 	);
 }

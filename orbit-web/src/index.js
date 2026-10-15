@@ -12,6 +12,10 @@ import './styles/layout.css';
 import './styles/controls.css';
 import './styles/settings.css';
 import './styles/spreadsheet.css';
+import './styles/reporting.css';
+import './styles/presentations.css';
+import './styles/reportingSlide.css';
+import './styles/dashboard.css';
 import App from './app/App';
 
 ReactDOM.createRoot(document.getElementById('root')).render(

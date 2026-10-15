@@ -9,6 +9,7 @@ const { createSnapshotRepository } = require('./snapshot.repository');
 const { createImportRepository } = require('./import.repository');
 const { createPresentationRepository } = require('./presentation.repository');
 const { createSettingsRepository } = require('./settings.repository');
+const { createReportingRepository } = require('./reporting.repository');
 
 /** One set of repositories per request, all sharing the request's budgeted `db`. */
 function createRepositories(db) {
@@ -25,6 +26,7 @@ function createRepositories(db) {
 		imports: createImportRepository(db),
 		presentations: createPresentationRepository(db),
 		settings: createSettingsRepository(db),
+		reporting: createReportingRepository(db),
 	};
 }
 

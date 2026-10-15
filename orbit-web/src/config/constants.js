@@ -1,4 +1,6 @@
-export const PAGE_SIZE = 25;
+export const PAGE_SIZE = 20;
+/** Rows-per-page choices offered on every table (each is within the backend's 100-row page cap). */
+export const PAGE_SIZES = [10, 20, 50, 100];
 export const SEARCH_DEBOUNCE_MS = 350;
 export const SEARCH_MIN_CHARS = 2;
 export const SEARCH_RESULTS_PER_GROUP = 5;
@@ -12,5 +14,6 @@ export const REPORT_SECTIONS = [
 	{ key: 'billable_hours', label: 'Billable hours', description: 'Billable vs non-billable trend' },
 	{ key: 'product_development', label: 'Product development', description: 'Work items by status and type' },
 	{ key: 'ai_usage', label: 'AI usage', description: 'Reported tool usage' },
+	{ key: 'reporting_structure', label: 'Team reporting structure', description: 'Saved reporting tree of the deck team (Employees > Reporting structure)' },
 	{ key: 'key_insights', label: 'Key insights', description: 'Notable findings from the data' },
 ];

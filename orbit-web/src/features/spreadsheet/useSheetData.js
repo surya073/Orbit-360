@@ -96,8 +96,8 @@ function reducer(state, a) {
  * (resourceService list/create/update/remove). Edits are tracked per cell and only changed
  * fields are sent. Nothing is reported as saved until the backend confirms it.
  */
-export default function useSheetData({ resource, template, canWrite, search = '', page = 1 }) {
-	const params = useMemo(() => ({ page, pageSize: SHEET_PAGE_SIZE, ...(search ? { q: search } : {}) }), [page, search]);
+export default function useSheetData({ resource, template, canWrite, search = '', page = 1, pageSize = SHEET_PAGE_SIZE }) {
+	const params = useMemo(() => ({ page, pageSize, ...(search ? { q: search } : {}) }), [page, pageSize, search]);
 	const res = useApiResource((signal) => resourceService.list(resource, params, { signal }), `sheet|${resource}|${JSON.stringify(params)}`, { enabled: Boolean(template), isEmpty: () => false });
 	const rows = useMemo(() => res.data || [], [res.data]);
 	const [state, dispatch] = useReducer(reducer, initial);

@@ -7,6 +7,7 @@ export const leaveConfig = defineModule({
 	singular: 'leave record',
 	description: 'Leave requests and approvals. Days and hours are reported separately.',
 	resource: 'leave_records',
+	search: 'Search by employee or leave type',
 	dateRange: true,
 	writable: true,
 	importable: true,

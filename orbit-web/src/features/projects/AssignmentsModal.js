@@ -9,6 +9,7 @@ import DataTable from '../../components/tables/DataTable';
 import Pagination from '../../components/tables/Pagination';
 import useApiResource from '../../hooks/useApiResource';
 import useLookupLabels from '../../hooks/useLookup';
+import usePageSize from '../../hooks/usePageSize';
 import useTemplates from '../../hooks/useTemplates';
 import { resourceService } from '../../services/resourceService';
 import { renderCell } from '../resources/renderCell';
@@ -22,8 +23,9 @@ export default function AssignmentsModal({ project, canWrite, onClose }) {
 	const { notify } = useToast();
 	const templates = useTemplates();
 	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = usePageSize('project_assignments', 10);
 	const [sub, setSub] = useState(null); // { type: 'form' } | { type: 'delete', row }
-	const res = useApiResource((signal) => resourceService.list('project_assignments', { project_id: project.ROWID, page, pageSize: 15 }, { signal }), `asg|${project.ROWID}|${page}`, { isEmpty: () => false });
+	const res = useApiResource((signal) => resourceService.list('project_assignments', { project_id: project.ROWID, page, pageSize }, { signal }), `asg|${project.ROWID}|${page}|${pageSize}`, { isEmpty: () => false });
 	const labelOf = useLookupLabels(res.data, assignmentsConfig.fkColumns);
 	const template = templates.byModule.project_assignments;
 	const rows = res.data || [];
@@ -48,7 +50,7 @@ export default function AssignmentsModal({ project, canWrite, onClose }) {
 							rows={rows}
 							rowActions={canWrite ? (row) => <Button size="sm" variant="ghost" icon="trash" aria-label="Remove assignment" onClick={() => setSub({ type: 'delete', row })}>Remove</Button> : undefined}
 						/>
-						<Pagination meta={res.meta} onPage={setPage} />
+						<Pagination meta={res.meta} onPage={setPage} pageSize={pageSize} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
 					</>
 				)}
 			</StateView>

@@ -22,6 +22,10 @@ function parseValue(raw) {
 
 function condFn(cond) {
 	let m;
+	if ((m = /^\((.+ OR .+)\)$/.exec(cond))) {
+		const fns = m[1].split(' OR ').map(condFn);
+		return (r) => fns.some((fn) => fn(r));
+	}
 	if ((m = /^(\w+) IS NULL$/.exec(cond))) return (r) => r[m[1]] === null || r[m[1]] === undefined;
 	if ((m = /^(\w+) IN \((.*)\)$/.exec(cond))) {
 		const set = new Set(m[2].split(',').map(parseValue));

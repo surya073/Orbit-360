@@ -4,6 +4,7 @@ export const ROUTES = {
 	login: '/login',
 	dashboard: '/',
 	employees: '/employees',
+	reporting: '/employees/reporting',
 	teams: '/teams',
 	projects: '/projects',
 	time: '/time-entries',

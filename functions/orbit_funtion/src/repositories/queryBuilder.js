@@ -17,7 +17,7 @@ function lit(type, value) {
  * WHERE clause for a resource listing. Team scope is applied here, inside the repository
  * layer, from a required Scope. `input` is the output of listQuery() validation.
  */
-function buildWhere(resource, input, scope) {
+function buildWhere(resource, input, scope, refIds = {}) {
 	assertScope(scope);
 	const c = [];
 	if (resource.softDelete) c.push('is_deleted = false');
@@ -37,7 +37,17 @@ function buildWhere(resource, input, scope) {
 		if (input.from) c.push(`${resource.dateColumn} >= ${lit('date', input.from)}`);
 		if (input.to) c.push(`${resource.dateColumn} <= ${lit('date', input.to)}`);
 	}
-	if (resource.search && input.q) c.push(`${resource.search} LIKE '%${input.q}%'`);
+	if (input.q && (resource.search || resource.searchRefs)) {
+		// Own text column OR a reference (e.g. employee_id) whose parent record's name matches.
+		// refIds come from a bounded parent lookup done by the repository; q is already sanitised.
+		const parts = [];
+		if (resource.search) parts.push(`${resource.search} LIKE '%${input.q}%'`);
+		for (const ref of resource.searchRefs || []) {
+			const ids = refIds[ref.fk] || [];
+			if (ids.length) parts.push(`${ref.fk} IN (${ids.map((i) => lit('id', i)).join(', ')})`);
+		}
+		c.push(parts.length > 1 ? `(${parts.join(' OR ')})` : parts.length === 1 ? parts[0] : 'ROWID = 0');
+	}
 	return c.length ? ` WHERE ${c.join(' AND ')}` : '';
 }
 
@@ -50,8 +60,8 @@ function buildOrder(resource, input) {
 }
 
 /** Explicit column list only (ZCQL allows max 20 columns per SELECT; never SELECT * for lists). */
-function buildListQueries(resource, input, scope) {
-	const where = buildWhere(resource, input, scope);
+function buildListQueries(resource, input, scope, refIds) {
+	const where = buildWhere(resource, input, scope, refIds);
 	const { page, pageSize, offset } = input.paging;
 	return {
 		page,

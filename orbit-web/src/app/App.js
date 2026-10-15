@@ -10,7 +10,7 @@ export default function App() {
 	return (
 		<ThemeProvider>
 			<ToastProvider>
-				<HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+				<HashRouter future={{ v7_startTransition: false, v7_relativeSplatPath: true }}>
 					<AuthProvider>
 						<AppRoutes />
 					</AuthProvider>

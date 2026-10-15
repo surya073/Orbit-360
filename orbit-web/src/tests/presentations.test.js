@@ -40,20 +40,25 @@ describe('presentation player', () => {
 		mockFetch(playerRoutes());
 		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
 		const dialog = await screen.findByRole('dialog', { name: 'Presentation: Board review' });
-		expect(await within(dialog).findByRole('heading', { name: 'Executive summary' })).toBeInTheDocument();
-		expect(within(dialog).getByText('Slide 1 of 3')).toBeInTheDocument();
-		expect(await within(dialog).findByRole('region', { name: 'Billable hours' })).toBeInTheDocument(); // KPI from the overview endpoint
+		expect(await within(dialog).findByRole('heading', { name: 'Board review' })).toBeInTheDocument(); // generated opening slide
+		expect(within(dialog).getByText('Slide 1 of 5')).toBeInTheDocument();
 
 		await userEvent.keyboard('{ArrowRight}');
+		expect(await within(dialog).findByRole('heading', { name: 'Executive summary' })).toBeInTheDocument();
+		expect(within(dialog).getByText('Slide 2 of 5')).toBeInTheDocument();
+		expect(await within(dialog).findByRole('region', { name: 'Billable hours' })).toBeInTheDocument(); // KPI from the overview endpoint
+		await userEvent.keyboard('{ArrowRight}');
 		expect(await within(dialog).findByRole('heading', { name: 'Billable hours' })).toBeInTheDocument();
-		expect(within(dialog).getByText('Slide 2 of 3')).toBeInTheDocument();
-		await userEvent.keyboard('{End}');
+		expect(within(dialog).getByText('Slide 3 of 5')).toBeInTheDocument();
+		await userEvent.keyboard('{ArrowRight}');
 		expect(await within(dialog).findByRole('heading', { name: 'Thanks' })).toBeInTheDocument();
 		expect(within(dialog).getByText('Questions?')).toBeInTheDocument();
+		await userEvent.keyboard('{End}');
+		expect(await within(dialog).findByRole('heading', { name: 'Thank you' })).toBeInTheDocument(); // generated closing slide
 		await userEvent.keyboard('{ArrowRight}'); // stays on the last slide
-		expect(within(dialog).getByText('Slide 3 of 3')).toBeInTheDocument();
+		expect(within(dialog).getByText('Slide 5 of 5')).toBeInTheDocument();
 		await userEvent.keyboard('{Home}');
-		expect(await within(dialog).findByRole('heading', { name: 'Executive summary' })).toBeInTheDocument();
+		expect(await within(dialog).findByRole('heading', { name: 'Board review' })).toBeInTheDocument();
 		await userEvent.keyboard('{Escape}');
 		expect(await screen.findByText('Presentation list page')).toBeInTheDocument();
 	});
@@ -61,6 +66,8 @@ describe('presentation player', () => {
 	test('shows the period, data freshness and completeness on the slide', async () => {
 		mockFetch(playerRoutes());
 		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
+		await screen.findByRole('heading', { name: 'Board review' });
+		await userEvent.keyboard('{ArrowRight}');
 		expect(await screen.findByText('This month')).toBeInTheDocument();
 		expect(await screen.findByText(/Latest time entry: 12 Oct 2026/)).toBeInTheDocument();
 		expect((await screen.findAllByText('Partial')).length).toBeGreaterThan(0); // pending entries excluded
@@ -69,6 +76,8 @@ describe('presentation player', () => {
 	test('fetches only what the deck needs and records that it was presented once', async () => {
 		mockFetch(playerRoutes(deck({ config: { v: 2, period: { preset: 'last_month' }, filters: { teamId: '7', projectId: null }, slides: [{ type: 'section', section: 'ai_usage' }] }, slides: [{ type: 'section', section: 'ai_usage' }] })));
 		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present' });
+		await screen.findByRole('heading', { name: 'Board review' });
+		await userEvent.keyboard('{ArrowRight}');
 		expect(await screen.findByRole('heading', { name: 'AI usage' })).toBeInTheDocument();
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line.startsWith('GET /dashboard/ai-usage'))).toBe(true));
 		const lines = global.fetch.calls.map((c) => c.line);
@@ -81,6 +90,8 @@ describe('presentation player', () => {
 		const scoped = deck({ config: { v: 2, period: { preset: 'this_month' }, filters: { teamId: '7', projectId: '3' }, slides: [{ type: 'section', section: 'billable_hours' }] }, slides: [{ type: 'section', section: 'billable_hours' }] });
 		mockFetch(playerRoutes(scoped));
 		const { unmount } = renderWithProviders(<PlayerRoutes />, { user: admin, route: '/presentations/5/present' });
+		await screen.findByRole('heading', { name: 'Board review' });
+		await userEvent.keyboard('{ArrowRight}');
 		await screen.findByRole('heading', { name: 'Billable hours' });
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line.startsWith('GET /dashboard/overview'))).toBe(true));
 		const adminCall = global.fetch.calls.find((c) => c.line.startsWith('GET /dashboard/overview')).line;
@@ -90,6 +101,8 @@ describe('presentation player', () => {
 
 		mockFetch(playerRoutes(scoped));
 		renderWithProviders(<PlayerRoutes />, { user: manager, route: '/presentations/5/present' });
+		await screen.findByRole('heading', { name: 'Board review' });
+		await userEvent.keyboard('{ArrowRight}');
 		await screen.findByRole('heading', { name: 'Billable hours' });
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line.startsWith('GET /dashboard/overview'))).toBe(true));
 		expect(global.fetch.calls.find((c) => c.line.startsWith('GET /dashboard/overview')).line).not.toContain('team_id');
@@ -119,10 +132,11 @@ describe('presentations list', () => {
 	test('lists decks with team names, present/edit links, and deletes after confirmation', async () => {
 		mockFetch([[/^GET \/presentations/, okBody(rows, meta(2))], [/^DELETE \/presentations\/5/, okBody({ deleted: true })], [/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }], meta(1))]]);
 		renderWithProviders(<PresentationsPage />);
-		expect(await screen.findByText('Board review')).toBeInTheDocument();
+		expect(await screen.findByRole('heading', { name: 'Board review' })).toBeInTheDocument();
 		expect(await screen.findByText('Delivery')).toBeInTheDocument();
 		expect(screen.getByText('All teams')).toBeInTheDocument();
-		expect(screen.getAllByRole('link', { name: 'Present' })[0]).toHaveAttribute('href', '/presentations/5/present');
+		expect(screen.getByRole('button', { name: 'Present Board review' })).toBeInTheDocument(); // opens the theme launcher
+		expect(screen.getByRole('link', { name: 'Edit Board review' })).toHaveAttribute('href', '/presentations/5/edit');
 		await userEvent.click(screen.getByRole('button', { name: 'Delete Board review' }));
 		expect(global.fetch.calls.some((c) => c.line.startsWith('DELETE'))).toBe(false);
 		await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));

@@ -1,0 +1,165 @@
+/* Team reporting structure slide. Uses only the presentation theme tokens set on .pscope, so it
+   follows all five presentation themes. Animation order: title, roots, connectors, avatars, names, metrics. */
+
+.pframe--reporting .pframe__body {
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+.pframe--reporting .pframe__body > .rsl {
+	animation: none;
+}
+.rsl {
+	position: relative;
+	flex: none;
+}
+.rsl__stage {
+	position: absolute;
+	transform-origin: 0 0;
+}
+.rsl__edges {
+	position: absolute;
+	left: 0;
+	top: 0;
+	overflow: visible;
+}
+.rsl__edge {
+	fill: none;
+	stroke: var(--accent);
+	stroke-opacity: 0.75;
+	stroke-width: 3;
+	stroke-linecap: round;
+	stroke-dasharray: 1;
+	stroke-dashoffset: 1;
+	animation: rsl-draw 620ms var(--ease) forwards;
+}
+.rsl-node {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	text-align: center;
+}
+.rsl-avatar {
+	display: grid;
+	place-items: center;
+	flex: none;
+	width: 96px;
+	height: 96px;
+	border-radius: 50%;
+	overflow: hidden;
+	background: var(--gradient-accent);
+	color: var(--on-accent);
+	border: 4px solid var(--bg);
+	box-shadow: 0 0 0 3px var(--accent), 0 10px 28px rgb(var(--shadow-rgb) / 0.35), 0 0 36px rgb(var(--p-glow) / 0.25);
+	font-family: var(--p-font-display);
+	font-weight: 800;
+	font-size: 36px;
+	opacity: 0;
+	animation: rsl-pop 560ms var(--ease) forwards;
+	animation-delay: var(--d, 0ms);
+}
+.rsl-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+.rsl-node--root .rsl-avatar {
+	box-shadow: 0 0 0 4px var(--accent), 0 12px 32px rgb(var(--shadow-rgb) / 0.4), 0 0 52px rgb(var(--p-glow) / 0.4);
+}
+.rsl-node__name {
+	max-width: 100%;
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1.15;
+	color: var(--text);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	opacity: 0;
+	animation: rsl-fade 480ms var(--ease) forwards;
+}
+.rsl-node__role {
+	max-width: 100%;
+	padding: 2px 14px;
+	border-radius: 999px;
+	border: 1px solid var(--p-card-border);
+	background: var(--p-card);
+	color: var(--text-muted);
+	font-size: 19px;
+	line-height: 1.3;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	opacity: 0;
+	animation: rsl-fade 480ms var(--ease) forwards;
+}
+.rsl-node__more {
+	font-size: 16px;
+	color: var(--accent);
+	opacity: 0;
+	animation: rsl-fade 480ms var(--ease) forwards;
+}
+.rsl-metrics {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	gap: 16px;
+	flex: none;
+	justify-content: center;
+	opacity: 0;
+	animation: rsl-fade 600ms var(--ease) forwards;
+}
+.rsl-metrics li {
+	padding: 8px 22px;
+	border: 1px solid var(--p-card-border);
+	border-radius: 999px;
+	background: var(--p-card);
+	color: var(--text-muted);
+	font-size: 22px;
+}
+.rsl-metrics strong {
+	color: var(--text);
+	font-family: var(--p-font-display);
+	font-size: 26px;
+}
+@keyframes rsl-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.82);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+@keyframes rsl-fade {
+	from {
+		opacity: 0;
+		transform: translateY(6px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes rsl-draw {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.rsl__edge,
+	.rsl-avatar,
+	.rsl-node__name,
+	.rsl-node__role,
+	.rsl-node__more,
+	.rsl-metrics {
+		animation: none !important;
+		opacity: 1;
+		stroke-dashoffset: 0;
+	}
+}

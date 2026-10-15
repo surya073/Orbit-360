@@ -7,6 +7,7 @@ export const timeEntriesConfig = defineModule({
 	singular: 'time entry',
 	description: 'Work logged against projects. Only approved entries count toward billable and non-billable totals.',
 	resource: 'time_entries',
+	search: 'Search by employee, project or category',
 	dateRange: true,
 	writable: true,
 	importable: true,

@@ -6,6 +6,7 @@ export const performanceConfig = defineModule({
 	title: 'Performance',
 	description: 'Review records by metric and cycle',
 	resource: 'performance_records',
+	search: 'Search by employee or review cycle',
 	dateRange: true,
 	note: 'Records are shown as stored. No overall score is calculated: scores need configured metric definitions and weights.',
 	columns: [

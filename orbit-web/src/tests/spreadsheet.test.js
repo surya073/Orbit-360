@@ -32,6 +32,7 @@ const rows = () => [
 const meta = { page: 1, pageSize: 50, total: 3, totalPages: 1 };
 
 beforeEach(() => {
+	window.localStorage.clear();
 	__resetTemplateCache();
 	__clearLookupCache();
 });

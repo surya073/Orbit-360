@@ -6,6 +6,8 @@ import TeamFilter from '../../components/filters/TeamFilter';
 import Field from '../../components/forms/Field';
 import PageHeader from '../../components/layout/PageHeader';
 import DataTable from '../../components/tables/DataTable';
+import Pagination from '../../components/tables/Pagination';
+import useClientPagination from '../../hooks/useClientPagination';
 import features from '../../config/features';
 import DataEntryModes from '../spreadsheet/DataEntryModes';
 import useTemplates from '../../hooks/useTemplates';
@@ -76,6 +78,8 @@ export default function ImportPage() {
 	const counts = countBy(list);
 	const conflicts = list.filter((r) => r.status === 'conflict');
 	const problems = list.filter((r) => r.status === 'invalid' || r.status === 'failed');
+	const conflictPage = useClientPagination(conflicts, 'import-conflicts', 10);
+	const problemPage = useClientPagination(problems, 'import-problems', 10);
 	const step = phase === 'committed' ? 2 : list.length ? 1 : 0;
 
 	const merge = (rows) => {
@@ -283,8 +287,9 @@ export default function ImportPage() {
 										),
 									},
 								]}
-								rows={conflicts.slice(0, 200)}
+								rows={conflictPage.rows}
 							/>
+							<Pagination {...conflictPage.pagination} />
 							<div style={{ marginTop: 8 }}>
 								<Button disabled={busy || phase !== 'previewed' || Object.keys(choices).length === 0} onClick={saveChoices}>
 									Save choices
@@ -296,8 +301,8 @@ export default function ImportPage() {
 					{problems.length ? (
 						<div>
 							<h2 className="section-title" style={{ marginTop: 0 }}>Rows with problems</h2>
-							<DataTable caption="Rows with problems" rowKey="rowNumber" columns={[{ key: 'rowNumber', label: 'Row' }, { key: 'errors', label: 'Problems', render: (r) => r.errors.map((e) => `${e.field ? `${e.field}: ` : ''}${e.message}`).join('; ') }]} rows={problems.slice(0, 200)} />
-							{problems.length > 200 ? <p className="muted small">Showing the first 200 of {problems.length}.</p> : null}
+							<DataTable caption="Rows with problems" rowKey="rowNumber" columns={[{ key: 'rowNumber', label: 'Row' }, { key: 'errors', label: 'Problems', render: (r) => r.errors.map((e) => `${e.field ? `${e.field}: ` : ''}${e.message}`).join('; ') }]} rows={problemPage.rows} />
+							<Pagination {...problemPage.pagination} />
 						</div>
 					) : null}
 

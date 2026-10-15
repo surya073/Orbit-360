@@ -312,3 +312,36 @@ test('time entries and attendance are searchable by employee and project name, w
 	assert.equal((await w.api(w.ids.mgr1, 'GET', '/attendance?q=asha')).body.data.length, 1);
 	assert.equal((await w.api(w.ids.mgr1, 'GET', '/attendance?q=bala')).body.data.length, 0);
 });
+
+// ---- text search uses ZCQL wildcards ---------------------------------------------------------
+test('list search: partial, any case, trimmed, scoped, paged; clearing restores the full list', async () => {
+	const w = buildWorld();
+	const names = async (url, who = w.ids.mgr1) => (await w.api(who, 'GET', url)).body.data.map((e) => e.full_name).sort();
+	assert.deepEqual(await names('/employees?q=sh'), ['Asha']); // partial match inside the name
+	assert.deepEqual(await names('/employees?q=CHIT'), ['Chitra']); // case does not matter
+	assert.deepEqual(await names('/employees?q=%20%20bala%20'), ['Bala']); // surrounding spaces are ignored
+	assert.deepEqual(await names('/employees?q=dev'), []); // another team's employee is never found by a manager
+	assert.deepEqual(await names('/employees?q=dev', w.ids.admin), ['Dev']);
+	assert.deepEqual(await names('/employees?q=zzz'), []);
+	assert.deepEqual(await names('/employees?q='), ['Asha', 'Bala', 'Chitra']); // an empty query is no filter
+	const paged = await w.api(w.ids.mgr1, 'GET', '/employees?q=a&page=2&pageSize=1');
+	assert.equal(paged.status, 200);
+	assert.equal(paged.body.data.length, 1);
+	assert.equal(paged.body.meta.total, 3); // every team-1 name contains an "a"
+	// ZCQL's LIKE wildcard is `*`; a `%` would be matched literally and every search would come back empty.
+	const sql = w.store.queries.filter((s) => / LIKE /.test(s));
+	assert.ok(sql.length > 0);
+	assert.ok(sql.every((s) => /LIKE '\*[^']*\*'/.test(s) && !s.includes('%')));
+	// a user-typed wildcard is stripped, never passed through
+	assert.deepEqual(await names('/employees?q=*'), ['Asha', 'Bala', 'Chitra']);
+	assert.deepEqual(await names('/employees?q=%25'), ['Asha', 'Bala', 'Chitra']);
+});
+
+test('the test data store treats % literally, like ZCQL (guards against the old LIKE syntax)', () => {
+	const w = buildWorld();
+	const { condFn } = require('./helpers/memoryCatalyst');
+	const run = (cond) => w.store.rows('employees').filter(condFn(cond)).length;
+	assert.equal(run("full_name LIKE '%Asha%'"), 0);
+	assert.equal(run("full_name LIKE '*Asha*'"), 1);
+	assert.equal(run("full_name LIKE 'A?ha'"), 1);
+});

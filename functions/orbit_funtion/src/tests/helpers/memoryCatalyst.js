@@ -31,7 +31,11 @@ function condFn(cond) {
 		const set = new Set(m[2].split(',').map(parseValue));
 		return (r) => r[m[1]] !== undefined && set.has(String(r[m[1]]));
 	}
-	if ((m = /^(\w+) LIKE '%(.*)%'$/.exec(cond))) return (r) => String(r[m[1]] || '').toLowerCase().includes(m[2].toLowerCase());
+	if ((m = /^(\w+) LIKE '(.*)'$/.exec(cond))) {
+		// ZCQL wildcards: `*` = any run of characters, `?` = one character; anything else (including `%`) is literal.
+		const re = new RegExp(`^${m[2].replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')}$`, 'i');
+		return (r) => re.test(String(r[m[1]] || ''));
+	}
 	if ((m = /^(\w+) (=|>=|<=) (.+)$/.exec(cond))) {
 		const [, col, op, rawV] = m;
 		const v = parseValue(rawV);
@@ -187,4 +191,4 @@ function call(handler, { method = 'GET', url, user, body } = {}) {
 	});
 }
 
-module.exports = { createStore, createMemoryCatalyst, call };
+module.exports = { createStore, createMemoryCatalyst, call, condFn };

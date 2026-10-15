@@ -18,14 +18,17 @@ function lit(type, value) {
  * layer, from a required Scope. `input` is the output of listQuery() validation.
  */
 /**
- * `col LIKE '%term%'` that does not depend on the data store's case rules: the (already sanitised)
+ * `col LIKE '*term*'` that does not depend on the data store's case rules: the (already sanitised)
  * term is matched as typed, lower case, UPPER case and Title Case, so "asha" finds "Asha Rao".
  * Returns a flat list of conditions to be OR-ed by the caller (no nested brackets).
+ * ZCQL's LIKE wildcard is `*` (any run of characters) and `?` (one character), NOT SQL's `%`: a `%`
+ * would be matched literally and every search would come back empty. The validators strip `*`, `?`
+ * and `%` from the term, so it can never inject its own wildcard.
  */
 function likeVariants(col, term) {
 	const title = term.toLowerCase().replace(/(^|[ \-_.@])([a-z])/g, (m, sep, ch) => sep + ch.toUpperCase());
 	const variants = [...new Set([term, term.toLowerCase(), term.toUpperCase(), title])];
-	return variants.map((v) => `${col} LIKE '%${v}%'`);
+	return variants.map((v) => `${col} LIKE '*${v}*'`);
 }
 
 function buildWhere(resource, input, scope, refIds = {}) {

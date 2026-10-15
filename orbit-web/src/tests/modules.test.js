@@ -56,6 +56,32 @@ describe('module page pattern (Employees)', () => {
 		expect(global.fetch.calls.filter((c) => c.line.startsWith('GET /employees')).pop().line).toContain('q=asha');
 	});
 
+	test('search is trimmed, restarts at page 1, combines with filters, and clearing restores the full list', async () => {
+		const lines = () => global.fetch.calls.filter((c) => c.line.startsWith('GET /employees')).map((c) => c.line);
+		mockFetch(baseRoutes([[/^GET \/employees/, (line) => (line.includes('q=zzz') ? okBody([], meta(0)) : line.includes('q=asha') ? okBody([emp(1, 'Asha Rao')], meta(1)) : line.includes('page=2') ? okBody([emp(26, 'Zed Page2')], meta(30, 2)) : okBody([emp(1, 'Asha Rao'), emp(2, 'Bala Iyer')], meta(30)))]]));
+		renderWithProviders(<EmployeesPage />);
+		await screen.findByText('Bala Iyer');
+		await userEvent.click(screen.getByRole('button', { name: /next/i }));
+		await screen.findByText('Zed Page2');
+		await userEvent.selectOptions(screen.getByLabelText('Status'), 'active');
+		const box = screen.getByLabelText('Search by name');
+		await userEvent.type(box, '  asha ');
+		await waitFor(() => expect(lines().pop()).toMatch(/q=asha(&|$)/), { timeout: 2000 });
+		const last = lines().pop();
+		expect(last).toContain('page=1'); // a new search starts on the first page
+		expect(last).toContain('employment_status=active'); // and keeps the active filter
+		expect(lines().some((l) => /q=(%20|\+)/.test(l))).toBe(false); // spaces never reach the server
+		expect(await screen.findByText('Asha Rao')).toBeInTheDocument();
+		expect(screen.queryByText('Bala Iyer')).not.toBeInTheDocument();
+		await userEvent.clear(box);
+		await userEvent.type(box, 'zzz');
+		expect(await screen.findByText('No records match your filters', {}, { timeout: 2000 })).toBeInTheDocument();
+		await userEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+		expect(box).toHaveValue('');
+		expect(await screen.findByText('Bala Iyer', {}, { timeout: 2000 })).toBeInTheDocument(); // the full list is back (served from the short GET cache)
+		expect(screen.getByLabelText('Status')).toHaveValue('active'); // clearing the search keeps the filter
+	});
+
 	test('empty, filtered-empty and error states are distinct', async () => {
 		mockFetch(baseRoutes([[/^GET \/employees/, (line) => (line.includes('employment_status=inactive') ? okBody([], meta(0)) : okBody([], meta(0)))]]));
 		renderWithProviders(<EmployeesPage />);

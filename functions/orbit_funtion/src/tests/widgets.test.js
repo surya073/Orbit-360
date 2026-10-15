@@ -143,7 +143,7 @@ test('people profiles: per-person time, late check-ins, leave, AI, product and p
 
 test('search terms match regardless of the data store case rules (typed, lower, upper and Title case)', () => {
 	const { likeVariants } = require('../repositories/queryBuilder');
-	assert.deepEqual(likeVariants('full_name', 'asha rao'), ["full_name LIKE '%asha rao%'", "full_name LIKE '%ASHA RAO%'", "full_name LIKE '%Asha Rao%'"]);
-	assert.deepEqual(likeVariants('tool_name', 'GitHub'), ["tool_name LIKE '%GitHub%'", "tool_name LIKE '%github%'", "tool_name LIKE '%GITHUB%'", "tool_name LIKE '%Github%'"]);
+	assert.deepEqual(likeVariants('full_name', 'asha rao'), ["full_name LIKE '*asha rao*'", "full_name LIKE '*ASHA RAO*'", "full_name LIKE '*Asha Rao*'"]);
+	assert.deepEqual(likeVariants('tool_name', 'GitHub'), ["tool_name LIKE '*GitHub*'", "tool_name LIKE '*github*'", "tool_name LIKE '*GITHUB*'", "tool_name LIKE '*Github*'"]);
 	assert.equal(likeVariants('x', '42').length, 1);
 });

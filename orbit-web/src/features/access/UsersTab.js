@@ -146,7 +146,7 @@ export default function UsersTab({ data, reload: reloadRoles }) {
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
 	const [editing, setEditing] = useState(null);
-	const dq = useDebouncedValue(q, 300);
+	const dq = useDebouncedValue(q, 300).trim();
 	const res = useApiResource((signal) => accessService.users({ q: dq || undefined, page, pageSize }, { signal }), `access-users|${dq}|${page}|${pageSize}`, { isEmpty: () => false });
 	const teams = useApiResource((signal) => resourceService.list('teams', { pageSize: 100 }, { signal }), 'access-teams', { enabled: can('teams.view'), isEmpty: () => false });
 	const teamList = teams.data || [];

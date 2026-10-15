@@ -17,7 +17,7 @@ export default function LookupSelect({ column, value, onChange, controlProps = {
 	const [resource, labelCol] = LOOKUPS[column];
 	const [opened, setOpened] = useState(false);
 	const [q, setQ] = useState('');
-	const dq = useDebouncedValue(q, 300);
+	const dq = useDebouncedValue(q, 300).trim();
 
 	const list = useApiResource((signal) => resourceService.list(resource, { q: dq, pageSize: LIMIT }, { signal }), `${resource}|${dq}`, { enabled: opened, isEmpty: () => false });
 	const options = (list.data || []).map((o) => ({ value: String(o.ROWID), label: String(o[labelCol] ?? `#${o.ROWID}`) }));

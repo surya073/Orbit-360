@@ -46,7 +46,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 	const [filters, setFilters] = useState({});
 	const [q, setQ] = useState(urlQ);
 	const [dialog, setDialog] = useState(null); // { type: 'form', initial? } | { type: 'delete', row }
-	const dq = useDebouncedValue(q, 350);
+	const dq = useDebouncedValue(q, 350).trim(); // surrounding spaces never start a new request
 	const templates = useTemplates();
 
 	// A search-palette jump (?q=) while already on this page updates the search box.

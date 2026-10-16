@@ -276,7 +276,9 @@ export const themeById = (id) => PRESENTATION_THEMES.find((t) => t.id === id) ||
 /** Inline style object that applies a theme's tokens to a subtree. */
 export const themeStyle = (themeOrId) => {
 	const t = typeof themeOrId === 'string' ? themeById(themeOrId) : themeOrId;
-	return { ...t.tokens };
+	// React wants camelCase for real CSS properties; the custom properties (--x) pass through unchanged
+	const { 'color-scheme': colorScheme, ...vars } = t.tokens;
+	return colorScheme ? { ...vars, colorScheme } : vars;
 };
 
 const THEME_KEY = 'company360.presentationTheme';

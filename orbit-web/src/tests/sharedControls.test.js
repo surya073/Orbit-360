@@ -1,3 +1,4 @@
+import { optionValues, pickOption } from './pickOption';
 import React, { useState } from 'react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -13,9 +14,9 @@ describe('Pagination with rows per page', () => {
 		const onPage = jest.fn();
 		render(<Pagination meta={{ page: 2, pageSize: 20, total: 55, totalPages: 3 }} onPage={onPage} pageSize={20} onPageSize={onPageSize} />);
 		const select = screen.getByRole('combobox', { name: 'Rows per page' });
-		expect([...select.options].map((o) => o.value)).toEqual(['10', '20', '50', '100']);
+		expect(await optionValues(select)).toEqual(['10', '20', '50', '100']);
 		expect(screen.getByText(/21–40 of 55/)).toBeInTheDocument();
-		await userEvent.selectOptions(select, '50');
+		await pickOption(select, '50');
 		expect(onPageSize).toHaveBeenCalledWith(50);
 		await userEvent.click(screen.getByRole('button', { name: 'Last page' }));
 		expect(onPage).toHaveBeenCalledWith(3);
@@ -44,7 +45,7 @@ describe('Pagination with rows per page', () => {
 		expect(screen.getAllByRole('listitem')).toHaveLength(10);
 		await userEvent.click(screen.getByRole('button', { name: 'Next' }));
 		expect(screen.getByText('row 11')).toBeInTheDocument();
-		await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Rows per page' }), '20');
+		await pickOption(screen.getByRole('combobox', { name: 'Rows per page' }), '20');
 		expect(screen.getAllByRole('listitem')).toHaveLength(20);
 		expect(screen.getByText('row 1')).toBeInTheDocument();
 	});

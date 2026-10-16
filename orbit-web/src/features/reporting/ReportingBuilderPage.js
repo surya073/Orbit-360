@@ -18,6 +18,7 @@ import NodeDetails from './NodeDetails';
 import TreeCanvas, { NODE_H, NODE_W, roleText } from './TreeCanvas';
 import { ancestorsOf, assign, canAssign, layoutTree, nodesFromTree, removeNode, seedFromSheet, setRole, sheetLinkCount, treeFromNodes, treeStats } from './treeModel';
 import useTreeHistory from './useTreeHistory';
+import Select from '../../components/forms/Select';
 
 /** Drop priority: a person beats the "top level" strip, which beats the roster, which beats the empty canvas. */
 function collide(args) {
@@ -278,7 +279,7 @@ export default function ReportingBuilderPage() {
 						{isAdmin && teams.data ? (
 							<label className="rs-teampick">
 								<span>Team</span>
-								<select
+								<Select
 									value={teamId}
 									onChange={(e) => {
 										if (hist.dirty && !window.confirm('You have unsaved changes. Switch team and discard them?')) return;
@@ -290,7 +291,7 @@ export default function ReportingBuilderPage() {
 											{t.name}
 										</option>
 									))}
-								</select>
+								</Select>
 							</label>
 						) : null}
 						<Button to={ROUTES.employees}>Back to employees</Button>

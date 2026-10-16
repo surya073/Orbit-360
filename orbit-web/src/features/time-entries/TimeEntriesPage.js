@@ -5,7 +5,7 @@ import ResourcePage from '../resources/ResourcePage';
 export const timeEntriesConfig = defineModule({
 	title: 'Time entries',
 	singular: 'time entry',
-	description: 'Work logged against projects. Only approved entries count toward billable and non-billable totals.',
+	description: 'Billable and non-billable hours logged against projects. Only approved entries count toward the totals.',
 	resource: 'time_entries',
 	search: 'Search by employee, project or category',
 	dateRange: true,

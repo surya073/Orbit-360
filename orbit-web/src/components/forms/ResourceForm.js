@@ -6,6 +6,7 @@ import Button from '../common/Button';
 import DetailsEditor from './DetailsEditor';
 import Field from './Field';
 import LookupSelect from './LookupSelect';
+import Select from './Select';
 
 // Friendlier labels where the column name is schema jargon.
 const LABELS = { email_normalized: 'Email', source_record_id: 'Source record ID', work_description: 'Description', is_billable: 'Billable', late_status: 'Late status', more_details: 'Extra details' };
@@ -83,22 +84,22 @@ export default function ResourceForm({ resource, template, initial, defaults = {
 								if (LOOKUPS[c.field]) return <LookupSelect column={c.field} value={v} onChange={set(c.field)} controlProps={p} disabled={locked} />;
 								if (c.type === 'enum')
 									return (
-										<select {...p} value={v} onChange={on} disabled={locked}>
+										<Select {...p} value={v} onChange={on} disabled={locked}>
 											<option value="">{c.required ? 'Select…' : '(not set)'}</option>
 											{c.values.map((o) => (
 												<option key={o} value={o}>
 													{humanize(o)}
 												</option>
 											))}
-										</select>
+										</Select>
 									);
 								if (c.type === 'bool')
 									return (
-										<select {...p} value={v} onChange={on} disabled={locked}>
+										<Select {...p} value={v} onChange={on} disabled={locked}>
 											<option value="">{c.required ? 'Select…' : '(not set)'}</option>
 											<option value="true">Yes</option>
 											<option value="false">No</option>
-										</select>
+										</Select>
 									);
 								if (c.type === 'json') return <DetailsEditor id={p.id} value={v} onChange={set(c.field)} disabled={locked} label={labelFor(c.field)} />;
 								if (c.type === 'text') return <textarea {...p} rows={3} value={v} onChange={on} disabled={locked} />;

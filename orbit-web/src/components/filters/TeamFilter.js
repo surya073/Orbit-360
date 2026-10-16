@@ -3,6 +3,7 @@ import { useAuth } from '../../app/providers/AuthProvider';
 import useApiResource from '../../hooks/useApiResource';
 import { resourceService } from '../../services/resourceService';
 import Field from '../forms/Field';
+import Select from '../forms/Select';
 
 /**
  * Admins choose a team (or all). Managers see their own team as a fixed chip: the backend pins
@@ -22,14 +23,14 @@ export default function TeamFilter({ value, onChange }) {
 	return (
 		<Field label="Team">
 			{(p) => (
-				<select {...p} value={value || ''} onChange={(e) => onChange(e.target.value)}>
+				<Select {...p} value={value || ''} onChange={(e) => onChange(e.target.value)}>
 					<option value="">All teams</option>
 					{(teams.data || []).map((t) => (
 						<option key={t.ROWID} value={t.ROWID}>
 							{t.name}
 						</option>
 					))}
-				</select>
+				</Select>
 			)}
 		</Field>
 	);

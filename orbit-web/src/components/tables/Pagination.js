@@ -1,6 +1,7 @@
 import React from 'react';
 import { PAGE_SIZES } from '../../config/constants';
 import Button from '../common/Button';
+import Select from '../forms/Select';
 
 /**
  * Pager with an optional rows-per-page choice. Pass `pageSize` + `onPageSize` to show the choice
@@ -18,13 +19,13 @@ export default function Pagination({ meta, onPage, pageSize, onPageSize, sizes =
 			{onPageSize ? (
 				<label className="pager__size">
 					<span>Rows per page</span>
-					<select value={size} onChange={(e) => onPageSize(Number(e.target.value))} aria-label="Rows per page">
+					<Select value={size} onChange={(e) => onPageSize(Number(e.target.value))} aria-label="Rows per page">
 						{[...new Set([...sizes, size])].sort((a, b) => a - b).map((n) => (
 							<option key={n} value={n}>
 								{n}
 							</option>
 						))}
-					</select>
+					</Select>
 				</label>
 			) : null}
 			<span className="pager__range" aria-live="polite">

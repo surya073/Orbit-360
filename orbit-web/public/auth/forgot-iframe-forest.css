@@ -1,7 +1,7 @@
 @import url("/__catalyst/auth/static-file?file_name=embedded_password_reset.css");
 
 /*
- * Forgot-password flow - theme: forest. GENERATED from src/styles/themes.css by scripts/generate-login-css.js; do not edit.
+ * Forgot-password flow - theme: forest. GENERATED from src/styles/themes.css and themes.extra.css by scripts/generate-login-css.js; do not edit.
  * Regenerate with `npm run gen:login-css` (src/tests/login.test.js fails if these drift).
  */
 

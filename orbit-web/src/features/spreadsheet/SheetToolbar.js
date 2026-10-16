@@ -4,6 +4,7 @@ import Icon from '../../components/common/Icon';
 import Popover from '../../components/common/Popover';
 import { humanize } from '../../utils/format';
 import { FILTER_OPS } from './gridModel';
+import Select from '../../components/forms/Select';
 
 function FilterPanel({ columns, filters, onChange }) {
 	const [field, setField] = useState(columns[0] ? columns[0].field : '');
@@ -22,7 +23,7 @@ function FilterPanel({ columns, filters, onChange }) {
 			<p className="small muted">Filters apply to the rows loaded on this page.</p>
 			<label className="sheet-filter__row">
 				<span>Column</span>
-				<select
+				<Select
 					value={field}
 					onChange={(e) => {
 						setField(e.target.value);
@@ -34,31 +35,31 @@ function FilterPanel({ columns, filters, onChange }) {
 							{c.label}
 						</option>
 					))}
-				</select>
+				</Select>
 			</label>
 			{choices ? (
 				<label className="sheet-filter__row">
 					<span>Is</span>
-					<select value={value} onChange={(e) => setValue(e.target.value)}>
+					<Select value={value} onChange={(e) => setValue(e.target.value)}>
 						<option value="">Choose…</option>
 						{choices.map((v) => (
 							<option key={v} value={v}>
 								{col.type === 'bool' ? (v === 'true' ? 'Yes' : 'No') : humanize(v)}
 							</option>
 						))}
-					</select>
+					</Select>
 				</label>
 			) : (
 				<>
 					<label className="sheet-filter__row">
 						<span>Condition</span>
-						<select value={op} onChange={(e) => setOp(e.target.value)}>
+						<Select value={op} onChange={(e) => setOp(e.target.value)}>
 							{Object.entries(FILTER_OPS).map(([k, label]) => (
 								<option key={k} value={k}>
 									{label}
 								</option>
 							))}
-						</select>
+						</Select>
 					</label>
 					<label className="sheet-filter__row">
 						<span>Value</span>
@@ -179,10 +180,10 @@ const SheetToolbar = forwardRef(function SheetToolbar(
 					/>
 				</div>
 				{canServerSearch ? (
-					<select className="sheet-scope" aria-label="Where to search" value={searchScope} onChange={(e) => onSearchScope(e.target.value)} title="Search all records on the server (by name), or only the rows loaded in the grid (every column)">
+					<Select className="sheet-scope" aria-label="Where to search" value={searchScope} onChange={(e) => onSearchScope(e.target.value)} title="Search all records on the server (by name), or only the rows loaded in the grid (every column)">
 						<option value="server">All records</option>
 						<option value="loaded">Loaded rows</option>
-					</select>
+					</Select>
 				) : null}
 				<Popover
 					label="Filter rows"

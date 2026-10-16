@@ -2,8 +2,9 @@ import { defineModule } from '../resources/defineModule';
 
 export const employeesConfig = defineModule({
 	title: 'Employees',
+	summary: 'employees',
 	singular: 'employee',
-	description: 'Directory of employees and their employment status',
+	description: 'Your people directory: who works here, in which team and role, and their employment status.',
 	resource: 'employees',
 	search: 'Search by name',
 	writable: true,

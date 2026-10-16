@@ -55,7 +55,7 @@ describe('sign-in page', () => {
 		renderLogin();
 		await userEvent.click(screen.getByRole('button', { name: 'Appearance' }));
 		const menu = screen.getByRole('radiogroup', { name: 'Theme' });
-		expect(within(menu).getAllByRole('radio')).toHaveLength(8);
+		expect(within(menu).getAllByRole('radio')).toHaveLength(THEME_IDS.length + 1);
 		expect(screen.queryByRole('link', { name: /Appearance settings/ })).not.toBeInTheDocument();
 	});
 
@@ -154,7 +154,7 @@ describe('auto-sizing the hosted card', () => {
 });
 
 describe('generated iframe stylesheets', () => {
-	const themes = fs.readFileSync(path.join(__dirname, '../styles/themes.css'), 'utf8');
+	const themes = fs.readFileSync(path.join(__dirname, '../styles/themes.css'), 'utf8') + fs.readFileSync(path.join(__dirname, '../styles/themes.extra.css'), 'utf8');
 	const token = (id, name) => {
 		const re = id === 'blueberry' ? /:root,\s*\[data-theme='blueberry'\]\s*\{([^}]*)\}/ : new RegExp(`\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`);
 		return new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(re.exec(themes)[1])[1];

@@ -9,6 +9,7 @@ import Field from '../../components/forms/Field';
 import { accessService } from '../../services/accessService';
 import { describeKey, diff, setAll, touchesAccessControl } from './accessModel';
 import PermissionMatrix from './PermissionMatrix';
+import Select from '../../components/forms/Select';
 
 export const SCOPE_LABEL = { all_teams: 'Every team', own_team: 'One team' };
 const initialsOf = (name = '') =>
@@ -94,7 +95,7 @@ function NewRoleModal({ catalog, roles, canGrant, canAllTeams, onClose, onCreate
 				</fieldset>
 				<Field label="Start from (optional)" hint="Copies that role's permissions, limited to the ones you hold yourself. You can change everything afterwards.">
 					{(p) => (
-						<select {...p} value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
+						<Select {...p} value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
 							<option value="">Nothing, start empty</option>
 							{roles
 								.filter((r) => r.isActive)
@@ -103,7 +104,7 @@ function NewRoleModal({ catalog, roles, canGrant, canAllTeams, onClose, onCreate
 										{r.name}
 									</option>
 								))}
-						</select>
+						</Select>
 					)}
 				</Field>
 			</form>

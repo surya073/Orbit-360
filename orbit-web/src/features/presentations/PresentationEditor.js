@@ -15,6 +15,7 @@ import { REPORT_SECTIONS } from '../../config/constants';
 import { ROUTES } from '../../config/routes';
 import useApiResource from '../../hooks/useApiResource';
 import { presentationsService } from '../../services/presentationsService';
+import Select from '../../components/forms/Select';
 
 const LABEL = Object.fromEntries(REPORT_SECTIONS.map((s) => [s.key, s.label]));
 const slideLabel = (s) => (s.type === 'section' ? LABEL[s.section] || s.section : s.title || `${s.type[0].toUpperCase()}${s.type.slice(1)} slide`);
@@ -94,10 +95,10 @@ export default function PresentationEditor() {
 							</Field>
 							<Field label="Status">
 								{(p) => (
-									<select {...p} value={status} onChange={(e) => setStatus(e.target.value)}>
+									<Select {...p} value={status} onChange={(e) => setStatus(e.target.value)}>
 										<option value="draft">Draft</option>
 										<option value="ready">Ready</option>
-									</select>
+									</Select>
 								)}
 							</Field>
 							<TeamFilter value={team} onChange={setTeam} />

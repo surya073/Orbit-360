@@ -13,8 +13,9 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const css = fs.readFileSync(path.join(ROOT, 'src/styles/themes.css'), 'utf8');
-const ids = ['ember', 'blueberry', 'blackcurrant', 'volcano', 'sunset', 'ocean', 'forest'];
+const css = fs.readFileSync(path.join(ROOT, 'src/styles/themes.css'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'src/styles/themes.extra.css'), 'utf8');
+const extra = JSON.parse(fs.readFileSync(path.join(ROOT, 'src/config/extraThemes.json'), 'utf8'));
+const ids = ['ember', 'blueberry', 'blackcurrant', 'volcano', 'sunset', 'ocean', 'forest', ...extra.map((t) => t.id)];
 
 function tokens(id) {
 	const re = id === 'blueberry' ? /:root,\s*\[data-theme='blueberry'\]\s*\{([^}]*)\}/ : new RegExp(`\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`);
@@ -24,7 +25,7 @@ function tokens(id) {
 const header = (id, file, kind) => `@import url("/__catalyst/auth/static-file?file_name=${file}");
 
 /*
- * ${kind} - theme: ${id}. GENERATED from src/styles/themes.css by scripts/generate-login-css.js; do not edit.
+ * ${kind} - theme: ${id}. GENERATED from src/styles/themes.css and themes.extra.css by scripts/generate-login-css.js; do not edit.
  * Regenerate with \`npm run gen:login-css\` (src/tests/login.test.js fails if these drift).
  */
 `;

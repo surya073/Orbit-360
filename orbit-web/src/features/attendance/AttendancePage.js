@@ -3,7 +3,7 @@ import { defineModule } from '../resources/defineModule';
 import ResourcePage from '../resources/ResourcePage';
 
 export const attendanceConfig = defineModule({
-	title: 'Attendance',
+	title: 'Attendance & punctuality',
 	singular: 'attendance record',
 	description: 'Daily check-ins. Check-in time and late status are kept separate; an unknown status is never treated as on time.',
 	resource: 'attendance_records',

@@ -171,7 +171,7 @@
 	color: var(--text-muted);
 	font-weight: 550;
 }
-.sheet-filter select,
+.sheet-filter .select,
 .sheet-filter input {
 	height: var(--control-h);
 	padding: 0 var(--space-2);
@@ -489,7 +489,7 @@
 	padding: 2px;
 	z-index: 6;
 }
-.sheet-editor--fk select,
+.sheet-editor--fk .select,
 .sheet-editor--fk input {
 	height: var(--control-h);
 }
@@ -573,7 +573,7 @@
 	color: var(--text-muted);
 	margin-left: auto;
 }
-.sheet-head__picker select {
+.sheet-head__picker .select {
 	height: 30px;
 	padding: 0 var(--space-2);
 	border: 1px solid var(--border-strong);

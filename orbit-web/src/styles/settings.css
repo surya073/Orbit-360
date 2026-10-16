@@ -13,7 +13,7 @@
 	flex-direction: column;
 	gap: 2px;
 	position: sticky;
-	top: calc(var(--header-h) + var(--space-4));
+	top: calc(var(--stick) + var(--space-4));
 	margin: 0;
 	padding: var(--space-2);
 	border: 1px solid var(--border);

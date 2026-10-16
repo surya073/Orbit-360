@@ -11,7 +11,7 @@
 	align-items: flex-end;
 	justify-content: space-between;
 	gap: var(--space-3) var(--space-4);
-	margin-bottom: 18px;
+	margin-bottom: 14px;
 }
 .sig-context__text {
 	display: grid;
@@ -391,61 +391,93 @@
 	position: absolute;
 	border-radius: 18px;
 	border: 1px solid var(--panel-border);
+	transition: top var(--dur-slow) var(--ease), left var(--dur-slow) var(--ease), right var(--dur-slow) var(--ease), height var(--dur-slow) var(--ease), opacity var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
-.sig-stack__card--3,
-.sig-stack__card--2 {
+/* position in the deck: 0 = front (full card), 1 and 2 = the strips peeking out behind it */
+.sig-stack__card[data-pos='2'],
+.sig-stack__card[data-pos='1'] {
 	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	padding: 9px 16px 0;
-	font-size: 0.75rem;
-	color: color-mix(in srgb, var(--text) 72%, transparent);
 	background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 34%, var(--surface-2)), color-mix(in srgb, var(--accent) 12%, var(--surface)));
 }
-.sig-stack__card--3 {
+.sig-stack__card[data-pos='2'] {
 	top: 0;
 	left: 13%;
 	right: 13%;
 	height: 64px;
 	opacity: 0.8;
+	z-index: 1;
 }
-.sig-stack__card--2 {
+.sig-stack__card[data-pos='1'] {
 	top: 26px;
 	left: 6%;
 	right: 6%;
 	height: 70px;
+	z-index: 2;
 }
-.sig-stack__card b {
-	font-weight: 600;
-	color: var(--text);
-}
-.sig-stack__dots {
-	display: inline-flex;
-}
-.sig-stack__dots i {
-	width: 18px;
-	height: 18px;
-	border-radius: 50%;
-	background: var(--danger);
-}
-.sig-stack__dots i + i {
-	margin-left: -7px;
-	background: var(--warning);
-	opacity: 0.9;
-}
-.sig-stack__card--1 {
+.sig-stack__card[data-pos='0'] {
 	left: 0;
 	right: 0;
 	top: 58px;
 	bottom: 0;
+	z-index: 3;
 	display: grid;
 	align-content: space-between;
-	padding: 16px 18px;
+	padding: 14px 18px 16px;
 	background: linear-gradient(160deg, color-mix(in srgb, var(--text) 10%, var(--surface)) 0%, var(--surface) 62%);
 	box-shadow: 0 24px 40px -22px rgb(var(--shadow-rgb) / 0.9), inset 0 1px 0 color-mix(in srgb, var(--text) 12%, transparent);
 }
-.sig-stack__brand {
+.sig-stack__pick {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	width: 100%;
+	height: 100%;
+	padding: 9px 16px 0;
+	border: 0;
+	border-radius: inherit;
+	background: transparent;
+	color: color-mix(in srgb, var(--text) 72%, transparent);
+	font: inherit;
+	font-size: 0.75rem;
+	cursor: pointer;
+	transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.sig-stack__pick b {
+	font-weight: 600;
+	color: var(--text);
+}
+.sig-stack__pick:hover {
+	background: color-mix(in srgb, var(--text) 8%, transparent);
+	color: var(--text);
+}
+.sig-stack__pick:focus-visible,
+.sig-stack__open:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+.sig-stack__open {
+	margin-left: auto;
+	padding: 3px 10px;
+	border: 1px solid var(--panel-border);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--text) 8%, transparent);
+	color: var(--text);
+	font-size: 0.72rem;
+	font-weight: 600;
+	font-style: normal;
+	letter-spacing: 0;
+	text-decoration: none;
+	transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.sig-stack__open:hover {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.sig-stack__dots {
 	display: inline-flex;
+}
+.sig-stack__brand {
+	display: flex;
 	align-items: center;
 	gap: 7px;
 	font-size: 0.95rem;
@@ -453,18 +485,8 @@
 	font-style: italic;
 	letter-spacing: 0.08em;
 }
-.sig-stack__chip {
-	position: absolute;
-	right: 20px;
-	top: 46px;
-	width: 38px;
-	height: 28px;
-	border-radius: 7px;
-	background: repeating-linear-gradient(90deg, transparent 0 8px, color-mix(in srgb, var(--surface) 60%, transparent) 8px 9px), linear-gradient(135deg, color-mix(in srgb, var(--text) 85%, transparent), color-mix(in srgb, var(--text) 45%, transparent));
-	opacity: 0.85;
-}
 .sig-stack__label {
-	margin-top: 18px;
+	margin-top: 6px;
 	font-size: 0.78rem;
 	color: var(--text-muted);
 }
@@ -732,23 +754,17 @@
 	font-size: 0.78rem;
 	cursor: pointer;
 }
-.sig-chip-btn--select select {
-	appearance: none;
+.sig-chip-btn--select .select {
+	height: auto;
+	padding: 0;
 	border: 0;
 	background: transparent;
+	box-shadow: none;
 	color: inherit;
 	font: inherit;
-	cursor: pointer;
-	padding-right: 2px;
 }
-.sig-chip-btn--select select option {
-	background: var(--surface);
-	color: var(--text);
-}
-.sig-chip-btn--select::after {
-	content: '⌄';
-	font-size: 0.8rem;
-	margin-top: -4px;
+.sig-chip-btn--select .select:hover:not(:disabled) {
+	border-color: transparent;
 }
 .sig-columns {
 	display: grid;
@@ -884,4 +900,912 @@
 	.sig-skel span {
 		animation: none;
 	}
+}
+
+/* ---------- team snapshot: scrolling project list ---------- */
+.sig-list ul:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+.sig-list ul {
+	max-height: 292px;
+	overflow-y: auto;
+	padding: 2px 4px 2px 0;
+	scroll-behavior: smooth;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+	scrollbar-color: color-mix(in srgb, var(--text) 28%, transparent) transparent;
+}
+.sig-row__amount {
+	display: grid;
+	justify-items: end;
+	gap: 5px;
+}
+.sig-row__bar {
+	width: 56px;
+	height: 4px;
+	border-radius: 999px;
+	overflow: hidden;
+	background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+.sig-row__bar i {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: currentColor;
+}
+@media (prefers-reduced-motion: reduce) {
+	.sig-stack__card,
+	.sig-list ul {
+		transition: none;
+		scroll-behavior: auto;
+	}
+}
+
+/* ---------- overview filters: a "viewing ..." scope bar with a year timeline ---------- */
+.sig-context {
+	display: block;
+}
+.sig-context .filter-bar {
+	position: relative;
+	display: block;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	margin: 12px 0 0;
+	padding: 0;
+	overflow: hidden;
+	border-color: color-mix(in srgb, var(--accent) 38%, var(--panel-border));
+	background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 20%, transparent), transparent 46%), var(--panel-bg);
+	box-shadow: var(--panel-shadow), 0 16px 36px -24px color-mix(in srgb, var(--accent) 75%, transparent);
+	transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.ofilter {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 14px;
+	padding: 16px 18px 14px;
+}
+.ofilter__row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px 22px;
+}
+.ofilter__lead {
+	display: grid;
+	gap: 8px;
+	min-width: 0;
+}
+.ofilter__eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--accent);
+}
+.ofilter__count {
+	padding: 1px 8px;
+	border-radius: 999px;
+	background: var(--accent);
+	color: var(--accent-contrast);
+	letter-spacing: 0.02em;
+	text-transform: none;
+	animation: sig-pop 360ms var(--ease) both;
+}
+/* the three controls read as one sentence: [This month] for [All teams] on [All projects] */
+.ofilter__sentence {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 10px;
+}
+.ofilter__word {
+	color: var(--text-muted);
+	font-size: 0.95rem;
+	font-style: italic;
+}
+.ofilter__slot {
+	display: contents;
+}
+.ofilter__sentence .field {
+	position: relative;
+	min-width: 0;
+}
+.ofilter__sentence .field > label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+.ofilter__sentence .select,
+.ofilter__sentence .combo__input {
+	width: auto;
+	min-width: 132px;
+	height: 40px;
+	padding-inline: 16px 12px;
+	border: 1px solid var(--panel-border);
+	border-radius: 999px;
+	background-color: color-mix(in srgb, var(--text) 7%, transparent);
+	font-size: 0.95rem;
+	font-weight: 600;
+	transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.ofilter__sentence .select:hover:not(:disabled),
+.ofilter__sentence .combo__input:hover {
+	border-color: var(--accent);
+	background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+	transform: translateY(-1px);
+}
+.ofilter__sentence .combo {
+	min-width: 200px;
+}
+.ofilter__slot.is-set .select,
+.ofilter__slot.is-set .combo__input {
+	border-color: var(--accent);
+	background: var(--gradient-accent);
+	color: var(--accent-contrast);
+	box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--accent) 90%, transparent);
+}
+.ofilter__slot.is-set .select__chevron {
+	color: inherit;
+}
+.ofilter__sentence .chip {
+	height: 40px;
+	border-radius: 999px;
+}
+.ofilter__side {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+/* quick periods: a segmented control whose highlight slides to the chosen one */
+.oseg {
+	position: relative;
+	display: grid;
+	grid-template-columns: repeat(var(--n), 1fr);
+	padding: 4px;
+	border: 1px solid var(--panel-border);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.oseg__thumb {
+	position: absolute;
+	top: 4px;
+	bottom: 4px;
+	left: 4px;
+	width: calc((100% - 8px) / var(--n));
+	border-radius: 999px;
+	background: var(--gradient-accent);
+	box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--accent) 90%, transparent);
+	transform: translateX(calc(var(--i) * 100%));
+	transition: transform 420ms cubic-bezier(0.3, 1.25, 0.5, 1), opacity var(--dur) var(--ease);
+}
+.oseg[data-custom] .oseg__thumb {
+	opacity: 0;
+}
+.oseg__btn {
+	position: relative;
+	z-index: 1;
+	padding: 7px 14px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--text-muted);
+	font: inherit;
+	font-size: 0.8rem;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: color var(--dur) var(--ease);
+}
+.oseg__btn:hover {
+	color: var(--text);
+}
+.oseg__btn[aria-pressed='true'] {
+	color: var(--accent-contrast);
+	font-weight: 650;
+}
+.oseg__btn:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+/* the year strip */
+.otime {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	gap: 6px 18px;
+}
+.otime__bar {
+	position: relative;
+	display: grid;
+	grid-template-columns: repeat(12, 1fr);
+	height: 26px;
+	border-radius: 10px;
+	background: color-mix(in srgb, var(--text) 6%, transparent);
+	overflow: hidden;
+}
+.otime__month {
+	display: grid;
+	place-items: center;
+	font-size: 0.66rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	color: var(--text-muted);
+	border-left: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+}
+.otime__month:first-child {
+	border-left: 0;
+}
+.otime__span {
+	position: absolute;
+	top: 3px;
+	bottom: 3px;
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--accent) 55%, transparent);
+	border: 1px solid var(--accent);
+	box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent);
+	transition: left 520ms cubic-bezier(0.3, 1.1, 0.5, 1), width 520ms cubic-bezier(0.3, 1.1, 0.5, 1);
+	pointer-events: none;
+}
+.otime__today {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	margin-left: -1px;
+	background: var(--text);
+	opacity: 0.75;
+}
+.otime__text {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	margin: 0;
+	font-size: 0.82rem;
+	white-space: nowrap;
+}
+.otime__text span {
+	color: var(--text-muted);
+}
+@media (max-width: 720px) {
+	.otime {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.ofilter__side {
+		width: 100%;
+	}
+	.oseg {
+		width: 100%;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.oseg__btn {
+		padding-inline: 8px;
+		font-size: 0.74rem;
+	}
+	.ofilter__sentence .select,
+	.ofilter__sentence .combo__input {
+		min-width: 0;
+	}
+	.ofilter__sentence .combo {
+		min-width: 0;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.ofilter__count,
+	.oseg__thumb,
+	.otime__span {
+		animation: none;
+		transition: none;
+	}
+}
+.ofilter__sentence .chip {
+	display: none; /* the year strip below already writes the dates out */
+}
+.ofilter .ofilter__sentence .combo {
+	min-width: 210px;
+}
+.ofilter .ofilter__sentence .combo .combo__input {
+	height: 40px;
+	padding-inline: 38px 34px;
+	border: 1px solid var(--panel-border);
+	border-radius: 999px;
+	background-color: color-mix(in srgb, var(--text) 7%, transparent);
+	font-size: 0.95rem;
+	font-weight: 600;
+}
+.ofilter .ofilter__sentence .combo .combo__input:hover,
+.ofilter .ofilter__sentence .combo.is-open .combo__input {
+	border-color: var(--accent);
+	background-color: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.ofilter .ofilter__sentence .combo__icon {
+	left: 14px;
+}
+.ofilter__slot.is-set .combo .combo__input {
+	background: var(--gradient-accent);
+	color: var(--accent-contrast);
+}
+@media (max-width: 720px) {
+	.ofilter .ofilter__sentence .combo {
+		min-width: 0;
+		width: 100%;
+	}
+}
+.ofilter .ofilter__sentence .combo,
+.ofilter .ofilter__sentence .combo .combo__input {
+	height: 40px;
+}
+
+/* ---------- filters v3: period control, month picker, custom dates ---------- */
+.ofilter__lead .oseg {
+	justify-self: start;
+}
+.ofilter__dates {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+.ofilter__dates .field {
+	min-width: 170px;
+}
+.otime {
+	grid-template-columns: auto minmax(0, 1fr) auto;
+}
+.otime__year {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-variant-numeric: tabular-nums;
+}
+.otime__step {
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	border: 1px solid var(--panel-border);
+	border-radius: 50%;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.otime__step:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.otime__bar {
+	height: 34px;
+}
+button.otime__month {
+	position: relative;
+	z-index: 1;
+	padding: 0;
+	border: 0;
+	border-left: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+	border-radius: 0;
+	background: transparent;
+	font: inherit;
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	cursor: pointer;
+	transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+button.otime__month:first-of-type {
+	border-left: 0;
+}
+button.otime__month:hover {
+	background: color-mix(in srgb, var(--accent) 22%, transparent);
+	color: var(--text);
+}
+button.otime__month[aria-pressed='true'] {
+	color: var(--text);
+}
+button.otime__month:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: -3px;
+}
+.otime__span {
+	z-index: 0;
+}
+@media (max-width: 720px) {
+	.otime {
+		grid-template-columns: auto minmax(0, 1fr);
+	}
+	.otime__text {
+		grid-column: 1 / -1;
+	}
+	button.otime__month {
+		font-size: 0.6rem;
+		letter-spacing: 0;
+	}
+	.ofilter__lead .oseg {
+		justify-self: stretch;
+	}
+}
+
+/* Chrome around the data is not text to select: a click or double-click on a button, card title or tab no
+   longer paints a selection that looks like a text field (table cells and values stay selectable). */
+button,
+.btn,
+.tab,
+.rail,
+.subnav,
+.sig-head,
+.sig-title,
+.card__head,
+.kpi__label,
+.oseg,
+.otime,
+.ofilter__eyebrow,
+.pager,
+.th,
+thead {
+	-webkit-user-select: none;
+	user-select: none;
+}
+button {
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- filters v4: Month / Custom, step-by-step range with a calendar ---------- */
+.ocustom {
+	display: grid;
+	gap: 12px;
+}
+.ocustom__steps {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+}
+.ocustom__arrow {
+	color: var(--text-muted);
+}
+.ocustom__chip {
+	display: grid;
+	gap: 1px;
+	min-width: 150px;
+	padding: 7px 16px;
+	border: 1px solid var(--panel-border);
+	border-radius: 14px;
+	background: color-mix(in srgb, var(--text) 6%, transparent);
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.ocustom__chip small {
+	font-size: 0.66rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.ocustom__chip b {
+	font-size: 0.92rem;
+}
+.ocustom__chip:hover:not(:disabled) {
+	border-color: var(--accent);
+}
+.ocustom__chip[aria-pressed='true'] {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 16%, transparent);
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.ocustom__chip[aria-pressed='true'] small {
+	color: var(--accent);
+}
+.ocustom__chip:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+.ocustom__hint {
+	margin: 0;
+	color: var(--text-muted);
+	font-size: 0.82rem;
+}
+button.otime__month.is-viewing {
+	background: color-mix(in srgb, var(--accent) 26%, transparent);
+	box-shadow: inset 0 -2px 0 var(--accent);
+	color: var(--text);
+}
+.ocal {
+	display: grid;
+	gap: 8px;
+	width: min(100%, 320px);
+	padding: 12px 14px 14px;
+	border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--panel-border));
+	border-radius: 16px;
+	background: color-mix(in srgb, var(--text) 5%, transparent);
+	animation: select-pop var(--dur) var(--ease) both;
+}
+.ocal__title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 4px 10px;
+	margin: 0;
+	font-weight: 650;
+}
+.ocal__title span {
+	color: var(--accent);
+	font-size: 0.72rem;
+	font-weight: 600;
+}
+.ocal__grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 3px;
+}
+.ocal__dow {
+	padding: 2px 0 4px;
+	text-align: center;
+	font-size: 0.66rem;
+	letter-spacing: 0.06em;
+	color: var(--text-muted);
+}
+.ocal__day {
+	aspect-ratio: 1;
+	min-width: 0;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 0.82rem;
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+	transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.ocal__day:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--accent) 22%, transparent);
+	transform: scale(1.08);
+}
+.ocal__day.is-in {
+	background: color-mix(in srgb, var(--accent) 24%, transparent);
+	border-radius: 6px;
+}
+.ocal__day.is-today {
+	border-color: var(--text-muted);
+}
+.ocal__day.is-edge {
+	background: var(--gradient-accent);
+	color: var(--accent-contrast);
+	font-weight: 700;
+	border-radius: 10px;
+}
+.ocal__day:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+.ocal__day:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+.otime__short {
+	display: none;
+}
+@media (max-width: 560px) {
+	.otime__long {
+		display: none;
+	}
+	.otime__short {
+		display: inline;
+	}
+	button.otime__month {
+		font-size: 0.74rem;
+	}
+}
+
+/* ---------- filters v5: one row (Viewing · Month/Custom · for team · on project · Reset) ---------- */
+.ofilter__row {
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	align-items: center;
+	gap: 10px 14px;
+}
+.ofilter__lead {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 12px;
+}
+.ofilter__side {
+	flex: 1 1 auto;
+	flex-wrap: wrap;
+	min-width: 0;
+}
+.ofilter__side > .btn {
+	margin-left: auto;
+}
+.ofilter__lead .oseg {
+	width: 176px;
+}
+.ofilter .ofilter__sentence .select,
+.ofilter .ofilter__sentence .combo .combo__input {
+	height: 38px;
+}
+.ofilter .ofilter__sentence .combo {
+	height: 38px;
+	min-width: 190px;
+}
+.sig-context__title {
+	margin-bottom: 0;
+}
+.sig-context .filter-bar {
+	margin-top: 10px;
+}
+.ofilter {
+	gap: 12px;
+	padding: 14px 18px 14px;
+}
+@media (max-width: 720px) {
+	.ofilter__lead .oseg {
+		width: 100%;
+	}
+	.ofilter__side {
+		width: 100%;
+	}
+	.ofilter__side > .btn {
+		margin-left: 0;
+	}
+}
+
+/* ---------- pointer: an arrow everywhere except real text fields ---------- */
+html {
+	cursor: default;
+}
+body {
+	-webkit-user-select: none;
+	user-select: none;
+}
+input,
+textarea,
+select,
+[contenteditable='true'],
+.selectable {
+	-webkit-user-select: text;
+	user-select: text;
+}
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='button']):not([type='submit']),
+textarea {
+	cursor: text;
+}
+.sig-context__title {
+	margin-bottom: 8px;
+}
+
+/* Start → End chips sit in the first row, sized to match the other controls */
+.ofilter__chips,
+.ocustom__steps {
+	display: inline-flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 8px;
+}
+.ofilter__chips .ocustom__chip {
+	min-width: 118px;
+	padding: 3px 12px;
+	border-radius: 12px;
+}
+.ofilter__chips .ocustom__chip b {
+	font-size: 0.8rem;
+	white-space: nowrap;
+}
+.ofilter__chips .ocustom__chip small {
+	font-size: 0.6rem;
+}
+.ocustom:empty {
+	display: none;
+}
+@media (max-width: 720px) {
+	.ofilter__chips {
+		width: 100%;
+	}
+	.ofilter__chips .ocustom__chip {
+		flex: 1;
+		min-width: 0;
+	}
+}
+
+/* ---------- filters v6: title and filter bar share the first row; dates float in a popover ---------- */
+.sig-context {
+	position: relative;
+	z-index: 20; /* the popover must sit above the cards that follow */
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px 22px;
+	margin-bottom: 14px;
+}
+.sig-context__text {
+	flex: none;
+}
+.sig-context__title {
+	margin: 0;
+}
+.sig-context .filter-bar {
+	flex: 1 1 620px;
+	width: auto;
+	margin: 0;
+	overflow: visible;
+}
+.sig-context .filter-bar::before {
+	border-radius: 18px 18px 0 0;
+}
+.ofilter {
+	position: relative;
+	padding: 8px 14px;
+	gap: 0;
+}
+.ofilter__row {
+	flex-wrap: wrap;
+	gap: 8px 12px;
+}
+.ofilter__side {
+	justify-content: flex-start;
+}
+.ofilter__lead .oseg {
+	width: 168px;
+}
+.ofilter__lead .oseg__btn {
+	padding: 5px 10px;
+}
+.ofilter .ofilter__sentence .select,
+.ofilter .ofilter__sentence .combo .combo__input,
+.ofilter .ofilter__sentence .combo {
+	height: 36px;
+}
+.ofilter .ofilter__sentence .combo {
+	min-width: 170px;
+}
+.ofilter .ofilter__sentence .select {
+	min-width: 118px;
+}
+.ofilter__when {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	height: 36px;
+	padding: 0 12px 0 14px;
+	border: 1px solid var(--panel-border);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--text) 7%, transparent);
+	color: var(--text);
+	font: inherit;
+	font-size: 0.9rem;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+	transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+.ofilter__when:hover,
+.ofilter__when[aria-expanded='true'] {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.ofilter__when[aria-expanded='true'] .ofilter__caret {
+	transform: rotate(180deg);
+}
+.ofilter__caret {
+	transition: transform var(--dur) var(--ease);
+	color: var(--text-muted);
+}
+.ofilter__chips .ocustom__chip {
+	padding: 2px 12px;
+}
+/* floating panel (month strip, or strip + calendar for a custom range) */
+.ofilter__pop,
+.ocustom--pop {
+	position: absolute;
+	top: calc(100% + 8px);
+	left: 0;
+	z-index: 40;
+	width: min(720px, calc(100vw - 24px));
+	max-height: min(76vh, 640px);
+	overflow: auto;
+	padding: 14px 16px 16px;
+	border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+	border-radius: 18px;
+	background: var(--surface);
+	box-shadow: var(--shadow-lg), 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+	animation: select-pop var(--dur) var(--ease) both;
+}
+.ocustom--pop[hidden] {
+	display: none;
+}
+.ocustom--pop {
+	display: grid;
+	gap: 12px;
+}
+.ofilter__pop::before,
+.ocustom--pop::before {
+	content: '';
+	position: absolute;
+	top: -7px;
+	left: 40px;
+	width: 12px;
+	height: 12px;
+	background: var(--surface);
+	border-left: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+	border-top: 1px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+	transform: rotate(45deg);
+}
+@media (max-width: 720px) {
+	.sig-context {
+		display: block;
+	}
+	.sig-context .filter-bar {
+		margin-top: 8px;
+	}
+	.ofilter__pop,
+	.ocustom--pop {
+		position: fixed;
+		inset: auto 12px 12px 12px;
+		top: auto;
+		width: auto;
+		max-height: 80vh;
+	}
+	.ofilter__pop::before,
+	.ocustom--pop::before {
+		display: none;
+	}
+}
+.ofilter__pop::before,
+.ocustom--pop::before {
+	display: none;
+}
+/* keep the whole filter on one row at laptop widths */
+.ofilter__row {
+	gap: 8px 10px;
+}
+.ofilter__lead {
+	gap: 8px 10px;
+}
+.ofilter__lead .oseg {
+	width: 150px;
+}
+.ofilter__chips .ocustom__chip {
+	min-width: 104px;
+	padding: 2px 10px;
+}
+.ofilter .ofilter__sentence {
+	gap: 6px 8px;
+}
+.ofilter .ofilter__sentence .combo {
+	min-width: 150px;
+}
+.ofilter .ofilter__sentence .select {
+	min-width: 108px;
+	padding-inline: 12px 8px;
+}
+.ofilter__count {
+	white-space: nowrap;
+}
+.ofilter__pop .otime,
+.ocustom--pop .otime {
+	grid-template-columns: auto minmax(0, 1fr);
+}
+.ofilter__pop .otime__text,
+.ocustom--pop .otime__text {
+	grid-column: 1 / -1;
+}
+.ofilter__pop .otime__bar,
+.ocustom--pop .otime__bar {
+	height: 38px;
 }

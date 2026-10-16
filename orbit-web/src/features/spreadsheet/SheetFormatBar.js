@@ -4,6 +4,7 @@ import Popover from '../../components/common/Popover';
 import Icon from '../../components/common/Icon';
 import { ALIGNS, FILL_COLORS, FONT_SIZES, TEXT_COLORS, ZOOM_STEPS, isHexColor, resolveFill, resolveText, safeUrl } from './sheetFormat';
 import { MOD } from './SheetToolbar';
+import Select from '../../components/forms/Select';
 
 function Swatches({ label, colors, current, onPick, onClear, close }) {
 	// The native colour picker covers any colour; the theme palette above stays one click away.
@@ -111,14 +112,14 @@ export default function SheetFormatBar({ fmt, hasSelection, onSet, onToggle, onC
 	return (
 		<div className="sheet-format" role="toolbar" aria-label="Cell formatting">
 			<div className="sheet-toolbar__group" role="group" aria-label="Font">
-				<select className="sheet-scope" aria-label="Font size" value={fmt && fmt.size ? String(fmt.size) : ''} disabled={!hasSelection} onChange={(e) => onSet({ size: e.target.value ? Number(e.target.value) : null })}>
+				<Select className="sheet-scope" aria-label="Font size" value={fmt && fmt.size ? String(fmt.size) : ''} disabled={!hasSelection} onChange={(e) => onSet({ size: e.target.value ? Number(e.target.value) : null })}>
 					<option value="">Size</option>
 					{FONT_SIZES.map((n) => (
 						<option key={n} value={n}>
 							{n}
 						</option>
 					))}
-				</select>
+				</Select>
 				<Button size="sm" variant={pressed('b') ? 'secondary' : 'ghost'} aria-pressed={pressed('b')} aria-label="Bold" title={`Bold (${MOD}B)`} disabled={!hasSelection} onClick={() => onToggle('b')}>
 					<b>B</b>
 				</Button>
@@ -187,13 +188,13 @@ export default function SheetFormatBar({ fmt, hasSelection, onSet, onToggle, onC
 			</span>
 
 			<div className="sheet-toolbar__group" role="group" aria-label="Zoom">
-				<select className="sheet-scope" aria-label="Zoom" value={String(zoomPct)} onChange={(e) => onZoom(Number(e.target.value))} title="Zoom (or Ctrl+mouse wheel over the grid)">
+				<Select className="sheet-scope" aria-label="Zoom" value={String(zoomPct)} onChange={(e) => onZoom(Number(e.target.value))} title="Zoom (or Ctrl+mouse wheel over the grid)">
 					{ZOOM_STEPS.map((z) => (
 						<option key={z} value={z}>
 							{z}%
 						</option>
 					))}
-				</select>
+				</Select>
 			</div>
 		</div>
 	);

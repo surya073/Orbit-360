@@ -11,14 +11,14 @@
 	min-height: 0;
 }
 .app-header {
-	position: sticky;
-	top: 0;
+	/* scrolls away with the page on wide screens (phones keep it pinned, see the max-width: 900px block) */
+	position: relative;
 	z-index: var(--z-header);
 	container: app-header / inline-size;
 	height: var(--header-h);
 	/* left: pages of the current section · centre: search (stays centred) · right: actions */
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+	grid-template-columns: minmax(0, 1fr) auto auto;
 	align-items: center;
 	gap: var(--space-3);
 	padding: 0 var(--space-4);
@@ -26,6 +26,12 @@
 	-webkit-backdrop-filter: saturate(1.4) blur(10px);
 	backdrop-filter: saturate(1.4) blur(10px);
 	border-bottom: 1px solid var(--border);
+}
+/* pages with no sibling pages have nothing for the bar to show: no empty strip above the content (phones still need the menu button) */
+@media (min-width: 901px) {
+	.app-header--bare {
+		display: none;
+	}
 }
 .brand {
 	display: inline-flex;
@@ -154,14 +160,14 @@
 	--search-w: 200px;
 	--search-w-open: 400px;
 	position: relative;
-	justify-self: center;
+	justify-self: end;
 	width: var(--search-w);
 	height: var(--control-h);
 }
 .search-trigger {
 	position: absolute;
 	top: 0;
-	left: 50%;
+	right: 0;
 	z-index: 2;
 	display: flex;
 	align-items: center;
@@ -177,7 +183,6 @@
 	background: var(--surface);
 	color: var(--text-muted);
 	font-size: var(--fs-sm);
-	transform: translateX(-50%);
 	transition: width var(--dur-slow) var(--ease), border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), color var(--dur) var(--ease);
 }
 .search-trigger .icon {
@@ -417,10 +422,12 @@
 	width: 100%;
 	max-width: var(--content-max);
 	margin: 0 auto;
-	padding: var(--space-5) var(--space-4) var(--space-6);
+	padding: var(--space-4) var(--space-4) var(--space-6);
+	/* scroll-reveal slides blocks in from the side: never let that (or a decorative orb) add a horizontal scrollbar */
+	overflow-x: clip;
 }
 .page {
-	animation: fade-up var(--dur-slow) var(--ease) both;
+	animation: fade-up var(--dur-slow) var(--ease) backwards; /* not "both": a held transform would become the containing block of every position:fixed child (bottom sheets) */
 }
 .page-header {
 	display: flex;
@@ -527,6 +534,11 @@
 	/* phones: menu button + brand on the left (the drawer lists every page), then search and actions */
 	.app-header {
 		display: flex;
+		position: sticky;
+		top: 0;
+	}
+	:root {
+		--stick: var(--header-h);
 	}
 	.header-left {
 		flex: 1;

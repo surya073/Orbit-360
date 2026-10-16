@@ -1,7 +1,7 @@
 @import url("/__catalyst/auth/static-file?file_name=embedded_signin.css");
 
 /*
- * Sign-in form - theme: blueberry. GENERATED from src/styles/themes.css by scripts/generate-login-css.js; do not edit.
+ * Sign-in form - theme: blueberry. GENERATED from src/styles/themes.css and themes.extra.css by scripts/generate-login-css.js; do not edit.
  * Regenerate with `npm run gen:login-css` (src/tests/login.test.js fails if these drift).
  */
 

@@ -112,7 +112,7 @@ describe('settings page', () => {
 		renderWithProviders(<SettingsPage />);
 		const list = await screen.findByRole('tablist', { name: 'Settings sections' });
 		expect(list).toHaveAttribute('aria-orientation', 'vertical');
-		expect(within(list).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Appearance', 'Layout', 'Profile']);
+		expect(within(list).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Appearance', 'Layout', 'Backup', 'Profile']);
 		screen.getByRole('tab', { name: 'Appearance' }).focus();
 		await userEvent.keyboard('{ArrowDown}');
 		expect(screen.getByRole('tab', { name: 'Layout' })).toHaveAttribute('aria-selected', 'true');

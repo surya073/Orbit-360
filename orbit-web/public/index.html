@@ -13,8 +13,15 @@
         try {
           var s = JSON.parse(localStorage.getItem('company360.appearance') || '{}');
           var t = legacy[s.theme] || s.theme;
-          if (['ember', 'blueberry', 'blackcurrant', 'volcano', 'sunset', 'ocean', 'forest', 'system'].indexOf(t) > -1) theme = t;
+          if (['ember', 'blueberry', 'blackcurrant', 'volcano', 'sunset', 'ocean', 'forest', 'midnight', 'nord', 'dracula', 'tokyo', 'graphite', 'cyber', 'aurora', 'mocha', 'rosewood', 'deepsea', 'obsidian', 'paper', 'mint', 'lavender', 'rose', 'sand', 'sky', 'citrus', 'peach', 'slate', 'teal', 'solar', 'system'].indexOf(t) > -1) theme = t;
           if (s.density === 'compact') density = 'compact';
+          /* personal display preferences + the custom accent derived last time (applied now, no flash) */
+          var r0 = document.documentElement;
+          if (['sharp', 'round'].indexOf(s.radius) > -1) r0.dataset.radius = s.radius;
+          if (['small', 'large', 'xlarge'].indexOf(s.textSize) > -1) r0.dataset.text = s.textSize;
+          if (s.motion === 'reduced') r0.dataset.motion = 'reduced';
+          if (['wide', 'full'].indexOf(s.width) > -1) r0.dataset.width = s.width;
+          if (s.accentVars) for (var k in s.accentVars) if (/^--[a-z-]+$/.test(k)) r0.style.setProperty(k, String(s.accentVars[k]));
         } catch (e) {}
         var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         var r = document.documentElement;

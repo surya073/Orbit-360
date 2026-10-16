@@ -9,6 +9,7 @@ import { presentationsService } from '../../services/presentationsService';
 import { detailOptions } from './deckSlides';
 import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, storeOptions, storeTheme, themeById, themeStyle } from './presentationThemes';
 import ThemePreview from './ThemePreview';
+import Select from '../../components/forms/Select';
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -141,13 +142,13 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 								{decks.length > 1 ? (
 									<label className="pl__deck">
 										<span>Presentation</span>
-										<select value={deckId} onChange={(e) => setDeckId(e.target.value)}>
+										<Select value={deckId} onChange={(e) => setDeckId(e.target.value)}>
 											{decks.map((d) => (
 												<option key={d.ROWID} value={d.ROWID}>
 													{d.title}
 												</option>
 											))}
-										</select>
+										</Select>
 									</label>
 								) : null}
 								{offered.people ? <Checkbox label="Add team overview and individual profile slides" hint="Real employee records you are allowed to see" checked={opts.people} onChange={(e) => setOpts((o) => ({ ...o, people: e.target.checked }))} /> : null}

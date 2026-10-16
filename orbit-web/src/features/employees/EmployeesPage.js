@@ -3,6 +3,8 @@ import Button from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
 import { ROUTES } from '../../config/routes';
 import ResourcePage from '../resources/ResourcePage';
+import EmployeeCard from './EmployeeCard';
+import EmployeeGridCard from './EmployeeGrid';
 import { employeesConfig } from './config';
 
 /** Directory plus a prominent entry to the Reporting Structure builder (drag-and-drop org tree). */
@@ -22,5 +24,5 @@ const reportingPromo = (
 );
 
 export default function EmployeesPage() {
-	return <ResourcePage config={employeesConfig} topSlot={reportingPromo} />;
+	return <ResourcePage config={employeesConfig} topSlot={reportingPromo} ViewCard={EmployeeCard} GridCard={EmployeeGridCard} />;
 }

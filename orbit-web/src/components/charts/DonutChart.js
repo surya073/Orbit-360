@@ -18,7 +18,7 @@ export default function DonutChart({ segments, centerLabel, ariaLabel }) {
 				{total > 0
 					? segments.map((s, i) => {
 							const len = (s.value / total) * C;
-							const el = <circle key={s.label} cx="60" cy="60" r={R} fill="none" stroke={s.color || colorAt(i)} strokeWidth="14" strokeDasharray={`${Math.max(len - 1.5, 0)} ${C - Math.max(len - 1.5, 0)}`} strokeDashoffset={-offset} transform="rotate(-90 60 60)" />;
+							const el = <circle key={s.label} cx="60" cy="60" r={R} fill="none" stroke={s.color || colorAt(i)} strokeWidth="14" strokeDasharray={`${Math.max(len - 1.5, 0)} ${C - Math.max(len - 1.5, 0)}`} strokeDashoffset={-offset} style={{ '--seg': Math.max(len - 1.5, 0) }} transform="rotate(-90 60 60)" />;
 							offset += len;
 							return el;
 					  })

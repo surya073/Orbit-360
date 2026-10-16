@@ -1,3 +1,4 @@
+import { pickOption } from './pickOption';
 import React from 'react';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -296,7 +297,7 @@ describe('Access & Permissions page', () => {
 		await userEvent.clear(name);
 		await userEvent.type(name, 'HR viewer');
 		await userEvent.click(within(dialog).getByRole('radio', { name: /Every team/ }));
-		await userEvent.selectOptions(within(dialog).getByLabelText(/Start from/), 'manager');
+		await pickOption(within(dialog).getByLabelText(/Start from/), 'manager');
 		await userEvent.click(within(dialog).getByRole('button', { name: 'Create role' }));
 		await waitFor(() => expect(global.fetch.calls.filter((c) => c.line === 'POST /access/roles')).toHaveLength(2));
 		const body = JSON.parse(global.fetch.calls.filter((c) => c.line === 'POST /access/roles')[1].init.body);
@@ -313,7 +314,7 @@ describe('Access & Permissions page', () => {
 		expect(within(table).getByText('Delivery')).toBeInTheDocument(); // team name, not an id
 		await userEvent.click(within(table).getByRole('button', { name: 'Edit access for Maya Rao' }));
 		const dialog = await screen.findByRole('dialog');
-		await userEvent.selectOptions(within(dialog).getByLabelText('Role'), 'admin');
+		await pickOption(within(dialog).getByLabelText('Role'), 'admin');
 		await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
 		expect(dialog).toHaveTextContent('Role: Manager → Administrator');
 		await userEvent.click(within(dialog).getByRole('button', { name: 'Confirm change' }));

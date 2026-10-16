@@ -6,6 +6,7 @@ import useApiResource from '../../hooks/useApiResource';
 import { accessService } from '../../services/accessService';
 import { allKeys, groupModules, summarize } from './accessModel';
 import { SCOPE_LABEL } from './RolesTab';
+import Select from '../../components/forms/Select';
 
 function SetupNote() {
 	return (
@@ -46,14 +47,14 @@ function PersonCheck({ roles, catalog }) {
 			<div className="stack">
 				<label className="field">
 					<span className="access-check__label">Person</span>
-					<select className="input" value={id} onChange={(e) => setId(e.target.value)} aria-label="Person to check" disabled={users.status === 'loading' && !users.data}>
+					<Select className="input" value={id} onChange={(e) => setId(e.target.value)} aria-label="Person to check" disabled={users.status === 'loading' && !users.data}>
 						<option value="">Choose a person…</option>
 						{(users.data || []).map((u) => (
 							<option key={u.id} value={u.id}>
 								{u.displayName} ({u.email})
 							</option>
 						))}
-					</select>
+					</Select>
 				</label>
 				{users.status === 'error' ? <p className="muted small">The list of people could not be loaded.</p> : null}
 				{person && role ? (

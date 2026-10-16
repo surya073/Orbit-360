@@ -1,3 +1,4 @@
+import { pickOption } from './pickOption';
 import React from 'react';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -63,7 +64,7 @@ describe('module page pattern (Employees)', () => {
 		await screen.findByText('Bala Iyer');
 		await userEvent.click(screen.getByRole('button', { name: /next/i }));
 		await screen.findByText('Zed Page2');
-		await userEvent.selectOptions(screen.getByLabelText('Status'), 'active');
+		await pickOption(screen.getByLabelText('Status'), 'active');
 		const box = screen.getByLabelText('Search by name');
 		await userEvent.type(box, '  asha ');
 		await waitFor(() => expect(lines().pop()).toMatch(/q=asha(&|$)/), { timeout: 2000 });
@@ -79,7 +80,7 @@ describe('module page pattern (Employees)', () => {
 		await userEvent.click(screen.getByRole('button', { name: 'Clear search' }));
 		expect(box).toHaveValue('');
 		expect(await screen.findByText('Bala Iyer', {}, { timeout: 2000 })).toBeInTheDocument(); // the full list is back (served from the short GET cache)
-		expect(screen.getByLabelText('Status')).toHaveValue('active'); // clearing the search keeps the filter
+		expect(screen.getByLabelText('Status')).toHaveAttribute('data-value', 'active'); // clearing the search keeps the filter
 	});
 
 	test('empty, filtered-empty and error states are distinct', async () => {
@@ -87,7 +88,7 @@ describe('module page pattern (Employees)', () => {
 		renderWithProviders(<EmployeesPage />);
 		expect(await screen.findByText('No employees yet')).toBeInTheDocument();
 		expect(screen.getAllByRole('button', { name: /add employee/i }).length).toBeGreaterThan(0); // header action and empty-state action
-		await userEvent.selectOptions(screen.getByLabelText('Status'), 'inactive');
+		await pickOption(screen.getByLabelText('Status'), 'inactive');
 		expect(await screen.findByText('No records match your filters')).toBeInTheDocument();
 		await userEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]);
 		expect(await screen.findByText('No employees yet')).toBeInTheDocument();

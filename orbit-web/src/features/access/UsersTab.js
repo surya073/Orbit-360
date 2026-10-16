@@ -14,6 +14,7 @@ import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { accessService } from '../../services/accessService';
 import { resourceService } from '../../services/resourceService';
 import { SCOPE_LABEL } from './RolesTab';
+import Select from '../../components/forms/Select';
 
 /**
  * One user's access: role, team and whether they can sign in. Two steps (edit, then review) so a
@@ -106,7 +107,7 @@ function EditAccessModal({ person, roles, teams, canPickTeam, onClose, onSaved }
 				<div className="stack">
 					<Field label="Role" hint={next ? `${SCOPE_LABEL[next.scopeType]}. ${next.description || ''}` : undefined}>
 						{(p) => (
-							<select {...p} value={roleKey} onChange={(e) => setRoleKey(e.target.value)}>
+							<Select {...p} value={roleKey} onChange={(e) => setRoleKey(e.target.value)}>
 								{roles
 									.filter((r) => r.isActive || r.key === person.roleKey)
 									.map((r) => (
@@ -114,20 +115,20 @@ function EditAccessModal({ person, roles, teams, canPickTeam, onClose, onSaved }
 											{r.name}
 										</option>
 									))}
-							</select>
+							</Select>
 						)}
 					</Field>
 					{canPickTeam ? (
 						<Field label="Team" error={fieldErrors.teamId} hint={needsTeam ? 'This role works with one team, so a team is required.' : 'Used by roles that cover one team.'}>
 							{(p) => (
-								<select {...p} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+								<Select {...p} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
 									<option value="">{person.teamId ? '(keep current)' : 'Choose a team…'}</option>
 									{teams.map((t) => (
 										<option key={t.ROWID} value={t.ROWID}>
 											{t.name}
 										</option>
 									))}
-								</select>
+								</Select>
 							)}
 						</Field>
 					) : null}

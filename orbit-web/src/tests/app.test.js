@@ -1,3 +1,4 @@
+import { pickOption } from './pickOption';
 import React from 'react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -68,8 +69,9 @@ describe('shell and dashboard', () => {
 		expect(within(nav).getByRole('link', { name: /People/ })).toBeInTheDocument();
 		expect(within(nav).getByRole('link', { name: /Delivery/ })).toBeInTheDocument();
 		expect(screen.queryByRole('navigation', { name: /pages$/ })).not.toBeInTheDocument(); // the Dashboard is not inside a section
-		expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+		// search and notifications are hidden for now (SHOW_SEARCH_AND_ALERTS in AppHeader)
+		expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Notifications' })).not.toBeInTheDocument();
 		expect(screen.getByRole('button', { name: /Account menu for Maya Rao/ })).toBeInTheDocument();
 
 		const billable = await screen.findByRole('region', { name: 'Billable hours' });
@@ -87,8 +89,7 @@ describe('shell and dashboard', () => {
 		mockFetch([meRoute(admin), ...dashboardRoutes()]);
 		render(<App />);
 		const team = await screen.findByLabelText('Team');
-		await screen.findByRole('option', { name: 'Delivery' });
-		await userEvent.selectOptions(team, '7');
+		await pickOption(team, '7');
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line.startsWith('GET /dashboard/overview') && c.line.includes('team_id=7'))).toBe(true));
 		expect(window.location.hash).toContain('team=7'); // filters live in the URL
 	});
@@ -153,7 +154,8 @@ describe('shell and dashboard', () => {
 		expect(authService.signOut).toHaveBeenCalled();
 	});
 
-	test('notifications state is honest that the feature is unavailable', async () => {
+	// the notifications control is hidden for now; re-enable together with SHOW_SEARCH_AND_ALERTS
+	test.skip('notifications state is honest that the feature is unavailable', async () => {
 		signIn(manager);
 		mockFetch([meRoute(manager), ...dashboardRoutes()]);
 		render(<App />);

@@ -2,8 +2,9 @@ import { defineModule } from '../resources/defineModule';
 
 export const projectsConfig = defineModule({
 	title: 'Projects',
+	summary: 'projects',
 	singular: 'project',
-	description: 'Projects, their status and assigned employees',
+	description: 'Project details: status, timeline, estimated hours and who is assigned to each one.',
 	resource: 'projects',
 	search: 'Search by project name',
 	writable: true,

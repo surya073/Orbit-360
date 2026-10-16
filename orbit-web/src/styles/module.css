@@ -1,0 +1,145 @@
+/*
+ * Module pages (employees, projects, time, attendance, leave, AI usage, ...): the dashboard's visual language.
+ * The card look and scroll entrance come from bento.css (scoped to .dash and .mod); this file adds the summary
+ * strip, the glass filter bar and the table card.
+ */
+
+.mod-count {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 2px 12px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--accent-soft);
+	color: var(--accent);
+	font-size: var(--fs-xs);
+	font-weight: 700;
+}
+.mod-count::before {
+	content: '';
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+/* ---------- summary strip ---------- */
+.msum {
+	display: grid;
+	gap: var(--space-3);
+	margin-bottom: var(--space-4);
+}
+.msum .grid--kpi {
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+}
+.msum .kpi {
+	min-height: 0;
+}
+.msum__mix {
+	display: grid;
+	gap: var(--space-3);
+	padding: var(--space-4);
+}
+.msum__mix-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+.msum__mix-head h2 {
+	margin: 0;
+	font-size: 0.98rem;
+	font-weight: 600;
+}
+.msum__mix-hint {
+	margin: 0;
+}
+.msum__note {
+	margin: 0;
+}
+
+/* ---------- filter bar: the same glass panel as the dashboard's filters ---------- */
+.mod .filter-bar {
+	position: relative;
+	padding: var(--space-3) var(--space-4);
+	border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--panel-border));
+	border-radius: 18px;
+	background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 12%, transparent), transparent 50%), var(--panel-bg);
+	box-shadow: var(--panel-shadow);
+}
+.mod .filter-bar::before {
+	content: '';
+	position: absolute;
+	inset: 0 0 auto 0;
+	height: 2px;
+	border-radius: 18px 18px 0 0;
+	background: var(--gradient-accent);
+	opacity: 0.8;
+}
+
+/* ---------- table card ---------- */
+.mod .table-wrap {
+	border-radius: 22px;
+	border-color: var(--panel-border);
+	background: var(--panel-bg);
+	box-shadow: var(--panel-shadow);
+}
+.mod .table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background: color-mix(in srgb, var(--text) 5%, var(--surface));
+	font-size: var(--fs-xs);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.mod .table tbody tr {
+	transition: background-color var(--dur-fast) var(--ease);
+}
+.mod .table tbody tr:hover {
+	background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+.mod .table tbody td:first-child {
+	font-weight: 600;
+}
+.mod .pager {
+	margin-top: var(--space-3);
+}
+
+@media (max-width: 640px) {
+	.mod .table-wrap {
+		border-radius: 0;
+		border: 0;
+		background: transparent;
+		box-shadow: none;
+	}
+	.mod .table thead th {
+		position: static;
+	}
+	.mod .filter-bar {
+		padding: var(--space-3);
+	}
+}
+
+@media (max-width: 560px) {
+	/* summary cards sit two to a row on phones; the long explanations stay on desktop */
+	.msum .grid--kpi {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--space-2);
+	}
+	.msum .kpi {
+		padding: 12px 14px;
+	}
+	.msum .kpi__hint,
+	.msum .kpi__go {
+		display: none;
+	}
+	.msum .kpi__value {
+		font-size: 1.5rem;
+	}
+	.msum .kpi__label {
+		font-size: 0.78rem;
+	}
+}

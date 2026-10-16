@@ -18,13 +18,19 @@ export default function KpiRow({ overview, projects, trends }) {
 	const att = o && o.attendance;
 	const leave = o && o.leave;
 	const head = o && o.headcount;
-	const statusMix = (m) =>
-		m && m.byStatus
-			? Object.entries(m.byStatus)
-					.slice(0, 3)
-					.map(([k, v]) => `${v} ${humanize(k).toLowerCase()}`)
-					.join(' · ')
-			: undefined;
+	// the headline statuses first, in a fixed order, then anything else the data holds
+	const statusMix = (m, order) => {
+		if (!m || !m.byStatus) return undefined;
+		const keys = Object.keys(m.byStatus);
+		const rank = (k) => (order.includes(k) ? order.indexOf(k) : order.length);
+		return keys
+			.sort((a, b) => rank(a) - rank(b))
+			.slice(0, 3)
+			.map((k) => `${m.byStatus[k]} ${humanize(k).toLowerCase()}`)
+			.join(' · ');
+	};
+	const PEOPLE_ORDER = ['active', 'on_leave', 'inactive'];
+	const PROJECT_ORDER = ['active', 'on_hold', 'completed'];
 
 	const t = trends && trends.data;
 	const series = (rows, key) => (Array.isArray(rows) ? rows.map((r) => (Number.isFinite(r[key]) ? r[key] : null)) : undefined);
@@ -33,8 +39,8 @@ export default function KpiRow({ overview, projects, trends }) {
 
 	return (
 		<div className="grid grid--kpi" role="group" aria-label="Key metrics">
-			<KpiCard label="Employees" icon="users" accent="var(--chart-1)" {...st(overview)} value={head ? (nv(head.total) === null ? null : formatNumber(head.total)) : null} sub={statusMix(head)} metric={head} delay={0} hint={rich ? 'Everyone in scope, by employment status.' : undefined} to={rich ? ROUTES.employees : undefined} />
-			<KpiCard label="Projects" icon="folder" accent="var(--chart-4)" {...st(projects)} value={p ? (p.status.total === null ? null : formatNumber(p.status.total)) : null} sub={statusMix(p && p.status)} metric={p && p.status} delay={30} hint={rich ? 'Projects in scope by current status.' : undefined} to={rich ? ROUTES.projects : undefined} />
+			<KpiCard label="Employees" icon="users" accent="var(--chart-1)" {...st(overview)} value={head ? (nv(head.total) === null ? null : formatNumber(head.total)) : null} sub={statusMix(head, PEOPLE_ORDER)} metric={head} delay={0} hint={rich ? 'Everyone in scope, by employment status.' : undefined} to={rich ? ROUTES.employees : undefined} />
+			<KpiCard label="Projects" icon="folder" accent="var(--chart-4)" {...st(projects)} value={p ? (p.status.total === null ? null : formatNumber(p.status.total)) : null} sub={statusMix(p && p.status, PROJECT_ORDER)} metric={p && p.status} delay={30} hint={rich ? 'Projects in scope by current status.' : undefined} to={rich ? ROUTES.projects : undefined} />
 			<KpiCard
 				label="Billable hours"
 				icon="clock"

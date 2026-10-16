@@ -5,10 +5,12 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider, readAppearance, resolveTheme } from '../app/providers/ThemeProvider';
 import { APPEARANCE_KEY, THEME_IDS } from '../config/themes';
+import { MemoryRouter } from 'react-router-dom';
+import SettingsPage from '../features/settings/SettingsPage';
 import ThemeSelector from '../features/settings/ThemeSelector';
 
 // ---- accessibility of the palettes themselves -------------------------------------------------
-const css = fs.readFileSync(path.join(__dirname, '../styles/themes.css'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, '../styles/themes.css'), 'utf8') + '\n' + fs.readFileSync(path.join(__dirname, '../styles/themes.extra.css'), 'utf8');
 
 function tokensFor(id) {
 	const re = id === 'blueberry' ? /:root,\s*\[data-theme='blueberry'\]\s*\{([^}]*)\}/ : new RegExp(`\\[data-theme='${id}'\\]\\s*\\{([^}]*)\\}`);
@@ -73,7 +75,7 @@ test('defaults to Ember, applies attributes, and persists a selection', async ()
 	expect(screen.getByRole('radio', { name: /sunset/i })).toHaveAttribute('aria-checked', 'true');
 });
 
-test('the selector offers exactly seven themes plus an explicit System option, each with a preview', () => {
+test('the gallery offers every theme plus an explicit System option, each with a preview, and filters by dark / light', async () => {
 	render(
 		<ThemeProvider>
 			<ThemeSelector />
@@ -81,9 +83,40 @@ test('the selector offers exactly seven themes plus an explicit System option, e
 	);
 	const group = screen.getByRole('radiogroup', { name: 'Theme' });
 	const names = within(group).getAllByRole('radio').map((r) => r.querySelector('b').textContent);
-	expect(names).toEqual(['Ember', 'Light Blueberry', 'Black Current', 'Volcano', 'Sunset', 'Ocean', 'Forest', 'System']);
-	expect(group.querySelectorAll('.theme-preview[data-theme]').length).toBe(8);
-});
+	expect(names.slice(0, 7)).toEqual(['Ember', 'Light Blueberry', 'Black Current', 'Volcano', 'Sunset', 'Ocean', 'Forest']);
+	expect(names[names.length - 1]).toBe('System');
+	expect(names.length).toBe(THEME_IDS.length + 1);
+	expect(THEME_IDS.length).toBeGreaterThanOrEqual(25);
+	expect(group.querySelectorAll('.theme-preview[data-theme]').length).toBe(THEME_IDS.length + 1);
+	await userEvent.click(screen.getByRole('button', { name: /^Dark/ }));
+	const darkNames = within(group).getAllByRole('radio').map((r) => r.querySelector('b').textContent);
+	expect(darkNames).toContain('Ember');
+	expect(darkNames).not.toContain('Sunset');
+	await userEvent.click(screen.getByRole('button', { name: /^Light/ }));
+	expect(within(group).getAllByRole('radio').map((r) => r.querySelector('b').textContent)).toContain('Sunset');
+	await userEvent.click(screen.getByRole('button', { name: /^All/ }));
+	await userEvent.type(screen.getByRole('searchbox', { name: 'Search themes' }), 'nord');
+	expect(within(group).getAllByRole('radio').map((r) => r.querySelector('b').textContent)).toEqual(['Nord']);
+}, 20000);
+
+test('accent colour, corner style, text size and motion apply to the document and persist', async () => {
+	render(
+		<ThemeProvider>
+			<SettingsPage />
+		</ThemeProvider>,
+		{ wrapper: MemoryRouter }
+	);
+	await userEvent.click(screen.getByRole('radio', { name: 'Round' }));
+	await userEvent.click(screen.getByRole('radio', { name: 'Large' }));
+	await userEvent.click(screen.getByRole('radio', { name: 'Reduce motion' }));
+	const root = document.documentElement;
+	expect([root.dataset.radius, root.dataset.text, root.dataset.motion]).toEqual(['round', 'large', 'reduced']);
+	const stored = JSON.parse(localStorage.getItem(APPEARANCE_KEY));
+	expect(stored).toMatchObject({ radius: 'round', textSize: 'large', motion: 'reduced' });
+	await userEvent.type(screen.getByRole('textbox', { name: 'Accent colour as hex' }), '#12a594');
+	expect(JSON.parse(localStorage.getItem(APPEARANCE_KEY)).accent).toBe('#12a594');
+	expect(readAppearance().accent).toBe('#12a594');
+}, 20000);
 
 test('a stored theme is restored on startup; invalid stored data falls back safely', () => {
 	localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'volcano', density: 'compact' }));
@@ -91,9 +124,9 @@ test('a stored theme is restored on startup; invalid stored data falls back safe
 	expect(document.documentElement.dataset.theme).toBe('volcano');
 	expect(document.documentElement.dataset.density).toBe('compact');
 	localStorage.setItem(APPEARANCE_KEY, '{not json');
-	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler' });
+	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard' });
 	localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'neon', density: 'huge' }));
-	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler' });
+	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard' });
 });
 
 test('System follows the device preference only when selected', async () => {

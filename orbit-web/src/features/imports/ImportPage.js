@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import Button from '../../components/common/Button';
+import Icon from '../../components/common/Icon';
 import StatusBadge from '../../components/common/StatusBadge';
 import StateView from '../../components/feedback/StateView';
 import TeamFilter from '../../components/filters/TeamFilter';
@@ -14,6 +15,7 @@ import useTemplates from '../../hooks/useTemplates';
 import { importsService } from '../../services/importsService';
 import { csvToRecords, toCsv } from '../../utils/csv';
 import { humanize } from '../../utils/format';
+import Select from '../../components/forms/Select';
 
 const MAX_ROWS = 5000; // client-side cap; the server accepts at most one batch per call
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -69,6 +71,7 @@ export default function ImportPage() {
 	const [choices, setChoices] = useState({}); // rowNumber -> resolution
 	const [unmapped, setUnmapped] = useState([]);
 	const [final, setFinal] = useState(null);
+	const [fileName, setFileName] = useState('');
 	const running = useRef(false);
 	const hasPreview = useRef(false);
 
@@ -123,12 +126,14 @@ export default function ImportPage() {
 		setChoices({});
 		setFinal(null);
 		setRecords([]);
+		setFileName('');
 	};
 
 	const onFile = (e) => {
 		const file = e.target.files[0];
 		e.target.value = '';
 		if (!file || !template) return;
+		setFileName(file.name);
 		guard(async () => {
 			if (!/\.csv$/i.test(file.name)) throw new Error('Only .csv files are supported. Excel (.xlsx) import is not available yet.');
 			if (file.size > MAX_FILE_BYTES) throw new Error('File is larger than 2 MB.');
@@ -198,45 +203,63 @@ export default function ImportPage() {
 		<>
 			<PageHeader title="Import data" description="Upload a CSV, review what will happen, then import. Nothing is saved until you confirm." />
 			<DataEntryModes current="import" resource={module || undefined} />
-			<ol className="tabs" aria-label="Progress" style={{ borderBottom: 0, marginBottom: 'var(--space-3)' }}>
-				{STEPS.map((s, i) => (
-					<li key={s} className="small" style={{ padding: '4px 12px 4px 0', fontWeight: i === step ? 700 : 500, color: i <= step ? 'var(--text)' : 'var(--text-muted)' }} aria-current={i === step ? 'step' : undefined}>
-						{i + 1}. {s}
+			<ol className="istepper" aria-label="Progress">
+				{STEPS.map((label, i) => (
+					<li key={label} className={`istepper__step ${i < step ? 'is-done' : ''} ${i === step ? 'is-current' : ''}`.trim()} aria-current={i === step ? 'step' : undefined}>
+						<span className="istepper__dot" aria-hidden="true">
+							{i < step ? <Icon name="check" size={14} /> : i + 1}
+						</span>
+						<span className="istepper__label">{label}</span>
 					</li>
 				))}
 			</ol>
 
 			<StateView res={templates} loadingLines={2}>
-				<div className="filter-bar">
-					<Field label="Data type">
-						{(p) => (
-							<select {...p} value={module} disabled={locked} onChange={(e) => setModule(e.target.value)}>
-								<option value="">Select…</option>
-								{importable.map((t) => (
-									<option key={t.module} value={t.module}>
-										{humanize(t.module)}
-									</option>
-								))}
-							</select>
-						)}
-					</Field>
-					<Field label="If a record already exists">
-						{(p) => (
-							<select {...p} value={policy} disabled={locked} onChange={(e) => setPolicy(e.target.value)}>
-								<option value="ask">Ask me for each one</option>
-								<option value="update">Update the existing record</option>
-								<option value="keep_existing">Keep the existing record</option>
-								<option value="skip">Skip the row</option>
-							</select>
-						)}
-					</Field>
-					<TeamFilter value={team} onChange={setTeam} />
-					<Field label="CSV file" hint="Headers must match the template. Max 2 MB.">
-						{(p) => <input {...p} type="file" accept=".csv,text/csv" disabled={!template || locked} onChange={onFile} />}
-					</Field>
-					<Button icon="download" disabled={!template} onClick={() => downloadTemplate(template)}>
-						Download template
-					</Button>
+				<div className="isetup">
+					<section className="isetup__card" aria-label="What to import">
+						<h2 className="isetup__title">
+							<span aria-hidden="true">1</span> What are you importing?
+						</h2>
+						<Field label="Data type">
+							{(p) => (
+								<Select {...p} value={module} disabled={locked} onChange={(e) => setModule(e.target.value)}>
+									<option value="">Select…</option>
+									{importable.map((t) => (
+										<option key={t.module} value={t.module}>
+											{humanize(t.module)}
+										</option>
+									))}
+								</Select>
+							)}
+						</Field>
+						<Field label="If a record already exists">
+							{(p) => (
+								<Select {...p} value={policy} disabled={locked} onChange={(e) => setPolicy(e.target.value)}>
+									<option value="ask">Ask me for each one</option>
+									<option value="update">Update the existing record</option>
+									<option value="keep_existing">Keep the existing record</option>
+									<option value="skip">Skip the row</option>
+								</Select>
+							)}
+						</Field>
+						<TeamFilter value={team} onChange={setTeam} />
+					</section>
+					<section className="isetup__card" aria-label="Upload the file">
+						<h2 className="isetup__title">
+							<span aria-hidden="true">2</span> Upload the CSV
+						</h2>
+						<div className={`idrop ${!template || locked ? 'is-disabled' : ''} ${fileName ? 'has-file' : ''}`.trim()}>
+							<Field label="CSV file">{(p) => <input {...p} type="file" accept=".csv,text/csv" disabled={!template || locked} onChange={onFile} />}</Field>
+							<span className="idrop__icon" aria-hidden="true">
+								<Icon name={fileName ? 'check' : 'upload'} size={26} />
+							</span>
+							<b className="idrop__title">{fileName || (template ? 'Drop a CSV here, or click to browse' : 'Choose a data type first')}</b>
+							<small>{template ? 'Headers must match the template. Max 2 MB, up to 5,000 rows.' : 'The template and checks depend on the data type.'}</small>
+						</div>
+						<Button icon="download" disabled={!template} onClick={() => downloadTemplate(template)}>
+							Download template
+						</Button>
+					</section>
 				</div>
 				{!features.excelImport ? <p className="small muted">CSV files only. Excel (.xlsx) import needs a spreadsheet parser that has not been added yet. Rows can refer to people and projects by employee_code and project_code.</p> : null}
 			</StateView>
@@ -279,12 +302,12 @@ export default function ImportPage() {
 										key: 'choice',
 										label: 'What to do',
 										render: (r) => (
-											<select className="input" style={{ width: 'auto' }} aria-label={`Resolution for row ${r.rowNumber}`} value={choices[r.rowNumber] || (r.conflict && r.conflict.resolution) || ''} disabled={busy || phase !== 'previewed'} onChange={(e) => setChoices((c) => ({ ...c, [r.rowNumber]: e.target.value }))}>
+											<Select className="input" style={{ width: 'auto' }} aria-label={`Resolution for row ${r.rowNumber}`} value={choices[r.rowNumber] || (r.conflict && r.conflict.resolution) || ''} disabled={busy || phase !== 'previewed'} onChange={(e) => setChoices((c) => ({ ...c, [r.rowNumber]: e.target.value }))}>
 												<option value="">Use the default above</option>
 												<option value="update">Update existing</option>
 												<option value="keep_existing">Keep existing</option>
 												<option value="skip">Skip</option>
-											</select>
+											</Select>
 										),
 									},
 								]}

@@ -1,3 +1,4 @@
+import { pickOption } from './pickOption';
 import React from 'react';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -131,14 +132,13 @@ describe('Spreadsheet editor page', () => {
 		await userEvent.type(input, `${text}{Enter}`);
 	}
 
-	test('loads real records, shows letters and field names, and offers the three entry options', async () => {
+	test('loads real records, shows letters and field names, and offers the two bulk entry options', async () => {
 		setup();
 		expect(await screen.findByRole('grid', { name: 'Employees spreadsheet' })).toBeInTheDocument();
 		expect(await screen.findByText('Asha Rao')).toBeInTheDocument();
 		expect(screen.getAllByRole('columnheader').map((h) => h.textContent).join('|')).toMatch(/AFull name/);
 		const modes = screen.getByRole('navigation', { name: 'Data entry options' });
-		expect(within(modes).getAllByRole('link').map((l) => l.textContent)).toEqual([expect.stringContaining('Add form'), expect.stringContaining('Sheet import'), expect.stringContaining('Spreadsheet editor')]);
-		expect(within(modes).getByRole('link', { name: /Add form/ })).toHaveAttribute('href', '/employees?new=1');
+		expect(within(modes).getAllByRole('link').map((l) => l.textContent)).toEqual([expect.stringContaining('Sheet import'), expect.stringContaining('Spreadsheet editor')]);
 		await userEvent.click(screen.getByRole('button', { name: 'About the spreadsheet editor' }));
 		expect(screen.getByText(/new columns cannot be added/)).toBeInTheDocument();
 	});
@@ -373,7 +373,7 @@ describe('Spreadsheet editor page', () => {
 		test('search in "Loaded rows" mode filters every visible column without any request', async () => {
 			setup();
 			await screen.findByText('Asha Rao');
-			await userEvent.selectOptions(screen.getByLabelText('Where to search'), 'loaded');
+			await pickOption(screen.getByLabelText('Where to search'), 'loaded');
 			const before = global.fetch.calls.length;
 			await userEvent.type(screen.getByRole('searchbox', { name: 'Search loaded rows' }), 'designer');
 			await waitFor(() => expect(screen.getByText(/1 row shown of 3/)).toBeInTheDocument());
@@ -409,7 +409,7 @@ describe('Spreadsheet editor page', () => {
 			await screen.findByText('Asha Rao');
 			await userEvent.type(screen.getByRole('searchbox', { name: /Search employees/ }), 'bala');
 			expect(await screen.findByText(/Searching all records is unavailable right now/)).toBeInTheDocument();
-			await waitFor(() => expect(screen.getByLabelText('Where to search')).toHaveValue('loaded'));
+			await waitFor(() => expect(screen.getByLabelText('Where to search')).toHaveAttribute('data-value', 'loaded'));
 			await waitFor(() => expect(screen.getByText('Bala Iyer')).toBeInTheDocument());
 			expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument(); // the typed search still filters
 		});

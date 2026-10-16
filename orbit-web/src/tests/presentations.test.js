@@ -1,3 +1,4 @@
+import { pickOption } from './pickOption';
 import React from 'react';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -175,7 +176,7 @@ describe('presentation editor', () => {
 		expect(screen.getAllByRole('listitem')[2].textContent).toMatch(/Employee overview/);
 		await userEvent.click(screen.getByRole('button', { name: 'Remove Attendance and leave' }));
 		await userEvent.click(screen.getByRole('button', { name: 'AI usage' }));
-		await userEvent.selectOptions(screen.getByLabelText('Reporting period'), 'last_month');
+		await pickOption(screen.getByLabelText('Reporting period'), 'last_month');
 		await userEvent.click(screen.getByRole('button', { name: 'Save presentation' }));
 		expect(await screen.findByText('Presentation list page')).toBeInTheDocument();
 		const post = global.fetch.calls.find((c) => c.line === 'POST /presentations');
@@ -195,7 +196,7 @@ describe('presentation editor', () => {
 		expect(save).toBeDisabled(); // no title yet
 		await userEvent.type(screen.getByLabelText(/Title/), 'T');
 		expect(save).toBeEnabled();
-		await userEvent.selectOptions(screen.getByLabelText('Reporting period'), 'custom');
+		await pickOption(screen.getByLabelText('Reporting period'), 'custom');
 		await userEvent.clear(screen.getByLabelText('From'));
 		await userEvent.type(screen.getByLabelText('From'), '2026-10-10');
 		await userEvent.clear(screen.getByLabelText('To'));

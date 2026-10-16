@@ -13,7 +13,7 @@ import { computeInsights } from '../../../utils/insights';
 import { PERIOD_PRESETS, presetLabel } from '../../../utils/periods';
 import { CountUp, prefersReducedMotion, useCinematic } from '../entrance';
 import { insightLink } from '../insightLinks';
-import logo from '../../../assets/images/logo.svg';
+import Select from '../../../components/forms/Select';
 
 /*
  * The dashboard's signature section, laid out like the reference design (data/dashboardreference.png):
@@ -141,6 +141,57 @@ const initials = (name) =>
 		.map((w) => w[0].toUpperCase())
 		.join('');
 
+/**
+ * The stacked cards. The front card is the one in focus; picking a card behind it only brings it forward
+ * (click, Enter/Space, or the arrow keys on the deck). Leaving for another page is a separate, explicit
+ * "Open" link on the front card, so browsing the stack never navigates by accident.
+ */
+function SnapshotDeck({ items, count }) {
+	const [front, setFront] = useState(0);
+	const n = items.length;
+	const onKeyDown = (e) => {
+		if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+		e.preventDefault();
+		setFront((f) => (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? (f + 1) % n : (f - 1 + n) % n));
+	};
+	return (
+		<div className="sig-stack" role="group" aria-label="Snapshot cards" onKeyDown={onKeyDown}>
+			{items.map((it, i) => {
+				const pos = (i - front + n) % n; // 0 = front
+				return (
+					<div key={it.key} className={`sig-stack__card sig-stack__card--${it.cls}`} data-pos={pos}>
+						{pos === 0 ? (
+							<>
+								<div className="sig-stack__brand">
+									<Icon name={it.icon} size={16} />
+									<span>{it.kicker}</span>
+									<Link to={it.to} className="sig-stack__open" aria-label={`Open ${it.go}`}>
+										Open <span aria-hidden="true">↗</span>
+									</Link>
+								</div>
+								<span className="sig-stack__label" title={it.hint}>
+									{it.label}
+								</span>
+								<div className="sig-stack__row">
+									<b className="sig-stack__value">
+										<CountUp text={it.value} enabled={count && it.key === 'employees'} />
+									</b>
+									{it.chip ? <Delta>{it.chip}</Delta> : null}
+								</div>
+							</>
+						) : (
+							<button type="button" className="sig-stack__pick" onClick={() => setFront(i)} aria-label={`Bring ${it.label} forward`}>
+								<span>{it.label}</span>
+								<b>{it.value}</b>
+							</button>
+						)}
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
 export function SidePanel({ overview, projects, onCustomize }) {
 	const { can } = useAuth();
 	const count = useCount();
@@ -150,7 +201,7 @@ export function SidePanel({ overview, projects, onCustomize }) {
 	const status = projects.data && projects.data.status;
 	const wl = projects.data && projects.data.workload;
 	const active = head && head.byStatus ? head.byStatus.active : null;
-	const rows = wl ? wl.projects.slice(0, 4) : []; // four rows fill the panel beside the chart and the two cards
+	const rows = wl ? wl.projects : []; // the list scrolls inside the card, so every returned project is reachable
 	return (
 		<section className="sig-card sig-side" aria-label="Team snapshot">
 			<header className="sig-head">
@@ -160,31 +211,14 @@ export function SidePanel({ overview, projects, onCustomize }) {
 				</button>
 			</header>
 
-			<div className="sig-stack">
-				<div className="sig-stack__card sig-stack__card--3">
-					<span>Approved leave</span>
-					<b>{leave && Number.isFinite(leave.approvedDays) ? `${formatNumber(leave.approvedDays, 1)} days` : '—'}</b>
-				</div>
-				<div className="sig-stack__card sig-stack__card--2">
-					<span className="sig-stack__dots" aria-hidden="true">
-						<i />
-						<i />
-					</span>
-					<b>{status && Number.isFinite(status.total) ? `${formatNumber(status.total)} projects` : '—'}</b>
-				</div>
-				<div className="sig-stack__card sig-stack__card--1">
-					<div className="sig-stack__brand">
-						<img src={logo} alt="" width="18" height="18" />
-						<span>COMPANY 360</span>
-					</div>
-					<span className="sig-stack__chip" aria-hidden="true" />
-					<span className="sig-stack__label">Employees</span>
-					<div className="sig-stack__row">
-						<b className="sig-stack__value">{head && Number.isFinite(head.total) ? <CountUp text={formatNumber(head.total)} enabled={count} /> : '—'}</b>
-						{Number.isFinite(active) ? <Delta>{formatNumber(active)} active</Delta> : null}
-					</div>
-				</div>
-			</div>
+			<SnapshotDeck
+				items={[
+					{ key: 'employees', cls: 1, kicker: 'Workforce', icon: 'users', label: 'Employees', hint: 'Everyone in scope, by employment status', value: head && Number.isFinite(head.total) ? formatNumber(head.total) : '—', chip: Number.isFinite(active) ? `${formatNumber(active)} active` : null, to: ROUTES.employees, go: 'employees' },
+					{ key: 'projects', cls: 2, kicker: 'Delivery', icon: 'folder', label: 'Projects', hint: 'Projects in scope by current status', value: status && Number.isFinite(status.total) ? formatNumber(status.total) : '—', chip: status && status.byStatus && Number.isFinite(status.byStatus.active) ? `${formatNumber(status.byStatus.active)} active` : null, to: ROUTES.projects, go: 'projects' },
+					{ key: 'leave', cls: 3, kicker: 'Time off', icon: 'calendar', label: 'Approved leave', hint: 'Approved leave in days; hours are never added to days', value: leave && Number.isFinite(leave.approvedDays) ? `${formatNumber(leave.approvedDays, 1)} days` : '—', chip: leave && leave.approvedHours > 0 ? `+ ${formatNumber(leave.approvedHours, 1)} h` : null, to: ROUTES.leave, go: 'leave records' },
+				]}
+				count={count}
+			/>
 
 			{can('spreadsheet.view') || can('presentations.view') ? (
 				<div className="sig-actions">
@@ -214,7 +248,7 @@ export function SidePanel({ overview, projects, onCustomize }) {
 					{rows.length === 0 ? (
 						<p className="sig-empty">No approved project time in this period.</p>
 					) : (
-						<ul aria-label="Busiest projects">
+						<ul aria-label="Busiest projects" tabIndex={rows.length > 4 ? 0 : undefined}>
 							{rows.map((p) => {
 								const burn = p.burnPercent;
 								const tone = burn === null ? 'none' : burn > 100 ? 'down' : 'up';
@@ -231,6 +265,11 @@ export function SidePanel({ overview, projects, onCustomize }) {
 										</span>
 										<span className={`sig-row__amount sig-row__amount--${tone}`} title={burn === null ? 'No estimate recorded' : 'Lifetime approved hours against the estimate'}>
 											{burn === null ? 'No estimate' : `${formatNumber(burn, 0)}%`}
+											{burn === null ? null : (
+												<span className="sig-row__bar" aria-hidden="true">
+													<i style={{ width: `${Math.min(100, burn)}%` }} />
+												</span>
+											)}
 										</span>
 									</li>
 								);
@@ -334,14 +373,14 @@ export function WorkloadCard({ projects, preset, onPreset }) {
 					</button>
 					<label className="sig-chip-btn sig-chip-btn--select">
 						<span className="sr-only">Period</span>
-						<select value={PERIOD_PRESETS.some((p) => p.id === preset && p.id !== 'custom') ? preset : ''} onChange={(e) => e.target.value && onPreset(e.target.value)}>
+						<Select value={PERIOD_PRESETS.some((p) => p.id === preset && p.id !== 'custom') ? preset : ''} onChange={(e) => e.target.value && onPreset(e.target.value)}>
 							{preset === 'custom' ? <option value="">Custom</option> : null}
 							{PERIOD_PRESETS.filter((p) => p.id !== 'custom').map((p) => (
 								<option key={p.id} value={p.id}>
 									{presetLabel(p.id)}
 								</option>
 							))}
-						</select>
+						</Select>
 					</label>
 				</div>
 			</header>

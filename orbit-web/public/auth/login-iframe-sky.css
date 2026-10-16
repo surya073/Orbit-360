@@ -1,0 +1,82 @@
+@import url("/__catalyst/auth/static-file?file_name=embedded_signin.css");
+
+/*
+ * Sign-in form - theme: sky. GENERATED from src/styles/themes.css and themes.extra.css by scripts/generate-login-css.js; do not edit.
+ * Regenerate with `npm run gen:login-css` (src/tests/login.test.js fails if these drift).
+ */
+
+/* ---- fit the hosted form into our card (Catalyst defaults to a 520px floating card) ---- */
+.signin_container {
+  width: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+.signin_box {
+  width: 100% !important;
+  min-height: 0 !important;
+  float: none !important;
+  display: block !important;
+  padding: 4px 2px 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+}
+.signin_head, .titlename, .service_name { display: none !important; } /* our page has its own heading */
+.hellouser, .backup_desc, .pass_name, .textbox_label, .textbox_actions, .oneAuthLable, .option_details { color: #5f6e7e !important; }
+
+html, body {
+  background: #ffffff !important;
+  color: #0f2236 !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden !important; /* the card is sized to this content (useIframeHeight): no inner scrollbar */
+  height: auto !important; /* never stretch to fill the iframe: the card follows the content, not the reverse */
+  min-height: 0 !important;
+}
+.textbox_div { margin-bottom: 18px !important; }
+.textbox {
+  background: #eef6fd !important;
+  color: #0f2236 !important;
+  border: 1px solid #bcc1c7 !important;
+  border-radius: 8px !important;
+  height: 42px !important;
+  text-indent: 0 !important;
+  padding: 0 12px !important;
+  font-size: 14px !important;
+  transition: border-color .15s ease, box-shadow .15s ease !important;
+}
+.textbox:hover { border-color: #5f6e7e !important; }
+.textbox:focus {
+  border-color: #1165ad !important;
+  box-shadow: 0 0 0 1px #1165ad !important;
+}
+.textbox::placeholder { color: #5f6e7e !important; opacity: 1 !important; }
+.textbox:-webkit-autofill, .textbox:-webkit-autofill:hover, .textbox:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f2236 !important;
+  -webkit-box-shadow: 0 0 0 100px #eef6fd inset !important;
+  background-color: #eef6fd !important;
+}
+.errorborder, .textbox.errorborder { border-color: #b3261e !important; }
+.btn.blue, .blue {
+  background: #1165ad !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  height: 42px !important;
+  border-radius: 8px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 14px !important;
+  margin-bottom: 14px !important;
+  transition: background-color .15s ease, transform .1s ease !important;
+}
+.btn.blue:hover, .blue:hover { background: #0f5795 !important; box-shadow: none !important; }
+.btn.blue:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 2px solid #1165ad !important; outline-offset: 2px !important; }
+.loadwithbtn { border-color: #ffffff !important; border-left-color: transparent !important; }
+a, a:visited, .bluetext_action, .bluetext_action a, .change_user, .fielderror a { color: #1165ad !important; text-decoration: none !important; }
+a:hover, .bluetext_action:hover { text-decoration: underline !important; }
+.fielderror, .error_icon, .error_message { color: #b3261e !important; }
+.backoption { color: #5f6e7e !important; }
+.backoption:hover { background: #f4f5f6 !important; }

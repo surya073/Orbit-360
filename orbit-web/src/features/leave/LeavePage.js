@@ -5,7 +5,7 @@ import ResourcePage from '../resources/ResourcePage';
 export const leaveConfig = defineModule({
 	title: 'Leave',
 	singular: 'leave record',
-	description: 'Leave requests and approvals. Days and hours are reported separately.',
+	description: 'Leave requests and who approved them. Days and hours are always reported separately.',
 	resource: 'leave_records',
 	search: 'Search by employee or leave type',
 	dateRange: true,

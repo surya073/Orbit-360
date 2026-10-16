@@ -14,6 +14,7 @@ import ResourceForm from '../../components/forms/ResourceForm';
 import PageHeader from '../../components/layout/PageHeader';
 import DataTable from '../../components/tables/DataTable';
 import Pagination from '../../components/tables/Pagination';
+import useBentoReveal from '../../hooks/useBentoReveal';
 import usePageSize from '../../hooks/usePageSize';
 import { SHEET_MODULES } from '../spreadsheet/spreadsheetModules';
 import { keyOf, moduleOfResource } from '../../config/permissions';
@@ -26,6 +27,11 @@ import { resourceService } from '../../services/resourceService';
 import { humanize } from '../../utils/format';
 import ModuleSummary from './ModuleSummary';
 import { renderCell } from './renderCell';
+import Select from '../../components/forms/Select';
+import Icon from '../../components/common/Icon';
+
+/** Simple English plural for the record-count chip ("time entry" -> "time entries"). */
+const plural = (n) => (/[^aeiou]y$/.test(n) ? `${n.slice(0, -1)}ies` : /(s|x|ch|sh)$/.test(n) ? `${n}es` : `${n}s`);
 
 /**
  * Standard module page: header, optional summary, filters, searchable paginated table, and
@@ -34,7 +40,7 @@ import { renderCell } from './renderCell';
  * `extraFilters`. Write controls are hidden when the backend contract is unavailable or the user's role
  * lacks the matching permission (UX only: the backend enforces both).
  */
-export default function ResourcePage({ config, rowExtras, topSlot, extraFilters }) {
+export default function ResourcePage({ config, rowExtras, topSlot, extraFilters, ViewCard, GridCard }) {
 	const { resource } = config;
 	const { can } = useAuth();
 	const { notify } = useToast();
@@ -45,6 +51,26 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 	const [pageSize, setPageSize] = usePageSize(resource);
 	const [filters, setFilters] = useState({});
 	const [q, setQ] = useState(urlQ);
+	// Modules that offer a card layout remember the chosen layout per device.
+	const viewKey = `company360.view.${resource}`;
+	const [layout, setLayoutState] = useState(() => {
+		try {
+			const saved = window.localStorage.getItem(viewKey);
+			// phones have no room for a wide table (its row actions fall off-screen): cards are the default there
+			if (!saved) return window.matchMedia && window.matchMedia('(max-width: 640px)').matches ? 'cards' : 'list';
+			return saved === 'cards' ? 'cards' : 'list';
+		} catch {
+			return 'list';
+		}
+	});
+	const setLayout = (v) => {
+		setLayoutState(v);
+		try {
+			window.localStorage.setItem(viewKey, v);
+		} catch {
+			/* private mode: the choice just lasts this visit */
+		}
+	};
 	const [dialog, setDialog] = useState(null); // { type: 'form', initial? } | { type: 'delete', row }
 	const dq = useDebouncedValue(q, 350).trim(); // surrounding spaces never start a new request
 	const templates = useTemplates();
@@ -58,6 +84,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 	const params = useMemo(() => ({ page, pageSize, q: dq, ...filters }), [page, pageSize, dq, filters]);
 	const res = useApiResource((signal) => resourceService.list(resource, params, { signal }), `${resource}|${JSON.stringify(params)}`, { isEmpty: () => false });
 	const labelOf = useLookupLabels(res.data, config.fkColumns);
+	useBentoReveal('.mod', [res.status === 'loading' ? 'l' : 'r', layout], '.mod .card, .mod .table-wrap, .mod .hgrid');
 
 	const template = templates.byModule[resource];
 	// Each control follows its own permission (Create / Edit / Delete / Approve), not one all-or-nothing flag.
@@ -124,6 +151,11 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 					Reject
 				</Button>
 			) : null}
+			{ViewCard ? (
+				<Button size="sm" variant="ghost" icon="search" aria-label={`View ${row.full_name || row.name || `record ${row.ROWID}`}`} onClick={() => setDialog({ type: 'view', row })}>
+					View
+				</Button>
+			) : null}
 			{canEdit ? (
 				<Button size="sm" variant="ghost" icon="edit" aria-label={`Edit record ${row.ROWID}`} onClick={() => setDialog({ type: 'form', initial: row })}>
 					Edit
@@ -136,13 +168,16 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 			) : null}
 		</>
 	);
-	const hasActions = canEdit || canDelete || canApprove || Boolean(rowExtras);
+	const hasActions = canEdit || canDelete || canApprove || Boolean(rowExtras) || Boolean(ViewCard);
 
+	const total = res.meta && Number.isFinite(res.meta.total) ? res.meta.total : null;
+	const noun = config.singular || 'record';
 	return (
-		<>
+		<div className="mod">
 			<PageHeader
 				title={config.title}
 				description={config.description}
+				meta={total !== null ? <span className="mod-count">{`${total} ${total === 1 ? noun : plural(noun)}${filtered ? ' match' : ''}`}</span> : undefined}
 				actions={
 					<>
 						{canCreate ? (
@@ -189,14 +224,14 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 				{config.filters.map((f) => (
 					<Field key={f.key} label={f.label}>
 						{(p) => (
-							<select {...p} value={filters[f.key] || ''} onChange={setFilter(f.key)}>
+							<Select {...p} value={filters[f.key] || ''} onChange={setFilter(f.key)}>
 								<option value="">All</option>
 								{f.options.map((o) => (
 									<option key={o} value={o}>
 										{humanize(o)}
 									</option>
 								))}
-							</select>
+							</Select>
 						)}
 					</Field>
 				))}
@@ -208,6 +243,18 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 				) : null}
 			</FilterBar>
 
+			{GridCard ? (
+				<div className="view-bar">
+					<div className="view-toggle" role="group" aria-label="Layout">
+						<button type="button" aria-pressed={layout === 'list'} onClick={() => setLayout('list')}>
+							<Icon name="menu" size={14} /> List
+						</button>
+						<button type="button" aria-pressed={layout === 'cards'} onClick={() => setLayout('cards')}>
+							<Icon name="dashboard" size={14} /> Cards
+						</button>
+					</div>
+				</div>
+			) : null}
 			<StateView res={res} loadingLines={6}>
 				{rows.length === 0 ? (
 					<EmptyState
@@ -227,7 +274,17 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 				) : (
 					<>
 						<div style={{ opacity: res.status === 'loading' ? 0.6 : 1, transition: 'opacity var(--dur) var(--ease)' }} aria-busy={res.status === 'loading'}>
-							<DataTable caption={config.title} columns={config.columns.map((c) => ({ key: c.key, label: c.label, render: (row) => renderCell(c, row, labelOf) }))} rows={rows} rowActions={hasActions ? actions : undefined} />
+							{GridCard && layout === 'cards' ? (
+								<div className="hgrid" role="list" aria-label={config.title}>
+									{rows.map((row) => (
+										<div key={row.ROWID} role="listitem">
+											<GridCard row={row} labelOf={labelOf} actions={hasActions ? actions(row) : null} />
+										</div>
+									))}
+								</div>
+							) : (
+								<DataTable caption={config.title} columns={config.columns.map((c) => ({ key: c.key, label: c.label, render: (row) => renderCell(c, row, labelOf) }))} rows={rows} rowActions={hasActions ? actions : undefined} />
+							)}
 						</div>
 						<Pagination meta={res.meta} onPage={setPage} pageSize={pageSize} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
 					</>
@@ -249,6 +306,9 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 					/>
 				</Modal>
 			) : null}
+			{dialog && dialog.type === 'view' && ViewCard ? (
+				<ViewCard row={dialog.row} labelOf={labelOf} canEdit={canEdit} onClose={closeDialog} onEdit={() => setDialog({ type: 'form', initial: dialog.row })} />
+			) : null}
 			{dialog && dialog.type === 'delete' && canDelete ? (
 				<ConfirmDialog
 					title={`Delete this ${config.singular || 'record'}?`}
@@ -262,6 +322,6 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters 
 					}}
 				/>
 			) : null}
-		</>
+		</div>
 	);
 }

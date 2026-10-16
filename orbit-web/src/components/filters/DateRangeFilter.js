@@ -1,6 +1,7 @@
 import React from 'react';
 import { PERIOD_PRESETS, resolvePeriod } from '../../utils/periods';
 import Field from '../forms/Field';
+import Select from '../forms/Select';
 
 /**
  * Reporting-period picker (Asia/Kolkata business dates). `value` = { preset, from?, to? };
@@ -24,13 +25,13 @@ export default function DateRangeFilter({ value, onChange, label = 'Period' }) {
 		<>
 			<Field label={label}>
 				{(p) => (
-					<select {...p} value={value.preset} onChange={(e) => setPreset(e.target.value)}>
+					<Select {...p} value={value.preset} onChange={(e) => setPreset(e.target.value)}>
 						{PERIOD_PRESETS.map((o) => (
 							<option key={o.id} value={o.id}>
 								{o.label}
 							</option>
 						))}
-					</select>
+					</Select>
 				)}
 			</Field>
 			{value.preset === 'custom' ? (

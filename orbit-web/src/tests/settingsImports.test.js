@@ -1,3 +1,4 @@
+import { pickOption } from './pickOption';
 import React from 'react';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -70,7 +71,7 @@ describe('import flow', () => {
 
 	async function choose() {
 		renderWithProviders(<ImportPage />);
-		await userEvent.selectOptions(await screen.findByLabelText('Data type'), 'attendance_records');
+		await pickOption(await screen.findByLabelText('Data type'), 'attendance_records');
 	}
 
 	test('validate in bounded batches, review problems, nothing is written until the user imports', async () => {
@@ -94,7 +95,7 @@ describe('import flow', () => {
 		mockFetch(happyRoutes(resolveLog));
 		await choose();
 		await userEvent.upload(screen.getByLabelText('CSV file'), upload());
-		await userEvent.selectOptions(await screen.findByLabelText('Resolution for row 2'), 'skip');
+		await pickOption(await screen.findByLabelText('Resolution for row 2'), 'skip');
 		await userEvent.click(screen.getByRole('button', { name: 'Save choices' }));
 		await waitFor(() => expect(resolveLog).toHaveLength(1));
 		expect(resolveLog[0]).toEqual({ resolutions: [{ rowNumber: 2, resolution: 'skip' }] });

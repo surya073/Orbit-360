@@ -657,7 +657,7 @@
 	font-weight: 650;
 	color: var(--text-muted);
 }
-.pl__deck select {
+.pl__deck .select {
 	height: var(--control-h);
 	padding: 0 var(--space-2);
 	border-radius: var(--radius-md);

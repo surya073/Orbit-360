@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * Presentational table. Horizontal scroll on narrow screens (focusable so keyboard users can
- * scroll it). columns: [{ key, label, render?(row), align? }]. Empty/error states are the
+ * scroll it). On phones each row becomes a stacked card (the CSS reads the cells' data-label). columns: [{ key, label, render?(row), align? }]. Empty/error states are the
  * caller's job (StateView) so this component only ever renders rows.
  */
 export default function DataTable({ caption, columns, rows, rowActions, rowKey = 'ROWID' }) {
@@ -28,7 +28,7 @@ export default function DataTable({ caption, columns, rows, rowActions, rowKey =
 					{rows.map((row) => (
 						<tr key={row[rowKey]}>
 							{columns.map((c) => (
-								<td key={c.key} style={c.align ? { textAlign: c.align } : undefined} title={typeof row[c.key] === 'string' ? row[c.key] : undefined}>
+								<td key={c.key} data-label={c.label} data-empty={!c.render && (row[c.key] === null || row[c.key] === undefined || row[c.key] === '') ? 'true' : undefined} style={c.align ? { textAlign: c.align } : undefined} title={typeof row[c.key] === 'string' ? row[c.key] : undefined}>
 									{c.render ? c.render(row) : row[c.key] ?? <span className="muted">—</span>}
 								</td>
 							))}

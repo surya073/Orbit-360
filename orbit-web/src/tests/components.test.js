@@ -1,3 +1,4 @@
+import { pickOption } from './pickOption';
 import React, { useState } from 'react';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -174,7 +175,7 @@ describe('DateRangeFilter', () => {
 	test('presets show the resolved dates; custom reveals inputs and rejects an inverted range', async () => {
 		render(<Harness />);
 		expect(screen.getByLabelText('Resolved dates')).toHaveTextContent('→');
-		await userEvent.selectOptions(screen.getByLabelText('Period'), 'custom');
+		await pickOption(screen.getByLabelText('Period'), 'custom');
 		const from = screen.getByLabelText('From');
 		const to = screen.getByLabelText('To');
 		await userEvent.clear(from);

@@ -5,6 +5,7 @@ import Field from '../../components/forms/Field';
 import { Checkbox } from '../../components/forms/Choice';
 import EmployeeAvatar from './EmployeeAvatar';
 import { roleText } from './TreeCanvas';
+import Select from '../../components/forms/Select';
 
 function PanelCard({ employee, node, selected, onSelect, onAdd }) {
 	const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `emp:${employee.id}` });
@@ -55,23 +56,23 @@ export default function EmployeePanel({ employees, tree, query, onQuery, role, o
 			<div className="rs-panel__filters">
 				<Field label="Role">
 					{(p) => (
-						<select {...p} value={role} onChange={(e) => onRole(e.target.value)}>
+						<Select {...p} value={role} onChange={(e) => onRole(e.target.value)}>
 							<option value="">All roles</option>
 							{roles.map((r) => (
 								<option key={r}>{r}</option>
 							))}
-						</select>
+						</Select>
 					)}
 				</Field>
 				{depts.length > 1 ? (
 					<Field label="Department">
 						{(p) => (
-							<select {...p} value={dept} onChange={(e) => onDept(e.target.value)}>
+							<Select {...p} value={dept} onChange={(e) => onDept(e.target.value)}>
 								<option value="">All</option>
 								{depts.map((d) => (
 									<option key={d}>{d}</option>
 								))}
-							</select>
+							</Select>
 						)}
 					</Field>
 				) : null}

@@ -8,9 +8,9 @@ import { defineModule } from '../resources/defineModule';
 import ResourcePage from '../resources/ResourcePage';
 
 export const aiUsageConfig = defineModule({
-	title: 'AI & GitHub usage',
+	title: 'AI & GitHub tool usage',
 	singular: 'usage record',
-	description: 'Tool usage as reported by employees',
+	description: 'Which AI and GitHub tools people use, and how much, as reported by employees.',
 	resource: 'ai_usage_records',
 	search: 'Search by tool name',
 	writable: true,

@@ -1,0 +1,192 @@
+/*
+ * Dashboard card grid (KPI cards through Key insights): a softer "bento" look and a scroll-triggered entrance.
+ * Cards are framed first, then their charts, bars and rings draw in once the card scrolls into view
+ * (hooks/useBentoReveal adds .bento / .is-in). Theme tokens only; scoped to the dashboard.
+ */
+
+/* ---------- entrance ---------- */
+:is(.dash, .mod) .bento {
+	transition: opacity 650ms var(--ease), translate 750ms var(--ease), scale 750ms var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
+	transition-delay: calc(var(--k, 0) * 70ms), calc(var(--k, 0) * 70ms), calc(var(--k, 0) * 70ms), 0s, 0s;
+}
+:is(.dash, .mod) .bento:not(.is-in) {
+	opacity: 0;
+	translate: 0 34px;
+	scale: 0.965;
+}
+/* hold every animated child at its first frame until the card is in view, then let them play */
+:is(.dash, .mod) .bento:not(.is-in) * {
+	animation-play-state: paused !important;
+}
+/* the first-visit sequence is timed from page load; here everything is timed from the moment the card lands */
+:is(.dash, .mod):is(.dash, .mod) .grid--kpi > .kpi.bento {
+	--d: 0ms;
+	animation-delay: calc(var(--k, 0) * 70ms + 120ms);
+}
+:is(.dash, .mod):is(.dash, .mod) .widget.bento {
+	--wd: 160ms;
+	animation-delay: 80ms;
+}
+
+/* donut segments draw round the ring one after another */
+@keyframes bento-seg {
+	from {
+		stroke-dasharray: 0 999;
+	}
+	to {
+		stroke-dasharray: var(--seg) 999;
+	}
+}
+:is(.dash, .mod) .bento .donut circle:nth-of-type(n + 2) {
+	animation: bento-seg 1100ms var(--ease) both;
+}
+:is(.dash, .mod) .bento .donut circle:nth-of-type(3) {
+	animation-delay: 180ms;
+}
+:is(.dash, .mod) .bento .donut circle:nth-of-type(4) {
+	animation-delay: 360ms;
+}
+:is(.dash, .mod) .bento .donut circle:nth-of-type(n + 5) {
+	animation-delay: 540ms;
+}
+
+/* ---------- card look ---------- */
+:is(.dash, .mod) .grid--kpi > .kpi,
+:is(.dash, .mod) .grid--widgets > .widget > .card {
+	border-radius: 22px;
+	border-color: var(--panel-border);
+	background: linear-gradient(180deg, color-mix(in srgb, var(--text) 4%, transparent), transparent 60%), var(--panel-bg);
+	box-shadow: var(--panel-shadow);
+}
+:is(.dash, .mod) .grid--kpi > .kpi:hover,
+:is(.dash, .mod) .grid--widgets > .widget:hover > .card {
+	border-color: color-mix(in srgb, var(--accent) 40%, var(--panel-border));
+	box-shadow: var(--panel-shadow), 0 22px 40px -26px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+:is(.dash, .mod) .bento.is-in:hover {
+	translate: 0 -3px;
+}
+:is(.dash, .mod) .grid--kpi > .kpi {
+	padding: 16px 18px 14px;
+}
+:is(.dash, .mod) .kpi::before {
+	inset: 0;
+	width: auto;
+	background: radial-gradient(120% 80% at 0 0, color-mix(in srgb, var(--kpi-accent, var(--accent)) 20%, transparent), transparent 58%);
+	opacity: 1;
+	pointer-events: none;
+}
+:is(.dash, .mod) .kpi__label {
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: color-mix(in srgb, var(--text) 78%, transparent);
+}
+:is(.dash, .mod) .kpi__icon,
+:is(.dash, .mod) .card__icon {
+	border-radius: 10px;
+}
+/* the little "···" menu mark on every card header (decorative, like the reference) */
+:is(.dash, .mod) .card__head:not(:has(.card__actions))::after {
+	content: '···' / '';
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 22px;
+	margin-left: auto;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--text) 8%, transparent);
+	color: var(--text-muted);
+	font-size: 0.8rem;
+	letter-spacing: 0.04em;
+	line-height: 1;
+}
+:is(.dash, .mod) .card__head {
+	align-items: center;
+}
+:is(.dash, .mod) .kpi__value {
+	margin-top: 8px;
+	font-size: clamp(1.7rem, 2.3vw, 2.15rem);
+	font-weight: 600;
+	letter-spacing: -0.03em;
+}
+:is(.dash, .mod) .kpi__sub {
+	margin-top: 6px;
+}
+:is(.dash, .mod) .kpi__go {
+	transition: translate var(--dur) var(--ease), color var(--dur-fast) var(--ease);
+}
+:is(.dash, .mod) .kpi__go:hover {
+	translate: 3px 0;
+}
+:is(.dash, .mod) .card__title {
+	font-size: 0.98rem;
+	font-weight: 600;
+}
+:is(.dash, .mod) .grid--widgets > .widget > .card .card__head {
+	padding-block: 16px;
+}
+
+/* ---------- hatched bars, rings and tracks ---------- */
+:is(.dash, .mod) .progress,
+:is(.dash, .mod) .barlist__track,
+:is(.dash, .mod) .stackbar {
+	background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--text) 9%, transparent) 0 2px, transparent 2px 6px);
+}
+:is(.dash, .mod) .progress,
+:is(.dash, .mod) .barlist__track {
+	height: 10px;
+	border-radius: 999px;
+}
+:is(.dash, .mod) .stackbar {
+	height: 14px;
+	border-radius: 999px;
+	gap: 3px;
+}
+:is(.dash, .mod) .progress__fill,
+:is(.dash, .mod) .barlist__fill,
+:is(.dash, .mod) .stackbar span {
+	position: relative;
+	overflow: hidden;
+	border-radius: 999px;
+}
+:is(.dash, .mod) .progress__fill::after,
+:is(.dash, .mod) .barlist__fill::after,
+:is(.dash, .mod) .stackbar span::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.28) 0 2px, transparent 2px 6px);
+	pointer-events: none;
+}
+:is(.dash, .mod) .barlist__track {
+	display: block;
+}
+:is(.dash, .mod) .legend i,
+:is(.dash, .mod) .donut__list i {
+	border-radius: 4px;
+}
+:is(.dash, .mod) .donut svg circle {
+	stroke-linecap: round;
+}
+:is(.dash, .mod) .stat-tile,
+:is(.dash, .mod) .projlist__row,
+:is(.dash, .mod) .toollist__row {
+	transition: translate var(--dur) var(--ease), border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+:is(.dash, .mod) .stat-tile:hover {
+	translate: 0 -2px;
+	border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:is(.dash, .mod) .bento,
+	:is(.dash, .mod) .bento * {
+		transition: none;
+		animation: none;
+	}
+	:is(.dash, .mod) .bento:not(.is-in) {
+		opacity: 1;
+		translate: none;
+		scale: 1;
+	}
+}

@@ -3,8 +3,8 @@ import { defineModule } from '../resources/defineModule';
 import ResourcePage from '../resources/ResourcePage';
 
 export const performanceConfig = defineModule({
-	title: 'Performance',
-	description: 'Review records by metric and cycle',
+	title: 'Performance reviews',
+	description: 'Review scores for each person, by metric and review cycle.',
 	resource: 'performance_records',
 	search: 'Search by employee or review cycle',
 	dateRange: true,

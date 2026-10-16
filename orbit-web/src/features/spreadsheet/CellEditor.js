@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import LookupSelect from '../../components/forms/LookupSelect';
 import { humanize } from '../../utils/format';
+import Select from '../../components/forms/Select';
 
 /**
  * In-cell editor. Text-like columns get an input, enum/boolean columns a native select, foreign
@@ -57,7 +58,7 @@ export default function CellEditor({ col, initial, onCommit, onCancel }) {
 	if (col.type === 'enum' || col.type === 'bool') {
 		const options = col.type === 'bool' ? [['true', 'Yes'], ['false', 'No']] : col.values.map((v) => [v, humanize(v)]);
 		return (
-			<select
+			<Select
 				className="sheet-editor"
 				aria-label={col.label}
 				autoFocus
@@ -72,7 +73,7 @@ export default function CellEditor({ col, initial, onCommit, onCancel }) {
 						{label}
 					</option>
 				))}
-			</select>
+			</Select>
 		);
 	}
 

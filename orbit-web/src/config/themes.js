@@ -1,7 +1,10 @@
-// Theme registry. The color tokens live in styles/themes.css, keyed by [data-theme="<id>"]; this file
-// only describes the options the UI offers. Seven themes exist; Ember is the default. "System" is not a theme: it
-// picks Light Blueberry or Black Current to match the device.
-export const THEMES = [
+// Theme registry. The color tokens live in styles/themes.css (seven hand-made themes) and styles/themes.extra.css
+// (22 generated ones, see scripts/generate-themes.js), keyed by [data-theme="<id>"]; this file only describes the
+// options the UI offers. Ember is the default. "System" is not a theme: it picks Light Blueberry or Black Current
+// to match the device.
+import extra from './extraThemes.json';
+
+const CORE = [
 	{ id: 'ember', label: 'Ember', description: 'Cinematic warm black with glass panels and an orange glow', scheme: 'dark' },
 	{ id: 'blueberry', label: 'Light Blueberry', description: 'Clean white and cool blue-grey with blueberry accents', scheme: 'light' },
 	{ id: 'blackcurrant', label: 'Black Current', description: 'Layered charcoal surfaces with a restrained berry accent', scheme: 'dark' },
@@ -10,6 +13,8 @@ export const THEMES = [
 	{ id: 'ocean', label: 'Ocean', description: 'Deep ocean blue with teal on blue-grey surfaces', scheme: 'light' },
 	{ id: 'forest', label: 'Forest', description: 'Deep forest green with muted emerald and sage', scheme: 'light' },
 ];
+
+export const THEMES = [...CORE, ...extra];
 
 export const SYSTEM_THEME = { id: 'system', label: 'System', description: 'Follow your device: Light Blueberry or Black Current' };
 
@@ -26,3 +31,27 @@ export const DENSITIES = [
 	{ id: 'comfortable', label: 'Comfortable' },
 	{ id: 'compact', label: 'Compact' },
 ];
+
+// More personal preferences (all per device, saved with the appearance).
+export const RADII = [
+	{ id: 'sharp', label: 'Sharp', hint: 'Square, technical corners' },
+	{ id: 'default', label: 'Default', hint: 'The standard softness' },
+	{ id: 'round', label: 'Round', hint: 'Friendly, pill-like corners' },
+];
+export const TEXT_SIZES = [
+	{ id: 'small', label: 'Small', hint: '93%: fits more on screen' },
+	{ id: 'default', label: 'Default', hint: '100%' },
+	{ id: 'large', label: 'Large', hint: '110%: easier to read' },
+	{ id: 'xlarge', label: 'Extra large', hint: '120%: for low vision' },
+];
+export const MOTIONS = [
+	{ id: 'auto', label: 'Follow my device', hint: 'Animate unless the device asks for less motion' },
+	{ id: 'reduced', label: 'Reduce motion', hint: 'No entrance, scroll or hover animations' },
+];
+export const WIDTHS = [
+	{ id: 'standard', label: 'Standard', hint: 'Centred, up to 1400 px' },
+	{ id: 'wide', label: 'Wide', hint: 'Up to 1680 px on large screens' },
+	{ id: 'full', label: 'Full width', hint: 'Use the whole window' },
+];
+// Quick accent colours for Settings -> Appearance (a custom colour can also be typed or picked).
+export const ACCENT_PRESETS = ['#ff8a3d', '#e5484d', '#e93d82', '#8e4ec6', '#5b5bd6', '#3b82f6', '#0ea5b7', '#12a594', '#30a46c', '#d6a600'];

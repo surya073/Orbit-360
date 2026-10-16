@@ -1,18 +1,22 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import Button from '../../components/common/Button';
+import Icon from '../../components/common/Icon';
 import Modal from '../../components/common/Modal';
-import DateRangeFilter from '../../components/filters/DateRangeFilter';
 import FilterBar from '../../components/filters/FilterBar';
 import ProjectFilter from '../../components/filters/ProjectFilter';
 import TeamFilter from '../../components/filters/TeamFilter';
 import useDashboardFilters from '../../hooks/useDashboardFilters';
+import useBentoReveal from '../../hooks/useBentoReveal';
 import useDashboardLayout from '../../hooks/useDashboardLayout';
+import useOutsideClick from '../../hooks/useOutsideClick';
+import { resolvePeriod } from '../../utils/periods';
 import DashboardLayoutEditor from './DashboardLayoutEditor';
 import { EntranceContext, useDashboardEntrance } from './entrance';
+import CustomRange from './CustomRange';
+import ScopeTimeline, { MONTH_NAMES, fmtDay, monthRange } from './ScopeTimeline';
 import { AttentionCard, BillableCard, SidePanel, WorkloadCard } from './signature/Signature';
 import useDashboardData from './useDashboardData';
 import AiUsageCard from './widgets/AiUsageCard';
-import FreshnessBar from './widgets/FreshnessBar';
 import InsightsCard from './widgets/InsightsCard';
 import KpiRow from './widgets/KpiRow';
 import ProductStatusCard from './widgets/ProductStatusCard';
@@ -22,6 +26,11 @@ import TimeBreakdownCard from './widgets/TimeBreakdownCard';
 import { AttendanceTrendCard } from './widgets/TrendCards';
 
 // Widgets that use the full row (their content is laid out in columns); the others share a row in pairs.
+const MODES = [
+	{ id: 'month', label: 'Month' },
+	{ id: 'custom', label: 'Custom' },
+];
+const isWholeMonth = ({ from, to }) => Boolean(from && to) && from.slice(0, 7) === to.slice(0, 7) && from.endsWith('-01') && to === monthRange(Number(to.slice(0, 4)), Number(to.slice(5, 7)) - 1).to;
 const WIDE = ['time-breakdown', 'people-leave', 'project-health', 'ai-usage', 'insights'];
 
 /**
@@ -34,9 +43,33 @@ export default function DashboardPage() {
 	const data = useDashboardData(f.params, { enabled: f.valid });
 	const layout = useDashboardLayout();
 	const [customizing, setCustomizing] = useState(false);
+	useBentoReveal('.dash', [f.valid]);
 	const entrance = useDashboardEntrance(); // 'cinematic' on the first visit of a session, else 'quick'
 	const reset = () => f.update({ period: { preset: 'this_month' }, team: '', project: '' });
 	const setPreset = (preset) => f.update({ period: { preset } });
+	const resolved = resolvePeriod(f.period);
+	// Month picks one calendar month; Custom builds any range. A range that is not a whole month opens as Custom.
+	const [mode, setMode] = useState(() => (f.period.preset === 'custom' || f.period.preset === 'last_30_days' || f.period.preset === 'this_quarter') && !isWholeMonth(resolved) ? 'custom' : 'month');
+	const [chipsHost, setChipsHost] = useState(null);
+	const [year, setYear] = useState(() => Number((resolved.to || resolved.from || '2000').slice(0, 4)));
+	// The month strip / calendar float over the page in a popover, so choosing dates never moves the dashboard.
+	const [open, setOpen] = useState(false);
+	const bar = useRef(null);
+	const closePop = useCallback(() => setOpen(false), []);
+	useOutsideClick(bar, closePop, open);
+	const chooseMode = (id) => {
+		setMode(id);
+		if (id === 'month' && !isWholeMonth(resolved)) setPreset('this_month');
+		setOpen(id === 'custom'); // Custom starts straight on the calendar
+	};
+	const pickMonth = (m) => {
+		const r = monthRange(year, m);
+		const now = resolvePeriod({ preset: 'this_month' });
+		f.update({ period: r.from === now.from && r.to === now.to ? { preset: 'this_month' } : { preset: 'custom', ...r } });
+		setOpen(false);
+	};
+	const whenLabel = resolved.from && resolved.to ? (isWholeMonth(resolved) ? `${MONTH_NAMES[Number(resolved.to.slice(5, 7)) - 1]} ${resolved.to.slice(0, 4)}` : `${fmtDay(resolved.from)} → ${fmtDay(resolved.to)}`) : 'Choose dates';
+	const activeCount = (f.period.preset !== 'this_month' ? 1 : 0) + (f.team ? 1 : 0) + (f.project ? 1 : 0);
 
 	const widgets = {
 		'attendance-trend': <AttendanceTrendCard res={data.trends} highlights />,
@@ -55,15 +88,82 @@ export default function DashboardPage() {
 				<section className="sig-context" aria-label="Overview filters">
 					<div className="sig-context__text">
 						<h1 className="sig-context__title">Overview</h1>
-						<FreshnessBar res={data.freshness} period={f.valid ? f.params : null} />
 					</div>
 					<FilterBar label="Dashboard filters">
-						<DateRangeFilter value={f.period} onChange={(period) => f.update({ period })} />
-						<TeamFilter value={f.team} onChange={(team) => f.update({ team })} />
-						<ProjectFilter value={f.project} onChange={(project) => f.update({ project })} />
-						<Button variant="ghost" onClick={reset}>
-							Reset
-						</Button>
+						<div className={`ofilter ${activeCount ? 'is-filtered' : ''}`.trim()} ref={bar}>
+							<div className="ofilter__row">
+								<div className="ofilter__lead">
+									<span className="ofilter__eyebrow">
+										<Icon name="filter" size={14} /> Viewing
+									</span>
+									<div className="oseg" role="group" aria-label="Period type" style={{ '--n': MODES.length, '--i': MODES.findIndex((m) => m.id === mode) }}>
+										<span className="oseg__thumb" aria-hidden="true" />
+										{MODES.map((m) => (
+											<button key={m.id} type="button" className="oseg__btn" aria-pressed={mode === m.id} onClick={() => chooseMode(m.id)}>
+												{m.label}
+											</button>
+										))}
+									</div>
+									{mode === 'month' ? (
+										<button type="button" className="ofilter__when" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+											<Icon name="calendar" size={14} />
+											<span>{whenLabel}</span>
+											<Icon name="chevronDown" size={14} className="ofilter__caret" />
+										</button>
+									) : (
+										<div className="ofilter__chips" ref={setChipsHost} />
+									)}
+									{activeCount ? (
+										<span className="ofilter__count" role="status">
+											{activeCount} changed
+										</span>
+									) : null}
+								</div>
+								<div className="ofilter__side">
+									<div className="ofilter__sentence">
+										<span className="ofilter__word" aria-hidden="true">
+											for
+										</span>
+										<span className={`ofilter__slot ${f.team ? 'is-set' : ''}`.trim()}>
+											<TeamFilter value={f.team} onChange={(team) => f.update({ team })} />
+										</span>
+										<span className="ofilter__word" aria-hidden="true">
+											on
+										</span>
+										<span className={`ofilter__slot ${f.project ? 'is-set' : ''}`.trim()}>
+											<ProjectFilter value={f.project} onChange={(project) => f.update({ project })} />
+										</span>
+									</div>
+									<Button
+										variant="ghost"
+										icon="refresh"
+										onClick={() => {
+											reset();
+											setOpen(false);
+										}}
+										disabled={activeCount === 0}
+									>
+										Reset
+									</Button>
+								</div>
+							</div>
+							{mode === 'month' ? (
+								 open ? (
+									<div className="ofilter__pop" role="dialog" aria-label="Choose a month">
+										<ScopeTimeline from={resolved.from} to={resolved.to} year={year} onYear={setYear} onPick={pickMonth} />
+									</div>
+								) : null
+							) : (
+								<CustomRange
+									from={f.period.preset === 'custom' ? f.period.from : undefined}
+									to={f.period.preset === 'custom' ? f.period.to : undefined}
+									onCommit={({ from, to }) => f.update({ period: { preset: 'custom', from, to } })}
+									chipsHost={chipsHost}
+									open={open}
+									onOpenChange={setOpen}
+								/>
+							)}
+						</div>
 					</FilterBar>
 				</section>
 

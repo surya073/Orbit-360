@@ -1,0 +1,244 @@
+[
+	{
+		"id": "midnight",
+		"label": "Midnight",
+		"description": "Deep navy with a bright periwinkle accent",
+		"scheme": "dark",
+		"swatch": [
+			"#070b16",
+			"#0e1426",
+			"#7593ff"
+		]
+	},
+	{
+		"id": "nord",
+		"label": "Nord",
+		"description": "Arctic blue-grey with frost cyan",
+		"scheme": "dark",
+		"swatch": [
+			"#242933",
+			"#2e3440",
+			"#a2ceda"
+		]
+	},
+	{
+		"id": "dracula",
+		"label": "Dracula",
+		"description": "Classic purple night with a lilac accent",
+		"scheme": "dark",
+		"swatch": [
+			"#1b1c26",
+			"#282a36",
+			"#cbaaf9"
+		]
+	},
+	{
+		"id": "tokyo",
+		"label": "Tokyo Night",
+		"description": "Ink blue city night with a soft azure accent",
+		"scheme": "dark",
+		"swatch": [
+			"#14141c",
+			"#1a1b26",
+			"#7aa2f7"
+		]
+	},
+	{
+		"id": "graphite",
+		"label": "Graphite",
+		"description": "Neutral monochrome greys, no colour noise",
+		"scheme": "dark",
+		"swatch": [
+			"#0f0f10",
+			"#181819",
+			"#d4d4d8"
+		]
+	},
+	{
+		"id": "cyber",
+		"label": "Cyberpunk",
+		"description": "Neon magenta over an ultraviolet black",
+		"scheme": "dark",
+		"swatch": [
+			"#0b0614",
+			"#140b24",
+			"#ff3bd9"
+		]
+	},
+	{
+		"id": "aurora",
+		"label": "Aurora",
+		"description": "Polar night green with a mint glow",
+		"scheme": "dark",
+		"swatch": [
+			"#06130f",
+			"#0c1f19",
+			"#2ee6a6"
+		]
+	},
+	{
+		"id": "mocha",
+		"label": "Mocha",
+		"description": "Roasted brown with a caramel accent",
+		"scheme": "dark",
+		"swatch": [
+			"#14100d",
+			"#1e1814",
+			"#d9a066"
+		]
+	},
+	{
+		"id": "rosewood",
+		"label": "Rosewood",
+		"description": "Dark wine surfaces with a rose accent",
+		"scheme": "dark",
+		"swatch": [
+			"#150a0d",
+			"#201015",
+			"#ff6b8b"
+		]
+	},
+	{
+		"id": "deepsea",
+		"label": "Deep Sea",
+		"description": "Abyssal teal with a cyan highlight",
+		"scheme": "dark",
+		"swatch": [
+			"#04131a",
+			"#0a1f29",
+			"#22c3e6"
+		]
+	},
+	{
+		"id": "obsidian",
+		"label": "Obsidian Gold",
+		"description": "Volcanic glass black with champagne gold",
+		"scheme": "dark",
+		"swatch": [
+			"#0b0b0a",
+			"#151513",
+			"#e0b341"
+		]
+	},
+	{
+		"id": "paper",
+		"label": "Paper",
+		"description": "Warm off-white paper with terracotta ink",
+		"scheme": "light",
+		"swatch": [
+			"#f6f3ec",
+			"#fffdf8",
+			"#9f491b"
+		]
+	},
+	{
+		"id": "mint",
+		"label": "Mint",
+		"description": "Fresh pale green with a confident emerald",
+		"scheme": "light",
+		"swatch": [
+			"#eef8f3",
+			"#ffffff",
+			"#0c734f"
+		]
+	},
+	{
+		"id": "lavender",
+		"label": "Lavender",
+		"description": "Soft lilac whites with a rich violet",
+		"scheme": "light",
+		"swatch": [
+			"#f4f0fb",
+			"#ffffff",
+			"#6d4bd1"
+		]
+	},
+	{
+		"id": "rose",
+		"label": "Rose Quartz",
+		"description": "Blush surfaces with a raspberry accent",
+		"scheme": "light",
+		"swatch": [
+			"#fbf0f3",
+			"#ffffff",
+			"#b63056"
+		]
+	},
+	{
+		"id": "sand",
+		"label": "Sand Dune",
+		"description": "Desert beige with burnt sienna",
+		"scheme": "light",
+		"swatch": [
+			"#f4ede2",
+			"#fffaf1",
+			"#955625"
+		]
+	},
+	{
+		"id": "sky",
+		"label": "Sky",
+		"description": "Open sky blue with a clear azure accent",
+		"scheme": "light",
+		"swatch": [
+			"#eef6fd",
+			"#ffffff",
+			"#1165ad"
+		]
+	},
+	{
+		"id": "citrus",
+		"label": "Citrus",
+		"description": "Pale lime cream with an olive green accent",
+		"scheme": "light",
+		"swatch": [
+			"#f8f7e8",
+			"#fffff6",
+			"#516c05"
+		]
+	},
+	{
+		"id": "peach",
+		"label": "Peach",
+		"description": "Warm peach whites with a coral accent",
+		"scheme": "light",
+		"swatch": [
+			"#fdf1ea",
+			"#ffffff",
+			"#ad4719"
+		]
+	},
+	{
+		"id": "slate",
+		"label": "Slate Light",
+		"description": "Cool grey-blue office light with steel blue",
+		"scheme": "light",
+		"swatch": [
+			"#eef1f5",
+			"#ffffff",
+			"#3b5b8a"
+		]
+	},
+	{
+		"id": "teal",
+		"label": "Teal Light",
+		"description": "Clean aqua-tinted white with deep teal",
+		"scheme": "light",
+		"swatch": [
+			"#ecf7f7",
+			"#ffffff",
+			"#097076"
+		]
+	},
+	{
+		"id": "solar",
+		"label": "Solar Light",
+		"description": "Parchment cream with a calm cobalt accent",
+		"scheme": "light",
+		"swatch": [
+			"#fdf6e3",
+			"#fffbea",
+			"#1c669a"
+		]
+	}
+]

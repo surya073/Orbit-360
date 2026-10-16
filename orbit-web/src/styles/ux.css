@@ -1,0 +1,321 @@
+/* Cross-cutting UX polish: touch targets, filter layout on phones, press feedback, back-to-top, route entrance. */
+
+/* ---------- press feedback (every button feels pressed) ---------- */
+.btn,
+.icon-btn,
+.tab,
+.view-toggle button,
+.optgroup__btn,
+.oseg__btn,
+.swatch {
+	transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+}
+.btn:active:not(:disabled),
+.icon-btn:active:not(:disabled),
+.view-toggle button:active,
+.optgroup__btn:active {
+	transform: scale(0.97);
+}
+
+/* ---------- touch targets: fingers need 40px+ ---------- */
+@media (pointer: coarse) {
+	.btn,
+	.btn--sm,
+	.icon-btn,
+	.select,
+	.tab,
+	.view-toggle button,
+	.optgroup__btn,
+	.pager button,
+	.kpi__go,
+	.sig-link {
+		min-height: 40px;
+	}
+	.icon-btn {
+		min-width: 40px;
+	}
+	.btn--sm {
+		padding-inline: var(--space-3);
+	}
+	.field input:not([type='checkbox']):not([type='radio']):not([type='file']),
+	.field .select,
+	.input {
+		min-height: 44px;
+	}
+	.table .btn--sm {
+		min-height: 36px;
+	}
+	.choice__mark {
+		min-width: 22px;
+		min-height: 22px;
+	}
+	.otime__month,
+	.ocal__day {
+		min-height: 40px;
+	}
+}
+
+/* ---------- filter bars on phones: two columns, comfortable gaps ---------- */
+@media (max-width: 640px) {
+	.filter-bar {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--space-3);
+	}
+	.filter-bar .field {
+		min-width: 0;
+	}
+	.filter-bar > .field:first-child:not(:only-child),
+	.filter-bar > .btn,
+	.filter-bar > .chip {
+		grid-column: 1 / -1;
+	}
+	.sig-context .filter-bar {
+		display: block;
+	}
+	.rs-promo {
+		padding: var(--space-3);
+		gap: var(--space-3);
+	}
+	.rs-promo__text p {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.page-header__actions .btn {
+		flex: 1 1 auto;
+		justify-content: center;
+	}
+}
+
+/* ---------- back to top ---------- */
+.to-top {
+	position: fixed;
+	right: var(--space-4);
+	bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+	z-index: var(--z-header);
+	display: grid;
+	place-items: center;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	border: 1px solid var(--border-strong);
+	border-radius: 50%;
+	background: var(--surface);
+	color: var(--accent);
+	box-shadow: var(--shadow-lg);
+	opacity: 0;
+	translate: 0 16px;
+	scale: 0.85;
+	pointer-events: none;
+	transition: opacity var(--dur) var(--ease), translate var(--dur) var(--ease), scale var(--dur) var(--ease), background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.to-top .icon {
+	rotate: 180deg;
+}
+.to-top.is-visible {
+	opacity: 1;
+	translate: 0 0;
+	scale: 1;
+	pointer-events: auto;
+}
+.to-top:hover {
+	background: var(--accent);
+	color: var(--accent-contrast);
+}
+.to-top:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+.shell--workspace .to-top {
+	display: none;
+}
+@media print {
+	.to-top {
+		display: none;
+	}
+}
+
+@media (max-width: 480px) {
+	.filter-bar:not(.sig-context .filter-bar) {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* ---------- Settings on phones: a compact two-column theme gallery ---------- */
+@media (max-width: 560px) {
+	.theme-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--space-2);
+	}
+	.theme-option__name .small {
+		display: none;
+	}
+	.theme-option__meta {
+		padding: var(--space-2);
+	}
+	.theme-option__scheme {
+		top: 6px;
+		right: 6px;
+		padding: 0 6px;
+		font-size: 0.58rem;
+	}
+	.theme-tools,
+	.theme-tools__search {
+		width: 100%;
+		max-width: none;
+	}
+	.icon-option .theme-option__name .small {
+		display: block;
+	}
+}
+
+/* the mobile drawer scrolls: hint that there is more below */
+.offcanvas__nav {
+	-webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+	mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+
+/* ---------- Access: compact two-up stat tiles on phones ---------- */
+@media (max-width: 560px) {
+	.access-stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--space-2);
+	}
+	.access-stat {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-2);
+		padding: var(--space-3);
+	}
+	.access-stat__hint {
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		font-size: var(--fs-xs);
+	}
+}
+
+/* ---------- tables on phones: every row becomes a card (labels come from data-label) ---------- */
+@media (max-width: 640px) {
+	.table-wrap {
+		overflow: visible;
+		border: 0;
+		background: transparent;
+		box-shadow: none;
+	}
+	.table,
+	.table tbody,
+	.table tr,
+	.table td {
+		display: block;
+		width: 100%;
+	}
+	.table thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+	}
+	.table tbody tr {
+		margin-bottom: var(--space-3);
+		padding: var(--space-1) 0;
+		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
+		background: var(--surface);
+		box-shadow: var(--shadow-sm);
+		overflow: hidden;
+	}
+	.table tbody tr:hover {
+		background: var(--surface);
+	}
+	.table td {
+		display: grid;
+		grid-template-columns: minmax(84px, 38%) minmax(0, 1fr);
+		align-items: baseline;
+		gap: var(--space-2);
+		padding: 7px var(--space-3);
+		border: 0;
+		text-align: left !important;
+		white-space: normal;
+		overflow-wrap: anywhere;
+	}
+	.table td::before {
+		content: attr(data-label);
+		color: var(--text-muted);
+		font-size: var(--fs-xs);
+		font-weight: 600;
+	}
+	.table td:first-child {
+		display: block;
+		padding-top: var(--space-3);
+		font-size: var(--fs-md);
+		font-weight: 700;
+	}
+	.table td:first-child::before {
+		display: none;
+	}
+	.table td.actions {
+		display: block;
+		margin-top: var(--space-1);
+		padding: var(--space-2) var(--space-2) var(--space-1);
+		border-top: 1px solid var(--border);
+	}
+	.table td.actions::before {
+		display: none;
+	}
+	.table td.actions .row-actions {
+		justify-content: flex-start;
+		flex-wrap: wrap;
+	}
+}
+@media (max-width: 640px) {
+	.table td.actions {
+		width: 100%;
+	}
+	/* a field with no value takes no room in the card (the desktop table still shows its dash) */
+	.table td[data-empty='true']:not(:first-child) {
+		display: none;
+	}
+}
+
+/* ---------- rows settle in one after another (first ten; later rows appear at once) ---------- */
+@keyframes row-in {
+	from {
+		opacity: 0;
+		translate: 0 10px;
+	}
+}
+.table tbody tr {
+	animation: row-in 420ms var(--ease) both;
+}
+.table tbody tr:nth-child(2) { animation-delay: 30ms; }
+.table tbody tr:nth-child(3) { animation-delay: 60ms; }
+.table tbody tr:nth-child(4) { animation-delay: 90ms; }
+.table tbody tr:nth-child(5) { animation-delay: 120ms; }
+.table tbody tr:nth-child(6) { animation-delay: 150ms; }
+.table tbody tr:nth-child(7) { animation-delay: 180ms; }
+.table tbody tr:nth-child(8) { animation-delay: 210ms; }
+.table tbody tr:nth-child(9) { animation-delay: 240ms; }
+.table tbody tr:nth-child(n + 10) { animation-delay: 270ms; }
+.table tbody tr:focus-within {
+	background: var(--surface-2);
+}
+
+@media (max-width: 720px) {
+	/* the bottom sheet dims the page behind it */
+	.ofilter__pop,
+	.ocustom--pop {
+		box-shadow: 0 0 0 100vmax rgb(var(--shadow-rgb) / 0.5), var(--shadow-lg);
+	}
+}
+
+/* The page scrollbar always reserves its lane, so the layout never shifts sideways when a page is
+   short (no scrollbar) or long (scrollbar): the sidebar, header and content stay exactly where they are. */
+html {
+	overflow-y: scroll;
+	scrollbar-gutter: stable;
+}

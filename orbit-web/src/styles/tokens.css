@@ -35,6 +35,7 @@
 	--dur-slow: 320ms;
 
 	--header-h: 52px;
+	--stick: 0px; /* offset for sticky side panels: the top bar scrolls away on wide screens, stays on phones */
 	/* panels: other themes keep flat surfaces; Ember overrides these with glass (themes.css) */
 	--panel-bg: var(--surface);
 	--panel-border: var(--border);

@@ -1,3 +1,4 @@
+import { pickOption } from './pickOption';
 import React from 'react';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -209,7 +210,7 @@ describe('presentation center landing page and launcher', () => {
 		mockFetch(listRoutes());
 		renderWithProviders(<CenterRoutes />, { route: '/presentations' });
 		await screen.findByRole('heading', { name: 'Board review' });
-		await userEvent.selectOptions(screen.getByLabelText('Rows per page'), '50');
+		await pickOption(screen.getByLabelText('Rows per page'), '50');
 		await waitFor(() => expect(global.fetch.calls.some((c) => /GET \/presentations\?.*pageSize=50/.test(c.line))).toBe(true));
 	});
 

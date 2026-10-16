@@ -1,15 +1,22 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { TourProvider } from '../../app/providers/TourProvider';
 import LoadingState from '../feedback/LoadingState';
 import { ROUTES } from '../../config/routes';
+import useScrollReveal from '../../hooks/useScrollReveal';
 import AppHeader from '../navigation/AppHeader';
+import BackToTop from './BackToTop';
 import SideNav from '../navigation/SideNav';
 
 export default function AppShell() {
 	const { pathname } = useLocation();
 	// The spreadsheet and the reporting-structure builder are workspaces: it fills the viewport under the header instead of scrolling the page.
 	const workspace = pathname === ROUTES.spreadsheet || pathname === ROUTES.reporting;
+	useScrollReveal('#main', [pathname]);
+	// A new page starts at its top (a tab or filter change inside a page keeps its scroll position).
+	useEffect(() => {
+		window.scrollTo(0, 0);
+	}, [pathname]);
 	return (
 		<TourProvider>
 			<div className={`shell ${workspace ? 'shell--workspace' : ''}`.trim()}>
@@ -29,6 +36,7 @@ export default function AppShell() {
 					</main>
 				</div>
 			</div>
+			<BackToTop />
 		</TourProvider>
 	);
 }

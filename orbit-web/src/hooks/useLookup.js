@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { resourceService } from '../services/resourceService';
+import { clearLookupCache, lookupCache } from '../utils/lookupCache';
 
 // Foreign-key column -> [resource, label column]. One shared cache across the app.
 export const LOOKUPS = {
@@ -11,7 +12,7 @@ export const LOOKUPS = {
 	primary_team_id: ['teams', 'name'],
 };
 
-const cache = {}; // resource -> { id: label }
+const cache = lookupCache; // resource -> { id: label }, shared (and seeded by full lists) via utils/lookupCache
 const pending = {}; // resource -> Set of ids being fetched
 
 /**
@@ -71,4 +72,4 @@ export default function useLookupLabels(rows, columns) {
 	);
 }
 
-export const __clearLookupCache = () => Object.keys(cache).forEach((k) => delete cache[k]);
+export const __clearLookupCache = clearLookupCache;

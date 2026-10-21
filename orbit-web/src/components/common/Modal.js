@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import useScrollLock from '../../hooks/useScrollLock';
 import { IconButton } from './Button';
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -31,13 +32,7 @@ export default function Modal({ title, onClose, children, footer, size = 'md', d
 		return () => target && target.focus && target.focus();
 	}, []);
 
-	useEffect(() => {
-		const prev = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
-		return () => {
-			document.body.style.overflow = prev;
-		};
-	}, []);
+	useScrollLock();
 
 	const onKeyDown = (e) => {
 		if (e.key === 'Escape' && dismissible) {

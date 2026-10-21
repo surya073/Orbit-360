@@ -1,3 +1,4 @@
+import { seedLookup } from '../utils/lookupCache';
 import { api } from './apiClient';
 
 // Resource names (Data Store table names, used by UI configs) -> REST path segment.
@@ -23,7 +24,12 @@ const path = (resource) => {
 
 /** Generic access to the paginated, team-scoped record endpoints. */
 export const resourceService = {
-	list: (resource, params, o) => api.get(path(resource), { ...o, params }),
+	list: (resource, params, o) => {
+		const req = api.get(path(resource), { ...o, params });
+		// A full, unfiltered team list is what every page needs to turn team ids into names: keep the names so no page asks for them again.
+		if (resource === 'teams' && !(params && (params.ids || params.search || params.q))) req.then((res) => seedLookup('teams', res && res.data)).catch(() => {});
+		return req;
+	},
 	get: (resource, id, o) => api.get(`${path(resource)}/${id}`, o),
 	create: (resource, body) => api.post(path(resource), body),
 	update: (resource, id, body) => api.patch(`${path(resource)}/${id}`, body),

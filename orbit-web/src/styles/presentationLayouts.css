@@ -303,7 +303,7 @@
 /* ---------- editor: start from a template ---------- */
 .etpl-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
 	gap: var(--space-3);
 }
 .etpl {
@@ -346,4 +346,82 @@
 	font-size: var(--fs-xs);
 	font-style: normal;
 	font-weight: 600;
+}
+
+/* ---------- story templates (what the presentation covers; independent of theme and layout) ---------- */
+.pl__subtext {
+	margin: -4px 0 10px;
+	font-size: var(--fs-sm);
+	color: var(--text-muted);
+}
+.pl__storylist {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr));
+	gap: 12px;
+}
+.pstory {
+	display: grid;
+	align-content: start;
+	gap: 8px;
+	padding: 12px 14px;
+	border: 1px solid var(--p-card-border, var(--border));
+	border-radius: 16px;
+	background: var(--p-card, var(--surface));
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: transform var(--dur) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.pstory:hover {
+	transform: translateY(-2px);
+	border-color: var(--accent);
+}
+.pstory.is-selected {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.pstory:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+.pstory__top {
+	display: grid;
+	gap: 2px;
+}
+.pstory__aud {
+	font-size: var(--fs-xs);
+	font-weight: 700;
+	color: var(--accent);
+}
+.pstory small {
+	color: var(--text-muted);
+	font-size: 0.78rem;
+	line-height: 1.4;
+}
+.pstory__slides {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 2px 0 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: slide;
+}
+.pstory__slides li {
+	counter-increment: slide;
+	padding: 2px 8px;
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--accent) 12%, transparent);
+	font-size: 0.7rem;
+	font-weight: 600;
+}
+.pstory__slides li::before {
+	content: counter(slide) '. ';
+	opacity: 0.65;
+}
+@media (max-width: 640px) {
+	.pl__storylist {
+		grid-template-columns: 1fr;
+	}
 }

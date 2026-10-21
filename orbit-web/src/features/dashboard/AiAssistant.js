@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
+import FloatingPanel from '../../components/common/FloatingPanel';
 import Icon from '../../components/common/Icon';
-import useOutsideClick from '../../hooks/useOutsideClick';
 
 // What the assistant is planned to do. Nothing here is wired to a model yet; the panel says so.
 const PLANNED = [
@@ -13,17 +13,15 @@ const PLANNED = [
 /** The AI entry point at the top right of the dashboard. Planned features only: it explains them and sends nothing anywhere. */
 export default function AiAssistant() {
 	const [open, setOpen] = useState(false);
-	const ref = useRef(null);
+	const btn = useRef(null);
 	const close = useCallback(() => setOpen(false), []);
-	useOutsideClick(ref, close, open);
 	return (
-		<div className="assist" ref={ref}>
-			<button type="button" className="assist__btn" aria-haspopup="dialog" aria-expanded={open} aria-label="AI assistant (planned)" title="AI assistant: coming soon" onClick={() => setOpen((o) => !o)}>
+		<div className="assist">
+			<button type="button" ref={btn} className="assist__btn" aria-haspopup="dialog" aria-expanded={open} aria-label="AI assistant (planned)" title="AI assistant: coming soon" onClick={() => setOpen((o) => !o)}>
 				<Icon name="sparkles" size={20} />
 				<span className="assist__soon" aria-hidden="true" />
 			</button>
-			{open ? (
-				<div className="assist__panel" role="dialog" aria-label="AI assistant">
+			<FloatingPanel anchorRef={btn} open={open} onClose={close} align="right" width={420} className="assist__panel" role="dialog" aria-label="AI assistant">
 					<header className="assist__head">
 						<span className="assist__badge" aria-hidden="true">
 							<Icon name="sparkles" size={18} />
@@ -54,8 +52,7 @@ export default function AiAssistant() {
 							Ask
 						</button>
 					</div>
-				</div>
-			) : null}
+			</FloatingPanel>
 		</div>
 	);
 }

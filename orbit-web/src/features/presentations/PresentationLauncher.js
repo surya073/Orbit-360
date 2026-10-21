@@ -5,12 +5,16 @@ import Button, { IconButton } from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
 import { Checkbox } from '../../components/forms/Choice';
 import useApiResource from '../../hooks/useApiResource';
+import useScrollLock from '../../hooks/useScrollLock';
 import { presentationsService } from '../../services/presentationsService';
 import { detailOptions } from './deckSlides';
 import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, storeOptions, storeTheme, storeTransition, themeById, themeStyle } from './presentationThemes';
-import { DECK_TEMPLATES, LAYOUTS, layoutById, readStoredLayout, storeLayout } from './presentationTemplates';
+import { DECK_TEMPLATES, LAYOUTS, layoutById, readStoredLayout, readStoredStory, storeLayout, storeStory, STORY_SAVED, STORY_TEMPLATES, storyById } from './presentationTemplates';
+import { REPORT_SECTIONS } from '../../config/constants';
 import ThemePreview from './ThemePreview';
 import Select from '../../components/forms/Select';
+
+const sectionLabel = (key) => (REPORT_SECTIONS.find((x) => x.key === key) || { label: key }).label;
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -28,6 +32,8 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 	const [closing, setClosing] = useState(false);
 	const [theme, setTheme] = useState(readStoredTheme);
 	const [layout, setLayout] = useState(readStoredLayout);
+	const [story, setStory] = useState(readStoredStory); // 'saved' = the deck's own slides, else a story template id
+	const storyDef = storyById(story);
 	const [deckId, setDeckId] = useState(() => String(initialId || (decks[0] && decks[0].ROWID) || ''));
 	const [opts, setOpts] = useState(readStoredOptions);
 	const deck = decks.find((d) => String(d.ROWID) === String(deckId)) || decks[0];
@@ -50,15 +56,13 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 	useEffect(() => {
 		const node = ref.current;
 		const target = returnTo.current;
-		const prevOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
 		const first = node && node.querySelector('[data-autofocus]');
 		if (first) first.focus();
 		return () => {
-			document.body.style.overflow = prevOverflow;
 			if (target && target.focus) target.focus();
 		};
 	}, []);
+	useScrollLock();
 
 	const onKeyDown = (e) => {
 		if (e.key === 'Escape') {
@@ -90,6 +94,10 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 		setLayout(id);
 		storeLayout(id);
 	};
+	const pickStory = (id) => {
+		setStory(id);
+		storeStory(id);
+	};
 	// A template sets the colour theme, the layout and the slide transition together.
 	const applyTemplate = (tpl) => {
 		pick(tpl.theme);
@@ -101,7 +109,7 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 		storeTheme(theme);
 		storeLayout(layout);
 		storeOptions(opts);
-		onStart({ id: deckId, theme, layout, people: offered.people && opts.people, records: offered.records && opts.records, reporting: offered.reporting && opts.reporting });
+		onStart({ id: deckId, theme, layout, story, people: offered.people && opts.people, records: offered.records && opts.records, reporting: offered.reporting && opts.reporting });
 	};
 
 	const t = themeById(theme);
@@ -121,8 +129,36 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 				</header>
 
 				<div className="pl__body">
-					<section className="pl__templates" aria-label="Templates">
-						<h3 className="pl__sub">Templates</h3>
+					<section className="pl__stories" aria-label="Presentation template">
+						<h3 className="pl__sub">Presentation template</h3>
+						<p className="pl__subtext">What the presentation covers and in which order. It works with any theme below.</p>
+						<div className="pl__storylist" role="radiogroup" aria-label="Presentation template">
+							{[{ id: STORY_SAVED, name: 'As saved', audience: deck ? deck.title : 'This presentation', purpose: 'Play the slides exactly as this presentation was saved.', slides: null }, ...STORY_TEMPLATES].map((s) => {
+								const on = s.id === story;
+								const titles = s.slides ? s.slides.map((k) => sectionLabel(k)) : null;
+								return (
+									<button key={s.id} type="button" role="radio" aria-checked={on} className={`pstory ${on ? 'is-selected' : ''}`.trim()} onClick={() => pickStory(s.id)}>
+										<span className="pstory__top">
+											<b>{s.name}</b>
+											<span className="pstory__aud">For: {s.audience}</span>
+										</span>
+										<small>{s.purpose}</small>
+										{titles ? (
+											<ol className="pstory__slides" aria-label={`Slides in ${s.name}`}>
+												{titles.map((t2, i) => (
+													<li key={`${t2}-${i}`}>{t2}</li>
+												))}
+											</ol>
+										) : null}
+									</button>
+								);
+							})}
+						</div>
+					</section>
+
+					<section className="pl__templates" aria-label="Style presets">
+						<h3 className="pl__sub">Style presets</h3>
+						<p className="pl__subtext">One-tap combinations of theme, layout and transition. They do not change what the presentation says.</p>
 						<div className="pl__tpls">
 							{DECK_TEMPLATES.map((tpl) => {
 								const on = tpl.theme === theme && tpl.layout === layout;
@@ -211,7 +247,9 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 				</div>
 
 				<footer className="pl__foot">
-					<span className="pl__hint">Arrow keys or Space to move · Esc to exit · F for fullscreen</span>
+					<span className="pl__hint" aria-live="polite">
+						<b>{storyDef ? storyDef.name : 'As saved'}</b> · {t.name} theme · {layoutById(layout).label} layout · Esc to exit · F for fullscreen
+					</span>
 					<Button variant="ghost" onClick={close}>
 						Cancel
 					</Button>

@@ -6,6 +6,7 @@ import { useAuth } from '../../app/providers/AuthProvider';
 import { useTour } from '../../app/providers/TourProvider';
 import { visibleNav } from '../../config/navigation';
 import { ROUTES } from '../../config/routes';
+import useScrollLock from '../../hooks/useScrollLock';
 import { IconButton } from '../common/Button';
 import Icon from '../common/Icon';
 
@@ -49,8 +50,6 @@ export default function MobileNav({ onClose }) {
 
 	useEffect(() => {
 		const el = ref.current;
-		const prevOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden'; // the page behind must not scroll while the menu is open
 		if (el) el.querySelector('button').focus();
 		const key = (e) => {
 			if (e.key === 'Escape') {
@@ -73,9 +72,9 @@ export default function MobileNav({ onClose }) {
 		document.addEventListener('keydown', key);
 		return () => {
 			document.removeEventListener('keydown', key);
-			document.body.style.overflow = prevOverflow;
 		};
 	}, [onClose]);
+	useScrollLock(); // the page behind must not scroll while the menu is open
 
 	// Swipe left to close: the panel follows the finger, then either leaves or springs back.
 	const onTouchStart = (e) => {

@@ -7,6 +7,9 @@ import SettingsPage from '../features/settings/SettingsPage';
 import { __resetTemplateCache } from '../hooks/useTemplates';
 import { admin, errBody, manager, mockFetch, okBody, renderWithProviders } from './helpers';
 
+// The first test in this file renders a heavy page (theme gallery / launcher); under a parallel full run that can pass 5 s.
+jest.setTimeout(20000);
+
 // jsdom (this version) lacks Blob/File text readers and crypto.subtle.
 beforeAll(() => {
 	const read = (blob, how) =>
@@ -140,6 +143,35 @@ describe('import flow', () => {
 		expect(await screen.findByText(/Import cancelled/)).toBeInTheDocument();
 		expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs/40/cancel')).toBe(true);
 		expect(screen.queryByRole('button', { name: 'Import valid rows' })).not.toBeInTheDocument();
+	});
+
+	test('headers that differ from the template are matched by the user before anything is sent; required fields must be covered', async () => {
+		mockFetch(happyRoutes());
+		await choose();
+		const renamed = 'Employee,Date,status\n1,2026-10-01,no\n2,2026-10-02,yes\n';
+		await userEvent.upload(screen.getByLabelText('CSV file'), upload('renamed.csv', renamed));
+		expect(await screen.findByRole('region', { name: 'Match the columns' })).toBeInTheDocument();
+		expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(false); // nothing is sent while matching
+		expect(screen.getByRole('alert')).toHaveTextContent(/Required fields not matched: employee_id, attendance_date, late_status/);
+		expect(screen.getByRole('button', { name: 'Check the rows' })).toBeDisabled();
+		await pickOption(screen.getByLabelText('Field for column Employee'), 'employee_id');
+		await pickOption(screen.getByLabelText('Field for column Date'), 'attendance_date');
+		await pickOption(screen.getByLabelText('Field for column status'), 'late_status');
+		expect(screen.getByText(/What will be sent for checking/)).toBeInTheDocument();
+		await userEvent.click(screen.getByRole('button', { name: 'Check the rows' }));
+		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(true));
+		const preview = global.fetch.calls.find((c) => /preview/.test(c.line));
+		expect(JSON.parse(preview.init.body).rows[0].data).toEqual({ employee_id: '1', attendance_date: '2026-10-01', late_status: 'no' });
+	});
+
+	test('two columns cannot be matched to the same field', async () => {
+		mockFetch(happyRoutes());
+		await choose();
+		await userEvent.upload(screen.getByLabelText('CSV file'), upload('dupes.csv', 'a,b,c\n1,2026-10-01,no\n'));
+		await pickOption(await screen.findByLabelText('Field for column a'), 'employee_id');
+		await pickOption(screen.getByLabelText('Field for column b'), 'employee_id');
+		expect(await screen.findByText(/More than one column is set to employee_id/)).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Check the rows' })).toBeDisabled();
 	});
 
 	test('only importable modules are offered, and a re-upload warning is shown', async () => {

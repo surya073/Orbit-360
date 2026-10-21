@@ -23,7 +23,7 @@ import FreshnessBar from '../dashboard/widgets/FreshnessBar';
 import { buildSlides, detailOptions, PEOPLE_LIMIT, PROFILE_LIMIT, RECORDS_LIMIT } from './deckSlides';
 import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, readStoredTransition, storeTheme, storeTransition, THEME_IDS, TRANSITIONS, themeById, themeStyle } from './presentationThemes';
 import { EntranceContext } from '../dashboard/entrance';
-import { LAYOUTS, LAYOUT_IDS, layoutById, readStoredLayout, storeLayout } from './presentationTemplates';
+import { LAYOUTS, LAYOUT_IDS, layoutById, readStoredLayout, storeLayout, storyById, storySlides } from './presentationTemplates';
 import { SCENE_CHOICES, readStoredScene, sceneFor, storeScene } from './presentationScenes';
 import { motionReduced } from '../../utils/motion';
 import { Brand, ClosingSlide, DetailStateSlide, OpeningSlide, PeopleSlide, ProfileSlide, RecordsSlide, SlideFrame, TextSlide } from './PresentationSlides';
@@ -110,9 +110,11 @@ export default function PresentationPlayer() {
 	const [nav, setNav] = useState({ index: 0, dir: 'next' });
 	const [theme, setTheme] = useState(() => (THEME_IDS.includes(sp.get('theme')) ? sp.get('theme') : readStoredTheme()));
 	const stored = useMemo(() => readStoredOptions(), []);
-	const wantPeople = queryFlag(sp, 'people', stored.people);
-	const wantRecords = queryFlag(sp, 'records', stored.records);
-	const wantReportingExtra = queryFlag(sp, 'reporting', stored.reporting);
+	// A story template (?story=) decides which sections play and in what order; theme, layout and transition stay the viewer's own choices.
+	const story = storyById(sp.get('story'));
+	const wantPeople = story ? story.detail.people : queryFlag(sp, 'people', stored.people);
+	const wantRecords = story ? story.detail.records : queryFlag(sp, 'records', stored.records);
+	const wantReportingExtra = story ? false : queryFlag(sp, 'reporting', stored.reporting); // a story lists the reporting slide itself
 	const marked = useRef(false);
 	const [fullscreen, setFullscreen] = useState(false);
 	const [layout, setLayout] = useState(() => (LAYOUT_IDS.includes(sp.get('layout')) ? sp.get('layout') : readStoredLayout()));
@@ -123,7 +125,12 @@ export default function PresentationPlayer() {
 	const hideTimer = useRef(null);
 
 	const config = deck.data && deck.data.config;
-	const slides = useMemo(() => (config ? config.slides : []), [config]);
+	const canSeeReporting = allowed('reporting.view') && allowed('employees.view');
+	const slides = useMemo(() => {
+		if (!config) return [];
+		if (!story) return config.slides;
+		return storySlides(story, (section) => section !== 'reporting_structure' || canSeeReporting); // no slide the viewer's role cannot load
+	}, [config, story, canSeeReporting]);
 	const filters = (config && config.filters) || {};
 	const period = config ? resolvePeriod(config.period) : null;
 	const params = useMemo(() => (config && period ? { ...period, ...(filters.teamId ? { team_id: filters.teamId } : {}), ...(filters.projectId ? { project_id: filters.projectId } : {}) } : {}), [config, period && period.from, period && period.to]); // eslint-disable-line react-hooks/exhaustive-deps

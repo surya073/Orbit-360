@@ -375,7 +375,7 @@
 }
 .pc-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
 	gap: var(--space-4);
 }
 .pc-card {
@@ -703,7 +703,8 @@
 		grid-template-columns: 1fr;
 	}
 	.pl__hint {
-		display: none;
+		order: -1;
+		flex: 1 1 100%;
 	}
 }
 
@@ -970,7 +971,7 @@
 	font-weight: var(--p-heading-weight);
 }
 .pres .grid--kpi {
-	grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(380px, 100%), 1fr));
 	gap: 28px;
 }
 .pres .freshness {
@@ -1651,4 +1652,15 @@
 .pactivity {
 	grid-template-rows: repeat(2, minmax(0, 1fr));
 	height: 100%;
+}
+
+/* editor slide rows: handle, number, name and the move/remove buttons wrap instead of running off a phone screen */
+.slide-row {
+	flex-wrap: wrap;
+	row-gap: 6px;
+}
+@media (max-width: 480px) {
+	.slide-row .btn {
+		flex: 1 1 auto;
+	}
 }

@@ -154,12 +154,12 @@ export default function PresentationEditor() {
 							items={slideItems}
 							onReorder={(ids) => setSlides((list) => ids.map((id) => list[slideItems.findIndex((it) => it.id === id)]))}
 							renderItem={(it, { handle, index: i, isFirst, isLast, moveUp, moveDown }) => (
-								<div className="insight" style={{ alignItems: 'center' }}>
+								<div className="insight slide-row" style={{ alignItems: 'center' }}>
 									{handle}
 									<span className="num muted" style={{ width: 20 }}>
 										{i + 1}
 									</span>
-									<span style={{ flex: 1 }}>
+									<span style={{ flex: '1 1 120px', minWidth: 0 }}>
 										<strong>{it.label}</strong>
 										{it.legacy ? <span className="small muted"> · legacy slide</span> : null}
 									</span>

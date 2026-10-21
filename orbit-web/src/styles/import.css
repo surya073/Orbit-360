@@ -234,3 +234,54 @@
 		transition: none;
 	}
 }
+
+/* ---------- column mapping step ---------- */
+.imap {
+	display: grid;
+	gap: var(--space-3);
+}
+.imap__table {
+	display: grid;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+}
+.imap__row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.2fr);
+	align-items: center;
+	gap: var(--space-3);
+	padding: 8px var(--space-3);
+	border-bottom: 1px solid var(--border);
+}
+.imap__row:last-child {
+	border-bottom: 0;
+}
+.imap__row--head {
+	background: var(--surface-2);
+	font-size: var(--fs-xs);
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--text-muted);
+}
+.imap__head,
+.imap__sample {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-weight: 600;
+}
+.imap__sample {
+	font-weight: 400;
+}
+@media (max-width: 640px) {
+	.imap__row {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 4px;
+	}
+	.imap__row--head {
+		display: none;
+	}
+}

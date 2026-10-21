@@ -10,6 +10,9 @@ import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, storeTheme, th
 import { __clearLookupCache } from '../hooks/useLookup';
 import { dashboardRoutes, errBody, mockFetch, okBody, renderWithProviders } from './helpers';
 
+// The first test in this file renders a heavy page (theme gallery / launcher); under a parallel full run that can pass 5 s.
+jest.setTimeout(20000);
+
 // ---- theme tokens ----------------------------------------------------------------------------
 const lum = (hex) => {
 	const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
@@ -188,6 +191,26 @@ describe('presentation center landing page and launcher', () => {
 		expect(people).toBeChecked();
 		await userEvent.click(within(dialog).getByRole('button', { name: 'Start Presentation' }));
 		expect(await screen.findByTestId('where')).toHaveTextContent('/presentations/5/present?theme=obsidian&layout=classic&people=1&records=0&reporting=1');
+	});
+
+	test('a presentation template is chosen separately from the theme: it lists audience and slide order, is remembered, and Start carries it to the viewer', async () => {
+		mockFetch(listRoutes());
+		renderWithProviders(<CenterRoutes />, { route: '/presentations' });
+		await screen.findByRole('heading', { name: 'Board review' });
+		await userEvent.click(screen.getByRole('button', { name: 'Play Presentation' }));
+		const dialog = await screen.findByRole('dialog', { name: 'Choose Your Presentation Experience' });
+		const stories = within(dialog).getByRole('radiogroup', { name: 'Presentation template' });
+		expect(within(stories).getAllByRole('radio')).toHaveLength(6); // "As saved" + the five story templates
+		expect(within(stories).getByRole('radio', { name: /As saved/ })).toBeChecked();
+		const exec = within(stories).getByRole('radio', { name: /Executive Overview/ });
+		expect(exec).toHaveTextContent('For: Leadership and board');
+		expect(within(within(stories).getByRole('list', { name: 'Slides in Executive Overview' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Executive summary', 'Billable hours', 'Project performance', 'Key insights']);
+		await userEvent.click(exec);
+		await userEvent.click(within(dialog).getByRole('radio', { name: /Obsidian Luxe/ })); // a theme on top of the template
+		expect(dialog.querySelector('.pl__hint')).toHaveTextContent(/Executive Overview · Obsidian Luxe theme · Classic layout/); // the summary above Start
+		await userEvent.click(within(dialog).getByRole('button', { name: 'Start Presentation' }));
+		expect(await screen.findByTestId('where')).toHaveTextContent(/theme=obsidian&layout=classic&.*&story=executive$/);
+		expect(window.localStorage.getItem('company360.presentationStory')).toBe('executive');
 	});
 
 	test('Escape closes the launcher and Cancel does too; the theme can be changed before starting without a reload', async () => {

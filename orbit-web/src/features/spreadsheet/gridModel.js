@@ -1,4 +1,5 @@
 import { LOOKUPS } from '../../hooks/useLookup';
+import { safeCell } from '../../utils/columnConfig';
 import { toCsv } from '../../utils/csv';
 import { humanize } from '../../utils/format';
 
@@ -252,9 +253,14 @@ export function matchesFilter(col, filter, value, labelOf) {
 
 // ---- export ---------------------------------------------------------------------------------
 
-/** CSV of the visible rows using the real field names as headers (importable by Sheet Import). */
-export function rowsToCsv(columns, rows, getValue) {
-	return toCsv([columns.map((c) => c.field), ...rows.map((r) => columns.map((c) => toText(getValue(r, c.field))))]);
+/**
+ * CSV of the given rows, one column per entry of `columns` in that order. Headers are the real field names (importable by
+ * Sheet Import) unless `headers: 'labels'` asks for each column's `exportLabel`. Cells that a spreadsheet program would run
+ * as a formula are written as plain text (see utils/columnConfig safeCell).
+ */
+export function rowsToCsv(columns, rows, getValue, { headers = 'fields' } = {}) {
+	const head = columns.map((c) => safeCell(headers === 'labels' ? c.exportLabel || c.label : c.field));
+	return toCsv([head, ...rows.map((r) => columns.map((c) => safeCell(toText(getValue(r, c.field)))))]);
 }
 
 // ---- navigation helpers ----------------------------------------------------------------------

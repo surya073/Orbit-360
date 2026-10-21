@@ -21,6 +21,8 @@ import SheetTabBar from './SheetTabBar';
 import { addTab, loadStore, reconcile, removeTab, renameTab, saveStore } from './tabStore';
 import useSheetFormat from './useSheetFormat';
 import { EDGES, isNumericText, MAX_DECIMALS, mergeEdges, shownDecimals } from './sheetFormat';
+import { applyConfig, configKey, loadConfig, saveConfig } from '../../utils/columnConfig';
+import ColumnConfigDialog from './ColumnConfigDialog';
 import { displayText, rowsToCsv } from './gridModel';
 import SheetGrid from './SheetGrid';
 import SheetShortcuts from './SheetShortcuts';
@@ -73,6 +75,8 @@ const permsOf = (template, user) => {
 /** The sheet for one record type. Remounted per module so each starts clean. */
 function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZoom, onDirty }) {
 	const { notify } = useToast();
+	const { user } = useAuth();
+	const [exportOpen, setExportOpen] = useState(false);
 	// The page belongs to the query it was chosen for, so a new search always starts on page 1
 	// (without first requesting the old query's page N).
 	const [pageSize, setPageSize] = usePageSize('spreadsheet', 50);
@@ -281,7 +285,14 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 	};
 
 	const dataColumns = columns.filter((c) => !c.placeholder);
-	const exportCsv = () => download(`${mod.resource}.csv`, rowsToCsv(dataColumns, view.filter((r) => !r.pristine), (r, f) => r.values[f]));
+	const exportRows = view.filter((r) => !r.pristine);
+	const colKey = configKey(user && (user.id || user.email), mod.resource, 'export');
+	const exportCsv = () => setExportOpen(true);
+	const downloadExport = ({ config, headers, remember }) => {
+		if (remember) saveConfig(colKey, config, dataColumns);
+		download(`${mod.resource}.csv`, rowsToCsv(applyConfig(config, dataColumns), exportRows, (r, f) => r.values[f], { headers }));
+		setExportOpen(false);
+	};
 	const sortCol = sort && columns.find((c) => c.field === sort.field);
 	const { status } = data.saveState;
 	const hasRowErrors = Object.keys(state.errors).length > 0;
@@ -320,6 +331,7 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 
 	return (
 		<div className="sheet-workspace" onKeyDown={onWorkspaceKeyDown}>
+			{exportOpen ? <ColumnConfigDialog columns={dataColumns} initial={loadConfig(colKey, dataColumns)} previewRows={exportRows} getValue={(r, f) => r.values[f]} rowCount={exportRows.length} onConfirm={downloadExport} onClose={() => setExportOpen(false)} /> : null}
 			<SheetToolbar
 				ref={searchRef}
 				title={mod.title}

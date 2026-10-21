@@ -98,3 +98,73 @@ export function storeLayout(id) {
 		/* the choice just is not remembered */
 	}
 }
+
+/**
+ * Story templates: WHAT a presentation says and in which order, independent of how it looks (theme, layout and transition
+ * are chosen separately, so any story works with any theme). Every slide is built from live data by the same section
+ * renderers the dashboard uses; a story contains no numbers or people of its own. `detail` switches on the extra slides built
+ * from real records (people, projects, the saved reporting tree). Slides the viewer may not see are left out by the player.
+ */
+export const STORY_SAVED = 'saved';
+export const STORY_TEMPLATES = [
+	{
+		id: 'executive',
+		name: 'Executive Overview',
+		audience: 'Leadership and board',
+		purpose: 'A concise summary: headline numbers, where time goes, which projects need attention and what to decide.',
+		slides: ['executive_summary', 'billable_hours', 'project_performance', 'key_insights'],
+		detail: { people: false, records: false, reporting: false },
+	},
+	{
+		id: 'team_performance',
+		name: 'Team Performance Review',
+		audience: 'Managers and HR',
+		purpose: 'How the team is made up, who is present, who is on leave and how much approved work was delivered.',
+		slides: ['employee_overview', 'attendance_leave', 'billable_hours', 'key_insights'],
+		detail: { people: true, records: false, reporting: false },
+	},
+	{
+		id: 'project_portfolio',
+		name: 'Project Portfolio Review',
+		audience: 'Delivery and programme leads',
+		purpose: 'Project status and workload against estimates, product work in flight and the records behind them.',
+		slides: ['project_performance', 'billable_hours', 'product_development', 'key_insights'],
+		detail: { people: false, records: true, reporting: false },
+	},
+	{
+		id: 'people_reporting',
+		name: 'People and Reporting Structure',
+		audience: 'New joiners, HR and leadership',
+		purpose: 'Who is on the team, their roles and profiles, and the saved reporting tree.',
+		slides: ['employee_overview', 'reporting_structure', 'attendance_leave'],
+		detail: { people: true, records: false, reporting: true },
+	},
+	{
+		id: 'company_360',
+		name: 'Comprehensive Company 360',
+		audience: 'Annual and quarterly reviews',
+		purpose: 'The whole picture: people, attendance, time, projects, product work, AI usage and the key insights.',
+		slides: ['executive_summary', 'employee_overview', 'attendance_leave', 'billable_hours', 'project_performance', 'product_development', 'ai_usage', 'reporting_structure', 'key_insights'],
+		detail: { people: true, records: true, reporting: true },
+	},
+];
+export const storyById = (id) => STORY_TEMPLATES.find((s) => s.id === id) || null;
+/** The deck slides a story plays: its sections in its order (a viewer without access to some data drops those via `allow`). */
+export const storySlides = (story, allow = () => true) => story.slides.filter(allow).map((section) => ({ type: 'section', section }));
+
+const STORY_KEY = 'company360.presentationStory';
+export function readStoredStory() {
+	try {
+		const v = window.localStorage.getItem(STORY_KEY);
+		return storyById(v) ? v : STORY_SAVED;
+	} catch {
+		return STORY_SAVED;
+	}
+}
+export function storeStory(id) {
+	try {
+		if (id === STORY_SAVED || storyById(id)) window.localStorage.setItem(STORY_KEY, id);
+	} catch {
+		/* the choice just is not remembered */
+	}
+}

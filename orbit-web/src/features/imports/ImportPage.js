@@ -13,7 +13,7 @@ import features from '../../config/features';
 import DataEntryModes from '../spreadsheet/DataEntryModes';
 import useTemplates from '../../hooks/useTemplates';
 import { importsService } from '../../services/importsService';
-import { csvToRecords, toCsv } from '../../utils/csv';
+import { autoMapHeaders, duplicateTargets, readCsv, recordsFromMapping, toCsv } from '../../utils/csv';
 import { humanize } from '../../utils/format';
 import Select from '../../components/forms/Select';
 
@@ -53,6 +53,108 @@ const countBy = (results) => {
 
 const STEPS = ['Choose file', 'Review', 'Import'];
 
+/** Required fields of the template that no header is mapped to. */
+const missingRequired = (template, mapping) => template.columns.filter((c) => c.required && !mapping.includes(c.field)).map((c) => c.field);
+
+/**
+ * Shown when a file's headers do not line up with the template: each header can be matched to a field or left out. Nothing
+ * is sent anywhere until the user continues; the server still validates every row afterwards.
+ */
+function MappingPanel({ template, pending, onChange, onContinue, onCancel, busy }) {
+	const fields = columnsOf(template);
+	const { headers, cells, mapping } = pending;
+	const missing = missingRequired(template, mapping);
+	const dupes = duplicateTargets(mapping);
+	const blocked = missing.length > 0 || dupes.length > 0 || mapping.every((m) => !m);
+	const sample = recordsFromMapping(cells.slice(0, 3), mapping);
+	const used = mapping.filter(Boolean);
+	return (
+		<section className="isetup__card imap" aria-label="Match the columns" style={{ marginTop: 'var(--space-4)' }}>
+			<h2 className="isetup__title">
+				<span aria-hidden="true">
+					<Icon name="check" size={14} />
+				</span>{' '}
+				Match your columns
+			</h2>
+			<p className="small muted">Some column names in {pending.file.name} do not match the {humanize(template.module)} template. Choose the field each column belongs to, or leave a column out. {cells.length} data rows.</p>
+			<div className="imap__table" role="table" aria-label="Column mapping">
+				<div className="imap__row imap__row--head" role="row">
+					<span role="columnheader">Column in your file</span>
+					<span role="columnheader">First value</span>
+					<span role="columnheader">Import as</span>
+				</div>
+				{headers.map((h, i) => (
+					<div className="imap__row" role="row" key={`${h}-${i}`}>
+						<span role="cell" className="imap__head">
+							{h || <em className="muted">(blank)</em>}
+						</span>
+						<span role="cell" className="small muted imap__sample">
+							{(cells[0] && cells[0][i]) || '—'}
+						</span>
+						<span role="cell">
+							<Select aria-label={`Field for column ${h || i + 1}`} value={mapping[i] || ''} onChange={(e) => onChange(i, e.target.value || null)}>
+								<option value="">Don’t import</option>
+								{fields.map((f) => (
+									<option key={f} value={f}>
+										{f}
+										{template.columns.some((c) => c.field === f && c.required) ? ' (required)' : ''}
+										{used.includes(f) && mapping[i] !== f ? ' (already used)' : ''}
+									</option>
+								))}
+							</Select>
+						</span>
+					</div>
+				))}
+			</div>
+			{missing.length ? (
+				<p role="alert" className="banner banner--warning">
+					Required {missing.length === 1 ? 'field' : 'fields'} not matched: {missing.join(', ')}.
+				</p>
+			) : null}
+			{dupes.length ? (
+				<p role="alert" className="banner banner--warning">
+					More than one column is set to {dupes.join(', ')}. Each field can take one column.
+				</p>
+			) : null}
+			{!blocked && sample.length ? (
+				<div className="imap__preview">
+					<h3 className="cc-preview__title">What will be sent for checking (first {sample.length} rows)</h3>
+					<div className="cc-preview">
+						<table>
+							<thead>
+								<tr>
+									{used.map((f) => (
+										<th key={f} scope="col">
+											{f}
+										</th>
+									))}
+								</tr>
+							</thead>
+							<tbody>
+								{sample.map((r, i) => (
+									<tr key={i}>
+										{used.map((f) => (
+											<td key={f}>{r[f] || <span className="muted">—</span>}</td>
+										))}
+									</tr>
+								))}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			) : null}
+			<div className="page-header__actions">
+				<Button variant="primary" onClick={onContinue} disabled={blocked || busy} loading={busy}>
+					Check the rows
+				</Button>
+				<Button onClick={onCancel} disabled={busy}>
+					Choose another file
+				</Button>
+			</div>
+		</section>
+	);
+}
+
 /**
  * CSV import. Rows are validated by the server in bounded batches and nothing is saved until
  * "Import valid rows". Re-sending a batch never creates duplicates (the server is idempotent).
@@ -70,6 +172,7 @@ export default function ImportPage() {
 	const [results, setResults] = useState({}); // rowNumber -> latest server result
 	const [choices, setChoices] = useState({}); // rowNumber -> resolution
 	const [unmapped, setUnmapped] = useState([]);
+	const [pending, setPending] = useState(null); // a chosen file whose headers still need matching: { file, headers, cells, mapping }
 	const [final, setFinal] = useState(null);
 	const [fileName, setFileName] = useState('');
 	const running = useRef(false);
@@ -126,6 +229,7 @@ export default function ImportPage() {
 		setChoices({});
 		setFinal(null);
 		setRecords([]);
+		setPending(null);
 		setFileName('');
 	};
 
@@ -134,29 +238,53 @@ export default function ImportPage() {
 		e.target.value = '';
 		if (!file || !template) return;
 		setFileName(file.name);
+		setPending(null);
 		guard(async () => {
 			if (!/\.csv$/i.test(file.name)) throw new Error('Only .csv files are supported. Excel (.xlsx) import is not available yet.');
 			if (file.size > MAX_FILE_BYTES) throw new Error('File is larger than 2 MB.');
-			const text = await file.text();
-			const parsed = csvToRecords(text, columnsOf(template));
-			if (parsed.records.length > MAX_ROWS) throw new Error(`The file has ${parsed.records.length} rows; at most ${MAX_ROWS} can be imported at once.`);
-			const rows = parsed.records.map((data, i) => ({ rowNumber: i + 1, data }));
-			setRecords(rows);
-			setUnmapped(parsed.unmapped);
-			setResults({});
-			setChoices({});
-			setFinal(null);
-			hasPreview.current = false;
-			const sha = await sha256Hex(await file.arrayBuffer());
-			const { data: created } = await importsService.createJob({ module, fileName: file.name, fileType: 'csv', totalRows: rows.length, conflictPolicy: policy, ...(team ? { teamId: team } : {}), ...(sha ? { fileSha256: sha } : {}) });
-			setJob(created);
-			if (created.possibleDuplicateOfJobs.length) setMessage({ text: 'This exact file was uploaded before for this team. Check that you are not importing it twice.' });
-			await inBatches(rows, created.batchSize, 'Validating', async (batch) => {
-				const { data } = await importsService.preview(created.id, batch);
-				merge(data.rows);
-			});
-			setPhase('previewed');
+			const { headers, cells } = readCsv(await file.text());
+			if (cells.length > MAX_ROWS) throw new Error(`The file has ${cells.length} rows; at most ${MAX_ROWS} can be imported at once.`);
+			const mapping = autoMapHeaders(headers, columnsOf(template));
+			// Straight to validation unless matching could matter: a required field has no column, or a column has no field while
+			// a template field is still uncovered (it may be a differently named version of it). A harmless extra column is just ignored.
+			const uncovered = template.columns.filter((c) => !mapping.includes(c.field));
+			if (missingRequired(template, mapping).length === 0 && (uncovered.length === 0 || mapping.every(Boolean))) {
+				setPhase('idle');
+				return validate(file, headers, cells, mapping);
+			}
+			setPending({ file, headers, cells, mapping });
+			setPhase('idle');
 		});
+	};
+
+	const validate = async (file, headers, cells, mapping) => {
+		const rows = recordsFromMapping(cells, mapping).map((data, i) => ({ rowNumber: i + 1, data }));
+		setRecords(rows);
+		setUnmapped(headers.filter((_, i) => !mapping[i]));
+		setResults({});
+		setChoices({});
+		setFinal(null);
+		hasPreview.current = false;
+		const sha = await sha256Hex(await file.arrayBuffer());
+		const { data: created } = await importsService.createJob({ module, fileName: file.name, fileType: 'csv', totalRows: rows.length, conflictPolicy: policy, ...(team ? { teamId: team } : {}), ...(sha ? { fileSha256: sha } : {}) });
+		setJob(created);
+		if (created.possibleDuplicateOfJobs.length) setMessage({ text: 'This exact file was uploaded before for this team. Check that you are not importing it twice.' });
+		await inBatches(rows, created.batchSize, 'Validating', async (batch) => {
+			const { data } = await importsService.preview(created.id, batch);
+			merge(data.rows);
+		});
+		setPhase('previewed');
+	};
+
+	const confirmMapping = () =>
+		guard(async () => {
+			const { file, headers, cells, mapping } = pending;
+			await validate(file, headers, cells, mapping);
+			setPending(null);
+		});
+	const cancelMapping = () => {
+		setPending(null);
+		setFileName('');
 	};
 
 	const saveChoices = () =>
@@ -196,7 +324,7 @@ export default function ImportPage() {
 		});
 
 	const busy = phase === 'working';
-	const locked = busy || phase === 'previewed' || phase === 'committed';
+	const locked = busy || Boolean(pending) || phase === 'previewed' || phase === 'committed';
 	const canCommit = phase === 'previewed' && (counts.valid || 0) + (counts.conflict || 0) + (counts.failed || 0) > 0;
 
 	return (
@@ -254,7 +382,7 @@ export default function ImportPage() {
 								<Icon name={fileName ? 'check' : 'upload'} size={26} />
 							</span>
 							<b className="idrop__title">{fileName || (template ? 'Drop a CSV here, or click to browse' : 'Choose a data type first')}</b>
-							<small>{template ? 'Headers must match the template. Max 2 MB, up to 5,000 rows.' : 'The template and checks depend on the data type.'}</small>
+							<small>{template ? 'Columns are matched to the template by name; you can match any that differ before checking. Max 2 MB, up to 5,000 rows.' : 'The template and checks depend on the data type.'}</small>
 						</div>
 						<Button icon="download" disabled={!template} onClick={() => downloadTemplate(template)}>
 							Download template
@@ -263,6 +391,8 @@ export default function ImportPage() {
 				</div>
 				{!features.excelImport ? <p className="small muted">CSV files only. Excel (.xlsx) import needs a spreadsheet parser that has not been added yet. Rows can refer to people and projects by employee_code and project_code.</p> : null}
 			</StateView>
+
+			{pending && template ? <MappingPanel template={template} pending={pending} busy={busy} onChange={(i, field) => setPending((p) => ({ ...p, mapping: p.mapping.map((m, j) => (j === i ? field : m)) }))} onContinue={confirmMapping} onCancel={cancelMapping} /> : null}
 
 			<div aria-live="polite">
 				{progress ? (

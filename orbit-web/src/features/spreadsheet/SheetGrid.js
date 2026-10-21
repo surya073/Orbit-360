@@ -2,12 +2,15 @@ import React, { forwardRef, memo, useCallback, useEffect, useId, useImperativeHa
 import { createPortal } from 'react-dom';
 import Icon from '../../components/common/Icon';
 import CellEditor from './CellEditor';
+import { evaluateFormula } from './formula';
 import { columnLetter, displayText, jumpTarget, parseTsv, rangeLabel, toTsv } from './gridModel';
 import { cellStyle, formatNumberText, linkFor, zoomIn, zoomOut } from './sheetFormat';
 
 const WIDTHS = { text: 240, str: 170, enum: 130, bool: 90, date: 120, datetime: 170, int: 110, num: 110, id: 190 };
 const MIN_WIDTH = 60;
 const MAX_PASTE_ROWS = 500;
+const WINDOW_MIN = 30; // rows always rendered from the top (also what a zero-height test viewport shows)
+const OVERSCAN = 15;
 const defaultWidth = (c) => (c.fk ? 200 : WIDTHS[c.type] || 160);
 const ROW_HEIGHT = { compact: 28, comfortable: 38 };
 
@@ -32,10 +35,10 @@ function saveWidths(k, w) {
 
 const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom, activeC, editingC, editInitial, readOnly, fmt, handlers }) {
 	return (
-		<div role="row" aria-rowindex={r + 2} className={`sheet__row ${row.isNew ? 'is-new' : ''} ${r % 2 ? 'is-odd' : ''}`.trim()}>
-			<div role="rowheader" className={`sheet__gutter ${c0 !== -1 ? 'is-selected' : ''}`.trim()} title={row.isNew ? 'New, unsaved record' : `Record ${row.id}`} onMouseDown={(e) => handlers.rowHeader(r, e)}>
+		<div role="row" aria-rowindex={r + 2} className={`sheet__row ${row.isNew && !row.pristine ? 'is-new' : ''} ${r % 2 ? 'is-odd' : ''}`.trim()}>
+			<div role="rowheader" className={`sheet__gutter ${c0 !== -1 ? 'is-selected' : ''}`.trim()} title={row.isNew ? (row.pristine ? undefined : 'New, unsaved record') : `Record ${row.id}`} onMouseDown={(e) => handlers.rowHeader(r, e)}>
 				{row.number}
-				{row.isNew ? <i className="sheet__newdot" aria-label="New row" /> : null}
+				{row.isNew && !row.pristine ? <i className="sheet__newdot" aria-label="New row" /> : null}
 				{row.rowError ? <i className="sheet__rowerr" role="img" aria-label={row.rowError} title={row.rowError} /> : null}
 			</div>
 			{columns.map((col, c) => {
@@ -44,7 +47,7 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom,
 				const active = c === activeC;
 				const dirty = row.dirty[col.field];
 				const error = row.errors[col.field];
-				const locked = readOnly || (!row.isNew && col.immutable);
+				const locked = readOnly || col.locked || (!row.isNew && col.immutable);
 				const cls = ['sheet__cell', f && f.wrap && 'is-wrap', f && f.clip && 'is-clip', f && f.note && 'has-note', f && f.fill && 'has-fill', selected && 'is-selected', selected && rTop && 'edge-t', selected && rBottom && 'edge-b', selected && c === c0 && 'edge-l', selected && c === c1 && 'edge-r', active && 'is-active', dirty && 'is-dirty', error && 'has-error', locked && 'is-locked', col.type === 'int' || col.type === 'num' ? 'is-num' : ''].filter(Boolean).join(' ');
 				const text = f && f.nf ? formatNumberText(displayText(col, row.values[col.field], labelOf), f.nf) : displayText(col, row.values[col.field], labelOf);
 				const shown = text || (f && f.link ? f.link : '');
@@ -154,7 +157,8 @@ function ContextMenu({ at, items, onClose }) {
  * to edit, Delete clears, Ctrl+C / Ctrl+V copy and paste tab-separated text, Ctrl+Z / Ctrl+Y undo
  * and redo, Ctrl+A selects all. While a cell is being edited the editor owns the keyboard.
  */
-const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows, onSetCells, onAddRows, onNotice, onUndo, onRedo, sort, onSort, onSelectRows, onSelection, onDeleteRows, density = 'compact', storageKey, label, formats, zoom = 1, onZoom, onFormatShortcut }, ref) {
+const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOnly, canAddRows, onSetCells, onAddRows, onNotice, onUndo, onRedo, sort, onSort, onSelectRows, onSelection, onDeleteRows, density = 'compact', storageKey, label, formats, zoom = 1, onZoom, onFormatShortcut, onRenameColumn }, ref) {
+	const [renaming, setRenaming] = useState(-1);
 	const uid = useId().replace(/:/g, '');
 	const scrollRef = useRef(null);
 	const gridRef = useRef(null);
@@ -216,11 +220,50 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 	const cellId = useCallback((r, c) => `${uid}-${r}-${c}`, [uid]);
 	const activeId = rowCount && colCount ? cellId(sel.r1, sel.c1) : undefined;
 
+	// Only the rows near the viewport are in the DOM (the sheet offers 500 rows); spacers keep the scroll height.
+	const [win, setWin] = useState({ start: 0, end: WINDOW_MIN });
+	const rowPx = (ROW_HEIGHT[density] || ROW_HEIGHT.compact) * zoom;
+	const syncWindow = useCallback(() => {
+		const node = scrollRef.current;
+		if (!node) return;
+		const first = Math.floor(node.scrollTop / rowPx);
+		const count = Math.ceil(node.clientHeight / rowPx);
+		const next = { start: Math.max(0, first - OVERSCAN), end: Math.max(WINDOW_MIN, first + count + OVERSCAN) };
+		setWin((w) => (w.start === next.start && w.end === next.end ? w : next));
+	}, [rowPx]);
+	useEffect(() => {
+		const node = scrollRef.current;
+		if (!node) return undefined;
+		let frame = 0;
+		const onScroll = () => {
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(syncWindow);
+		};
+		node.addEventListener('scroll', onScroll, { passive: true });
+		window.addEventListener('resize', onScroll);
+		syncWindow();
+		return () => {
+			cancelAnimationFrame(frame);
+			node.removeEventListener('scroll', onScroll);
+			window.removeEventListener('resize', onScroll);
+		};
+	}, [syncWindow]);
+
 	// Scroll the active cell into view (sticky header/gutter are accounted for by CSS scroll-padding).
 	useLayoutEffect(() => {
 		if (!activeId) return;
+		const r = sel.r1;
+		// A row outside the window is not in the DOM yet: bring it in, then scroll to it.
+		if (r < win.start || r >= win.end) {
+			const node = scrollRef.current;
+			setWin({ start: Math.max(0, r - OVERSCAN), end: Math.max(WINDOW_MIN, r + OVERSCAN * 2) });
+			if (node) node.scrollTop = Math.max(0, r * rowPx - node.clientHeight / 2);
+			return;
+		}
 		const el = document.getElementById(activeId);
 		if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		// Runs only when the active cell changes: scrolling away by wheel or scrollbar moves the window and must not snap back to the selection.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeId]);
 
 	const focusGrid = useCallback(() => {
@@ -273,6 +316,16 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 			commit: (r, c, text, nav) => {
 				const { rows: rs, columns: cs, onSetCells: set, onNotice: notice } = live.current;
 				setEditing(null);
+				// "=SUM(D2:D9)*2": a typed formula is worked out now and its result is what gets stored (records hold values, not formulas)
+				if (typeof text === 'string' && text.trim().startsWith('=') && text.trim().length > 1) {
+					const out = evaluateFormula(text, (rr, cc) => (rs[rr] && cs[cc] ? rs[rr].values[cs[cc].field] : undefined), { rows: rs.length, cols: cs.length });
+					if (!out.ok) {
+						notice(`${out.code} ${out.message}`);
+						requestAnimationFrame(focusGrid);
+						return;
+					}
+					text = out.text;
+				}
 				const row = rs[r];
 				if (row) {
 					const { rejected } = set([{ key: row.key, field: cs[c].field, text }]);
@@ -619,24 +672,49 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 					{columns.map((col, c) => {
 						const dir = sort && sort.field === col.field ? sort.dir : null;
 						const inSel = c >= ca && c <= cb;
+						const renamable = Boolean(onRenameColumn) && (col.custom || (col.placeholder && !col.locked));
 						return (
-							<div key={col.field} role="columnheader" aria-colindex={c + 2} aria-sort={dir ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={`sheet__col ${inSel ? 'is-selected' : ''}`.trim()} style={{ width: `calc(var(--col-${c}) * var(--sheet-zoom, 1))` }} onMouseDown={(e) => selectColumn(c, e)}>
+							<div key={col.field} role="columnheader" aria-colindex={c + 2} aria-sort={dir ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={`sheet__col ${inSel ? 'is-selected' : ''} ${col.placeholder ? 'is-blank' : ''}`.trim()} style={{ width: `calc(var(--col-${c}) * var(--sheet-zoom, 1))` }} onMouseDown={(e) => selectColumn(c, e)}>
 								<span className="sheet__letter" aria-hidden="true">
 									{columnLetter(c)}
 								</span>
-								<span className="sheet__name" title={col.label + (col.required ? ' (required)' : '')}>
-									{col.label}
-									{col.required ? <span className="sheet__req" aria-hidden="true"> *</span> : null}
-								</span>
-								<button type="button" className={`sheet__sort ${dir ? 'is-on' : ''}`} aria-label={`Sort by ${col.label}${dir ? `, currently ${dir === 'asc' ? 'ascending' : 'descending'}` : ''}`} onClick={() => onSort(col.field)}>
+								{renaming === c ? (
+									<input
+										className="sheet__rename"
+										aria-label={col.placeholder ? 'Name for the new column' : `Rename column ${col.label}`}
+										defaultValue={col.label}
+										maxLength={80}
+										autoFocus
+										onMouseDown={(e) => e.stopPropagation()}
+										onKeyDown={(e) => {
+											e.stopPropagation();
+											if (e.key === 'Enter') {
+												onRenameColumn(col, e.currentTarget.value);
+												setRenaming(-1);
+											} else if (e.key === 'Escape') setRenaming(-1);
+										}}
+										onBlur={(e) => {
+											if (renaming === c) onRenameColumn(col, e.currentTarget.value);
+											setRenaming(-1);
+										}}
+									/>
+								) : (
+									<span className="sheet__name" title={col.placeholder ? (renamable ? 'Double-click to name this column, or just type in it' : '') : col.label + (col.required ? ' (required)' : '')} onDoubleClick={renamable ? () => setRenaming(c) : undefined}>
+										{col.label}
+										{col.required ? <span className="sheet__req" aria-hidden="true"> *</span> : null}
+									</span>
+								)}
+								{col.placeholder ? null : <button type="button" className={`sheet__sort ${dir ? 'is-on' : ''}`} aria-label={`Sort by ${col.label}${dir ? `, currently ${dir === 'asc' ? 'ascending' : 'descending'}` : ''}`} onClick={() => onSort(col.field)}>
 									<Icon name="chevronDown" size={12} className={dir === 'asc' ? 'sheet__flip' : ''} />
-								</button>
+								</button>}
 								<span className="sheet__resize" role="separator" aria-orientation="vertical" aria-label={`Resize ${col.label} column`} tabIndex={-1} onPointerDown={(e) => startResize(c, e)} onKeyDown={(e) => resizeByKey(c, e)} />
 							</div>
 						);
 					})}
 				</div>
-				{rows.map((row, r) => {
+				{win.start > 0 ? <div aria-hidden="true" style={{ height: win.start * rowPx }} /> : null}
+				{rows.slice(win.start, win.end).map((row, i) => {
+					const r = win.start + i;
 					const inRows = r >= ra && r <= rb;
 					return (
 						<Row
@@ -658,6 +736,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 						/>
 					);
 				})}
+				{win.end < rowCount ? <div aria-hidden="true" style={{ height: (rowCount - win.end) * rowPx }} /> : null}
 			</div>
 			{menu
 				? createPortal(

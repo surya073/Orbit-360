@@ -15,6 +15,8 @@ import { REPORT_SECTIONS } from '../../config/constants';
 import { ROUTES } from '../../config/routes';
 import useApiResource from '../../hooks/useApiResource';
 import { presentationsService } from '../../services/presentationsService';
+import { DECK_TEMPLATES, layoutById, storeLayout } from './presentationTemplates';
+import { storeTheme, storeTransition, themeById } from './presentationThemes';
 import Select from '../../components/forms/Select';
 
 const LABEL = Object.fromEntries(REPORT_SECTIONS.map((s) => [s.key, s.label]));
@@ -54,6 +56,17 @@ export default function PresentationEditor() {
 		setSlides(d.config.slides || []);
 	}, [existing.data]);
 
+	// A template fills in a sensible set of sections and remembers its theme, layout and transition for playing.
+	const [tplId, setTplId] = useState('');
+	const applyTemplate = (tpl) => {
+		setTplId(tpl.id);
+		setSlides(tpl.slides.map((section) => ({ type: 'section', section })));
+		setTitle((cur) => (cur.trim() === '' || DECK_TEMPLATES.some((x) => x.title === cur) ? tpl.title : cur));
+		storeTheme(tpl.theme);
+		storeLayout(tpl.layout);
+		storeTransition(tpl.transition);
+	};
+
 	const included = new Set(slides.filter((s) => s.type === 'section').map((s) => s.section));
 	const available = REPORT_SECTIONS.filter((s) => !included.has(s.key));
 	const slideItems = slides.map((s, i) => ({ id: s.type === 'section' ? `section-${s.section}` : `${s.type}-${i}`, label: slideLabel(s), legacy: s.type !== 'section' }));
@@ -83,6 +96,22 @@ export default function PresentationEditor() {
 			<PageHeader title={editing ? 'Edit presentation' : 'New presentation'} description="Choose what to show, for which period and scope" />
 			<StateView res={editing ? existing : { status: 'success' }} loadingLines={5}>
 				<form onSubmit={save} className="stack" noValidate>
+					{!editing ? (
+						<Card title="Start from a template" subtitle="Pick a layout, colour theme and set of slides that suit the occasion. You can still change every slide below.">
+							<div className="etpl-grid" role="radiogroup" aria-label="Template">
+								{DECK_TEMPLATES.map((tpl) => (
+									<button key={tpl.id} type="button" role="radio" aria-checked={tplId === tpl.id} className={`etpl ${tplId === tpl.id ? 'is-selected' : ''}`.trim()} onClick={() => applyTemplate(tpl)}>
+										<span className="etpl__swatch" style={{ background: `linear-gradient(135deg, ${themeById(tpl.theme).swatches[0]}, ${themeById(tpl.theme).swatches[2]})` }} aria-hidden="true" />
+										<b>{tpl.name}</b>
+										<small>{tpl.description}</small>
+										<em>
+											{tpl.slides.length} slides · {layoutById(tpl.layout).label} layout
+										</em>
+									</button>
+								))}
+							</div>
+						</Card>
+					) : null}
 					{error ? (
 						<p role="alert" className="banner banner--error">
 							{error}

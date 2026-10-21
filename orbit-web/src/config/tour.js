@@ -34,7 +34,7 @@ const NAV_COPY = {
 
 const FIXED = {
 	search: { target: 'search', icon: 'search', title: 'Find anything, fast', body: 'Search employees, projects, product items and pages from anywhere.', hint: 'Press Ctrl K (⌘K on Mac) to open it without the mouse.' },
-	appearance: { target: 'appearance', icon: 'palette', title: 'Make it yours', body: 'Settings is where you pick one of seven themes, an icon style and your dashboard layout. They apply instantly and are remembered on this device.' },
+	appearance: { target: 'appearance', icon: 'palette', title: 'Make it yours', body: 'Settings sits at the foot of the sidebar. Pick one of 29 themes, your own accent colour, fonts and layout; they apply instantly and are remembered on this device. Access & Permissions lives inside Settings too.' },
 	account: { target: 'account', icon: 'user', title: 'Your account', body: 'Who you are signed in as, at the bottom of the sidebar. Your profile, settings and sign-out are in its menu, and you can replay this tour from there whenever you like.' },
 };
 
@@ -43,7 +43,9 @@ const FIXED = {
  * rules as the navigation), then search, appearance and account. `can(permissionKey)` decides.
  */
 export function buildSteps(can) {
-	const steps = visibleNav(can).map((n) => {
+	const steps = visibleNav(can)
+		.filter((n) => n.label !== 'Settings') // Settings has its own step below
+		.map((n) => {
 		const copy = NAV_COPY[n.label] || { icon: n.icon, title: n.label, body: '' };
 		return {
 			id: navTarget(n.label),

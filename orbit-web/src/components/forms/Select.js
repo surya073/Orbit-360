@@ -47,11 +47,19 @@ export default function Select({ children, value, defaultValue, onChange, onKeyD
 	useLayoutEffect(() => {
 		if (!open) return undefined;
 		measure();
+		// Escape closes the list wherever focus is (the trigger does not always hold it, e.g. after a pointer-only open).
+		const escape = (e) => {
+			if (e.key !== 'Escape') return;
+			e.preventDefault();
+			setOpen(false);
+		};
 		window.addEventListener('resize', measure);
 		window.addEventListener('scroll', measure, true);
+		document.addEventListener('keydown', escape);
 		return () => {
 			window.removeEventListener('resize', measure);
 			window.removeEventListener('scroll', measure, true);
+			document.removeEventListener('keydown', escape);
 		};
 	}, [open, measure]);
 	useEffect(() => {

@@ -20,7 +20,7 @@ import ThemePreview from './ThemePreview';
 
 const FK = ['team_id'];
 
-export const presentUrl = ({ id, theme, people, records, reporting }) => `${ROUTES.present(id)}?theme=${theme}&people=${people ? 1 : 0}&records=${records ? 1 : 0}&reporting=${reporting ? 1 : 0}`;
+export const presentUrl = ({ id, theme, layout = 'classic', people, records, reporting }) => `${ROUTES.present(id)}?theme=${theme}&layout=${layout}&people=${people ? 1 : 0}&records=${records ? 1 : 0}&reporting=${reporting ? 1 : 0}`;
 
 /**
  * Executive presentation center: a studio-style landing page. Saved decks the caller may open

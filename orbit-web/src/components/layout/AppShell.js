@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { TourProvider } from '../../app/providers/TourProvider';
 import LoadingState from '../feedback/LoadingState';
 import { ROUTES } from '../../config/routes';
-import useScrollReveal from '../../hooks/useScrollReveal';
+import useBentoReveal, { PAGE_SELECTOR } from '../../hooks/useBentoReveal';
 import AppHeader from '../navigation/AppHeader';
 import BackToTop from './BackToTop';
 import SideNav from '../navigation/SideNav';
@@ -21,7 +21,8 @@ export default function AppShell() {
 	const { pathname } = useLocation();
 	// The spreadsheet and the reporting-structure builder are workspaces: it fills the viewport under the header instead of scrolling the page.
 	const workspace = pathname === ROUTES.spreadsheet || pathname === ROUTES.reporting;
-	useScrollReveal('#main', [pathname]);
+	// Cards and tables of every page animate in one by one as they scroll into view (the dashboard and module pages run their own).
+	useBentoReveal('#main', [pathname], PAGE_SELECTOR, '.dash, .mod');
 	// Which side the sidebar docks to (this device only).
 	const [side, setSide] = useState(readSide);
 	const changeSide = useCallback((next) => {

@@ -163,7 +163,93 @@ const assignments = [
 	['1', '1', 'Tech lead', 60], ['1', '2', 'Delivery manager', 40], ['3', '4', 'QA engineer', 100], ['3', '5', 'Backend engineer', 80], ['5', '7', 'Frontend engineer', 100], ['6', '12', 'Security engineer', 50], ['2', '9', 'Campaign owner', 30],
 ].map(([proj, emp, role, alloc], i) => ({ ROWID: String(i + 1), project_id: proj, employee_id: emp, role_in_project: role, allocation_percent: alloc, is_active: true, start_date: '2026-09-01', end_date: null, _emp: nameOf(emp), _project: projectName(proj) }));
 
-function route(method, p, url) {
+// ---- more sample data (deterministic) so lists, charts, paging and search have something to work with ----
+{
+	const more = [
+		['Mira Joshi', 'UX Designer', 'active', '7', '2023-02-13', '8'], ['Nikhil Rao', 'Backend Engineer', 'active', '8', '2022-08-29', '4'], ['Omar Haddad', 'Data Engineer', 'active', '8', '2021-05-17', '4'],
+		['Priya Shah', 'Scrum Master', 'active', '7', '2022-10-03', '2'], ['Quentin Moore', 'Account Manager', 'active', '9', '2020-09-14', '9'], ['Rhea Kapoor', 'QA Analyst', 'active', '8', '2024-01-08', '4'],
+		['Sam Okafor', 'Support Lead', 'on_leave', '9', '2021-12-06', '11'], ['Tara Nguyen', 'Frontend Engineer', 'active', '7', '2023-09-18', '7'], ['Uday Verma', 'Solutions Architect', 'active', '8', '2019-11-25', ''],
+		['Vera Petrova', 'Product Designer', 'active', '7', '2024-03-04', '8'], ['Waleed Khan', 'Security Engineer', 'active', '8', '2022-04-11', '6'], ['Xena Lopez', 'Recruiter', 'active', '9', '2023-06-19', '11'],
+		['Yusuf Demir', 'Mobile Engineer', 'active', '7', '2022-02-21', '7'], ['Zoya Fernandes', 'Business Analyst', 'inactive', '9', '2020-06-01', '9'],
+	];
+	more.forEach(([full_name, job_role, employment_status, primary_team_id, joining_date, boss], i) => {
+		const id = String(people.length + 1);
+		people.push({ ROWID: id, full_name, employee_code: 'E-' + (112 + i), job_role, employment_status, primary_team_id, joining_date, ...(boss ? { reports_to_employee_id: boss } : {}) });
+	});
+	[['Nova CRM Integration', 'PRJ-NOVA', '7', 'active', 220], ['Analytics Warehouse', 'PRJ-WH', '8', 'active', 340], ['Brand Refresh', 'PRJ-BRAND', '9', 'completed', 90]].forEach(([project_name, project_code, team_id, current_status, estimated_hours], i) => {
+		projects.push({ ROWID: String(projects.length + 1), project_name, project_code, team_id, current_status, estimated_hours });
+	});
+	const cats = ['development', 'testing', 'meetings', 'design', 'analysis', 'devops'];
+	for (let i = 0; i < 40; i++) {
+		const emp = String((i * 7) % people.length + 1);
+		const proj = String((i * 3) % projects.length + 1);
+		const d = 1 + (i % 28);
+		timeEntries.push({ ROWID: String(timeEntries.length + 1), work_date: day(d), employee_id: emp, project_id: proj, duration_minutes: 120 + ((i * 45) % 360), is_billable: i % 4 !== 0, work_category: cats[i % cats.length], approval_status: i % 9 === 0 ? 'pending' : i % 13 === 0 ? 'rejected' : 'approved', work_description: 'Sample work item ' + (i + 1), _emp: nameOf(emp), _project: projectName(proj) });
+	}
+	for (let i = 0; i < 24; i++) {
+		const emp = String((i * 5) % people.length + 1);
+		const late = i % 5 === 0 ? 'yes' : i % 11 === 0 ? 'unknown' : 'no';
+		attendanceRecords.push({ ROWID: String(attendanceRecords.length + 1), attendance_date: day(1 + (i % 12)), employee_id: emp, check_in_time_local: late === 'yes' ? '10:' + String(5 + (i % 40)).padStart(2, '0') : '09:' + String(i % 30).padStart(2, '0'), late_status: late, late_reason: late === 'yes' ? 'Sample delay' : '', _emp: nameOf(emp) });
+	}
+	['Annual leave', 'Sick leave', 'Casual leave', 'Personal leave'].forEach((type, i) => {
+		const emp = String(14 + i);
+		leaveRecords.push({ ROWID: String(leaveRecords.length + 1), employee_id: emp, leave_type: type, start_date: day(6 + i * 4), end_date: day(7 + i * 4), units: 2, unit_type: 'days', status: i === 2 ? 'requested' : 'approved', _emp: nameOf(emp) });
+	});
+	[['6', 4.1], ['8', 4.6], ['9', 3.9], ['11', 4.3], ['14', 3.7], ['16', 4.8]].forEach(([emp, value]) => {
+		performanceRecords.push({ ROWID: String(performanceRecords.length + 1), employee_id: emp, review_cycle: 'H1 2026', period_start: '2026-01-01', period_end: '2026-06-30', metric_value: value, metric_text: 'Sample review note', review_status: value > 4.2 ? 'finalized' : 'submitted', _emp: nameOf(emp) });
+	});
+	[['15', 'Claude', 'ai', 45, 'Data pipeline review'], ['17', 'Cursor', 'ai', 55, 'Refactoring'], ['19', 'GitHub Copilot', 'github', null, 'Mobile screens'], ['21', 'ChatGPT', 'ai', 30, 'Policy drafting']].forEach(([emp, tool, cat, pct, purpose]) => {
+		aiUsageRecords.push({ ROWID: String(aiUsageRecords.length + 1), employee_id: emp, tool_name: tool, tool_category: cat, usage_percent_reported: pct, reporting_period: '2026-09', usage_purpose: purpose, _emp: nameOf(emp) });
+	});
+}
+
+// Invitations and per-person permissions are kept in memory while the preview runs.
+const userOverrides = { 2: { allow: [], deny: [] }, 3: { allow: ["spreadsheet.export"], deny: [] } };
+const overridesOf = (id) => userOverrides[id] || (userOverrides[id] = { allow: [], deny: [] });
+const accessOfUser = (u) => {
+	const role = roles().find((r) => r.key === u.roleKey);
+	const o = overridesOf(u.id);
+	const locked = u.roleKey === "admin";
+	return { user: { id: u.id, email: u.email, displayName: u.displayName }, role: { id: role.id, key: role.key, name: role.name }, rolePermissions: role.permissions, allow: o.allow, deny: o.deny, effective: locked ? perm.ALL_KEYS : [...new Set([...role.permissions, ...o.allow])].filter((k) => !o.deny.includes(k)), locked, canEdit: !locked && u.id !== "1" };
+};
+
+// Extra columns: kept in memory while the preview runs so adding/removing one can be tried out.
+let customSeq = 3;
+const customFields = [{ ROWID: "1", module: "employees", field_key: "client_tier", label: "Client tier", field_type: "choice", choices: "Gold,Silver,Bronze", sort_order: 1, is_active: true }, { ROWID: "2", module: "employees", field_key: "notes", label: "Notes", field_type: "text", sort_order: 2, is_active: true }];
+const extraOf = (e) => JSON.stringify(e.ROWID === "1" ? { client_tier: "Gold", notes: "Mentor" } : e.ROWID === "2" ? { client_tier: "Silver" } : {});
+
+function route(method, p, url, body) {
+	// Import wizard: a job, then batches checked in memory (rows without a name are invalid). Nothing is stored.
+	if (p === '/imports/jobs' && method === 'POST') return { status: 201, body: ok({ id: 'J1', batchSize: 100, status: 'previewing', possibleDuplicateOfJobs: [] }) };
+	if (/^\/imports\/jobs\/[^/]+\/preview$/.test(p) && method === 'POST') {
+		const rows = (body.rows || []).map((r) => (String((r.data || {}).full_name || '').trim() ? { rowNumber: r.rowNumber, status: 'valid', errors: [] } : { rowNumber: r.rowNumber, status: 'invalid', errors: [{ field: 'full_name', message: 'Required' }] }));
+		return { body: ok({ rows }) };
+	}
+	if (/^\/imports\/jobs\/[^/]+\/commit$/.test(p) && method === 'POST') return { body: ok({ rows: (body.rows || []).map((r) => ({ rowNumber: r.rowNumber, status: String((r.data || {}).full_name || '').trim() ? 'committed' : 'invalid', outcome: 'created', errors: [] })) }) };
+	if (/^\/imports\/jobs\/[^/]+\/(resolve|cancel)$/.test(p) && method === 'POST') return { body: ok({ ok: true }) };
+	if (/^\/imports\/jobs\/[^/]+\/complete$/.test(p) && method === 'POST') return { body: ok({ status: 'completed', counts: { created: 2, updated: 0, skipped: 0, invalid: 1, conflict: 0 } }) };
+	if (p === '/access/invitations' && method === 'POST') {
+		const role = roles().find((r) => String(r.id) === String(body.roleId) || r.key === body.roleId);
+		const id = String(accessUsers.length + 1);
+		accessUsers.push({ id, email: String(body.email).toLowerCase(), displayName: `${body.firstName} ${body.lastName}`, teamId: body.teamId || null, isActive: true, roleId: role ? role.id : null, roleKey: role ? role.key : 'manager', roleName: role ? role.name : 'Manager', roleSource: 'assigned' });
+		return { status: 201, body: ok({ id, email: body.email, status: 'invited' }) };
+	}
+	const permMatch = /^\/access\/users\/(\d+)\/permissions$/.exec(p);
+	if (permMatch) {
+		const u = accessUsers.find((x) => x.id === permMatch[1]);
+		if (!u) return { status: 404, body: { ok: false, error: { code: 'NOT_FOUND', message: 'User not found' } } };
+		if (method === 'PUT') userOverrides[u.id] = { allow: body.allow || [], deny: body.deny || [] };
+		return { body: ok(accessOfUser(u)) };
+	}
+	if (p === '/custom-fields' && method === 'POST') {
+		customFields.push({ ...body, ROWID: String(customSeq++), is_active: true });
+		return { status: 201, body: ok({ ROWID: String(customSeq - 1) }) };
+	}
+	if (/^\/custom-fields\/\d+$/.test(p) && method === 'DELETE') {
+		const i = customFields.findIndex((c) => `/custom-fields/${c.ROWID}` === p);
+		if (i >= 0) customFields.splice(i, 1);
+		return { body: ok({ deleted: true }) };
+	}
 	if (method !== 'GET') return { status: method === 'POST' ? 201 : 200, body: ok({ ROWID: '999', id: '999', key: 'new_role', granted: 0, revoked: 0 }) };
 	const sp = url.searchParams;
 	const page = Math.max(1, Number(sp.get('page')) || 1);
@@ -188,6 +274,11 @@ function route(method, p, url) {
 	};
 	switch (true) {
 		case p === '/me': return { body: ok(me) };
+		case p === '/dashboard/bundle': {
+			// the whole dashboard in one request, composed from the single-section answers above
+			const part = (path) => ({ ok: true, data: route(method, path, url).body.data });
+			return { body: ok({ overview: part('/dashboard/overview'), trends: part('/dashboard/trends'), projects: part('/dashboard/projects'), product: part('/dashboard/product'), ai: part('/dashboard/ai-usage'), freshness: part('/dashboard/freshness') }) };
+		}
 		case p === '/dashboard/overview': return { body: ok(overview) };
 		case p === '/dashboard/trends': return { body: ok({ filters: { granularity: 'week' }, truncated: false, time: trendTime, attendance: trendAttendance }) };
 		case p === '/dashboard/projects': return { body: ok({ filters: {}, status: { completeness: 'complete', total: 7, byStatus: { active: 5, on_hold: 1, completed: 1 } }, workload: { completeness: 'complete', projectsWithTime: workload.length, truncated: false, projects: workload } }) };
@@ -199,7 +290,8 @@ function route(method, p, url) {
 			return { body: ok({ filters: {}, people: Object.fromEntries(ids.map((i) => [i, profile])), truncated: false }) };
 		}
 		case p === '/imports/templates': return { body: ok(templates) };
-		case p === '/employees': return list(query(people, ['full_name', 'employee_code', 'job_role']));
+		case p === '/custom-fields': return list(customFields.filter((c) => !sp.get('module') || c.module === sp.get('module')));
+		case p === '/employees': return list(query(people, ['full_name', 'employee_code', 'job_role']).map((e) => (sp.get('extra') === '1' ? { ...e, more_details: extraOf(e) } : e)));
 		case /^\/employees\/\d+$/.test(p): return { body: ok(people.find((e) => `/employees/${e.ROWID}` === p) || people[0]) };
 		case p === '/teams': return list(query(ROLE === 'admin' ? teams : teams.slice(0, 1), ['name', 'team_code', 'description']));
 		case p === '/projects': return list(query(projects, ['project_name', 'project_code']));
@@ -215,7 +307,7 @@ function route(method, p, url) {
 		case p === '/reporting-structure': return { body: ok({ team: { id: '7', name: 'Delivery' }, employees: people.filter((e) => e.primary_team_id === '7').map((e) => ({ id: e.ROWID, name: e.full_name, jobRole: e.job_role, code: e.employee_code, sheetManagerId: e.reports_to_employee_id || null })), nodes: [{ employeeId: '2', parentId: null, roleLabel: 'Delivery Lead' }, { employeeId: '1', parentId: '2', roleLabel: null }] }) };
 		case p === '/access/catalog': return { body: ok(perm.catalog()) };
 		case p === '/access/roles': return { body: ok({ tablesReady: TABLES_READY, you: { roleKey: me.roleKey, canManageRoles: true, canManageUsers: true }, roles: roles() }) };
-		case p === '/access/users': return list(query(accessUsers.map((u) => ({ ...u, ROWID: u.id })), ['displayName', 'email', 'roleName']));
+		case p === '/access/users': return list(query(accessUsers.map((u) => ({ ...u, ROWID: u.id, overrideCount: overridesOf(u.id).allow.length + overridesOf(u.id).deny.length })), ['displayName', 'email', 'roleName']));
 		default: return list([]);
 	}
 }
@@ -228,11 +320,17 @@ http
 			res.writeHead(200, { 'Content-Type': 'text/javascript' });
 			return res.end('window.catalyst = { auth: { isUserAuthenticated: function () { return Promise.resolve(); }, signOut: function () { alert("Sign-out is disabled in local preview"); }, signIn: function () {} } };');
 		}
-		let chunks = 0;
-		req.on('data', (c) => (chunks += c.length));
+		const bodyParts = [];
+		req.on('data', (c) => bodyParts.push(c));
 		req.on('end', () => {
 			const p = url.pathname.replace(/^.*\/api\/v1/, '');
-			const out = route(req.method, p, url);
+			let parsed = {};
+			try {
+				parsed = JSON.parse(Buffer.concat(bodyParts).toString() || '{}');
+			} catch {
+				parsed = {};
+			}
+			const out = route(req.method, p, url, parsed);
 			// a little latency so loading states are visible while designing
 			setTimeout(() => {
 				res.writeHead(out.status || 200, { 'Content-Type': 'application/json' });

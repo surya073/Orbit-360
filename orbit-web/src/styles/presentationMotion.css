@@ -1,0 +1,279 @@
+/*
+ * Presentation motion: six slide transitions, a drifting ambient glow that leans toward the pointer, an
+ * auto-play timer bar, a slow shine on slide titles, and the look of the five newer templates.
+ * Everything here is skipped for reduced motion (device setting or Settings -> Motion).
+ */
+
+.pres__canvas {
+	perspective: 2400px;
+}
+.pslide {
+	z-index: 1;
+}
+
+/* ---------- ambient glow ---------- */
+.pres__ambient {
+	position: absolute;
+	inset: 0;
+	z-index: 0;
+	overflow: hidden;
+	pointer-events: none;
+}
+.pres__ambient i {
+	position: absolute;
+	width: 760px;
+	height: 760px;
+	border-radius: 50%;
+	background: radial-gradient(circle, rgb(var(--p-glow) / 0.34) 0%, transparent 68%);
+	filter: blur(30px);
+	translate: calc(var(--px, 0) * 46px) calc(var(--py, 0) * 34px);
+	transition: translate 900ms var(--ease);
+	animation: p-orbit 24s ease-in-out infinite alternate;
+}
+.pres__ambient i:nth-child(1) {
+	left: -180px;
+	top: -220px;
+}
+.pres__ambient i:nth-child(2) {
+	right: -240px;
+	bottom: -260px;
+	width: 900px;
+	height: 900px;
+	opacity: 0.8;
+	animation-duration: 31s;
+	animation-direction: alternate-reverse;
+}
+.pres__ambient i:nth-child(3) {
+	left: 42%;
+	top: 30%;
+	width: 460px;
+	height: 460px;
+	opacity: 0.55;
+	animation-duration: 19s;
+}
+@keyframes p-orbit {
+	from {
+		transform: translate3d(0, 0, 0) scale(1);
+	}
+	50% {
+		transform: translate3d(90px, 60px, 0) scale(1.12);
+	}
+	to {
+		transform: translate3d(-70px, 110px, 0) scale(0.94);
+	}
+}
+
+/* ---------- transitions (the slide carries data-ptrans) ---------- */
+.pslide[data-ptrans='zoom'] {
+	animation: pt-zoom 520ms var(--ease) both;
+}
+.pslide[data-ptrans='blur'] {
+	animation: pt-blur 520ms var(--ease) both;
+}
+.pslide[data-ptrans='flip'].is-next {
+	animation: pt-flip-next 900ms var(--ease) both;
+}
+.pslide[data-ptrans='flip'].is-prev {
+	animation: pt-flip-prev 900ms var(--ease) both;
+}
+.pslide[data-ptrans='wipe'].is-next {
+	animation: pt-wipe-next 820ms cubic-bezier(0.65, 0, 0.2, 1) both;
+}
+.pslide[data-ptrans='wipe'].is-prev {
+	animation: pt-wipe-prev 820ms cubic-bezier(0.65, 0, 0.2, 1) both;
+}
+.pslide[data-ptrans='rise'] {
+	animation: pt-rise 760ms var(--ease) both;
+}
+.pslide[data-ptrans='slide'].is-next {
+	animation: pslide-next 640ms var(--ease) both;
+}
+.pslide[data-ptrans='slide'].is-prev {
+	animation: pslide-prev 640ms var(--ease) both;
+}
+@keyframes pt-zoom {
+	from {
+		opacity: 0;
+		transform: scale(0.92);
+	}
+}
+/* a soft dissolve: text is never blurred, only faded and eased in from a touch larger */
+@keyframes pt-blur {
+	from {
+		opacity: 0;
+		transform: scale(1.025);
+	}
+}
+@keyframes pt-flip-next {
+	from {
+		opacity: 0;
+		transform: rotateY(-72deg) translateX(10%);
+		transform-origin: 0% 50%;
+	}
+}
+@keyframes pt-flip-prev {
+	from {
+		opacity: 0;
+		transform: rotateY(72deg) translateX(-10%);
+		transform-origin: 100% 50%;
+	}
+}
+@keyframes pt-wipe-next {
+	from {
+		clip-path: inset(0 100% 0 0);
+		opacity: 0.4;
+	}
+	to {
+		clip-path: inset(0 0 0 0);
+	}
+}
+@keyframes pt-wipe-prev {
+	from {
+		clip-path: inset(0 0 0 100%);
+		opacity: 0.4;
+	}
+	to {
+		clip-path: inset(0 0 0 0);
+	}
+}
+@keyframes pt-rise {
+	from {
+		opacity: 0;
+		transform: translateY(90px) scale(0.96);
+	}
+}
+
+/* ---------- richer movement inside slides ---------- */
+.pframe__title,
+.pcover__title {
+	background-size: 220% 100%;
+	animation: p-shine 9s ease-in-out 1.2s infinite alternate;
+}
+@keyframes p-shine {
+	from {
+		background-position: 0% 50%;
+	}
+	to {
+		background-position: 100% 50%;
+	}
+}
+.pframe__body .card,
+.pframe__body .kpi {
+	transition: transform 420ms var(--ease), box-shadow 420ms var(--ease);
+}
+.pframe__body .card:hover,
+.pframe__body .kpi:hover {
+	transform: translateY(-6px);
+	box-shadow: 0 30px 60px -30px rgb(var(--p-glow) / 0.55);
+}
+
+/* ---------- auto-play timer ---------- */
+.pres__auto {
+	position: absolute;
+	left: 0;
+	top: 4px;
+	z-index: 5;
+	width: 100%;
+	height: 3px;
+	background: rgb(var(--p-glow) / 0.9);
+	transform-origin: left center;
+	animation: p-timer linear both;
+}
+@keyframes p-timer {
+	from {
+		transform: scaleX(0);
+	}
+	to {
+		transform: scaleX(1);
+	}
+}
+
+/* ---------- the five newer templates ---------- */
+[data-ptheme='editorial'] .pframe::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 150px;
+	height: 12px;
+	background: var(--accent);
+	pointer-events: none;
+}
+[data-ptheme='editorial'] .pframe__title {
+	letter-spacing: -0.01em;
+	text-transform: none;
+}
+[data-ptheme='pitch'] .pframe::after {
+	content: '';
+	position: absolute;
+	right: -140px;
+	top: -140px;
+	width: 380px;
+	height: 380px;
+	background: var(--accent);
+	opacity: 0.1;
+	transform: rotate(45deg);
+	pointer-events: none;
+	z-index: -1;
+}
+[data-ptheme='neon'] .pframe {
+	box-shadow: inset 0 0 0 3px rgb(var(--p-glow) / 0.55), inset 0 0 90px rgb(var(--p-glow) / 0.16);
+	border-radius: 6px;
+}
+[data-ptheme='neon'] .pframe__title {
+	text-shadow: 0 0 34px rgb(var(--p-glow) / 0.55);
+}
+[data-ptheme='sage'] .pframe::after {
+	content: '';
+	position: absolute;
+	left: -200px;
+	bottom: -220px;
+	width: 560px;
+	height: 560px;
+	border-radius: 50%;
+	background: rgb(var(--p-glow) / 0.08);
+	box-shadow: 0 0 0 70px rgb(var(--p-glow) / 0.05);
+	pointer-events: none;
+	z-index: -1;
+}
+[data-ptheme='corporate'] .pframe::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	height: 14px;
+	background: var(--gradient-accent);
+	pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.pres__ambient i,
+	.pframe__title,
+	.pcover__title,
+	.pres__auto {
+		animation: none !important;
+	}
+	.pslide[data-ptrans] {
+		animation: pl-fade 200ms linear both !important;
+	}
+}
+html[data-motion='reduced'] .pres__ambient i,
+html[data-motion='reduced'] .pframe__title,
+html[data-motion='reduced'] .pcover__title {
+	animation: none !important;
+}
+html[data-motion='reduced'] .pslide[data-ptrans] {
+	animation: pl-fade 200ms linear both !important;
+}
+
+/* on light templates the glow is a whisper, not a stain */
+[data-pscheme='light'] .pres__ambient i {
+	opacity: 0.38;
+}
+[data-pscheme='light'] .pres__ambient i:nth-child(2) {
+	opacity: 0.3;
+}
+[data-pscheme='light'] .pres__ambient i:nth-child(3) {
+	opacity: 0.2;
+}

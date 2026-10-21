@@ -50,6 +50,17 @@ export default function ResourceForm({ resource, template, initial, defaults = {
 		setFieldErrors({});
 		const payload = { ...buildPayload(template.columns, values, initial, template.immutable) };
 		for (const [k, v] of Object.entries(defaults)) if (!editing && payload[k] === undefined && v) payload[k] = String(v);
+		// A required field left empty is caught here, without a request; the server still checks everything else.
+		if (!editing) {
+			const missing = {};
+			for (const c of template.columns) if (c.required && payload[c.field] === undefined) missing[c.field] = 'Required';
+			if (Object.keys(missing).length) {
+				setFieldErrors(missing);
+				setFormError('Please fix the highlighted fields.');
+				setSaving(false);
+				return;
+			}
+		}
 		try {
 			if (editing && Object.keys(payload).length === 0) {
 				setFormError('Nothing has changed.');

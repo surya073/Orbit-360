@@ -15,10 +15,11 @@ describe('sidebar rail', () => {
 	test('shows the destinations the user may open, in a labelled Primary navigation', async () => {
 		renderWithProviders(<SideNav />, { user: admin });
 		const nav = await screen.findByRole('navigation', { name: 'Primary' });
-		for (const name of ['Dashboard', 'Imports', 'Presentations', 'Access']) expect(within(nav).getByRole('link', { name: name })).toBeInTheDocument();
+		for (const name of ['Dashboard', 'Imports', 'Presentations']) expect(within(nav).getByRole('link', { name: name })).toBeInTheDocument();
 		expect(within(nav).queryByRole('link', { name: 'Spreadsheet' })).not.toBeInTheDocument(); // it opens from Imports
 		expect(within(nav).getByRole('link', { name: 'People' })).toBeInTheDocument();
 		expect(within(nav).getByRole('link', { name: 'Delivery' })).toBeInTheDocument();
+		expect(within(nav).queryByRole('link', { name: 'Access' })).not.toBeInTheDocument(); // moved under Settings
 		expect(screen.getByRole('link', { name: 'Settings' })).toBeInTheDocument();
 	});
 
@@ -150,7 +151,7 @@ describe('phone navigation (offcanvas)', () => {
 		expect(within(drawer).getByText(/Administrator · all teams/)).toBeInTheDocument();
 		expect(within(drawer).getByRole('group', { name: 'People' })).toBeInTheDocument();
 		expect(within(drawer).getByRole('group', { name: 'Delivery' })).toBeInTheDocument();
-		for (const name of ['Dashboard', 'Employees', 'Projects', 'Imports', 'Access', 'Settings']) expect(within(drawer).getByRole('link', { name })).toBeInTheDocument();
+		for (const name of ['Dashboard', 'Employees', 'Projects', 'Imports', 'Settings', 'Access & Permissions']) expect(within(drawer).getByRole('link', { name })).toBeInTheDocument();
 		expect(within(drawer).getByRole('button', { name: 'Take the tour' })).toBeInTheDocument();
 		expect(within(drawer).getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
 	});
@@ -161,7 +162,7 @@ describe('phone navigation (offcanvas)', () => {
 		expect(within(drawer).getByRole('link', { name: 'Projects' })).toBeInTheDocument();
 		expect(within(drawer).queryByRole('link', { name: 'Employees' })).not.toBeInTheDocument();
 		expect(within(drawer).queryByRole('group', { name: 'People' })).not.toBeInTheDocument();
-		expect(within(drawer).queryByRole('link', { name: 'Access' })).not.toBeInTheDocument();
+		expect(within(drawer).queryByRole('link', { name: 'Access & Permissions' })).not.toBeInTheDocument();
 	});
 
 	test('it closes on Escape, the close button and a tap outside; the page behind cannot scroll while it is open', async () => {

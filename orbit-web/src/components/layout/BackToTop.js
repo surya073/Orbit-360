@@ -6,14 +6,15 @@ import Icon from '../common/Icon';
 export default function BackToTop({ shifted = false }) {
 	const [show, setShow] = useState(false);
 	useEffect(() => {
-		const onScroll = () => setShow(window.scrollY > 700);
+		const onScroll = () => setShow(window.scrollY > 300);
 		onScroll();
 		window.addEventListener('scroll', onScroll, { passive: true });
 		return () => window.removeEventListener('scroll', onScroll);
 	}, []);
 	return (
 		<button type="button" className={`to-top ${show ? 'is-visible' : ''} ${shifted ? 'to-top--clear-rail' : ''}`.replace(/\s+/g, ' ').trim()} aria-label="Back to top" tabIndex={show ? 0 : -1} aria-hidden={!show} onClick={() => window.scrollTo({ top: 0, behavior: motionReduced() ? 'auto' : 'smooth' })}>
-			<Icon name="chevronDown" size={18} />
+			<Icon name="chevronDown" size={14} />
+			<span>Back to top</span>
 		</button>
 	);
 }

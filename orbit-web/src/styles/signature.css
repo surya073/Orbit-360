@@ -913,8 +913,6 @@
 	padding: 2px 4px 2px 0;
 	scroll-behavior: smooth;
 	overscroll-behavior: contain;
-	scrollbar-width: thin;
-	scrollbar-color: color-mix(in srgb, var(--text) 28%, transparent) transparent;
 }
 .sig-row__amount {
 	display: grid;
@@ -1808,4 +1806,320 @@ textarea {
 .ofilter__pop .otime__bar,
 .ocustom--pop .otime__bar {
 	height: 38px;
+}
+
+/* ---------- AI assistant entry (top right of the dashboard) ---------- */
+.sig-context {
+	align-items: flex-start;
+}
+.sig-context .filter-bar {
+	flex: 1 1 560px;
+}
+.assist {
+	position: relative;
+	flex: none;
+}
+.assist__btn {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 48px;
+	height: 48px;
+	padding: 0;
+	border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--panel-border));
+	border-radius: 16px;
+	background: var(--gradient-accent);
+	color: var(--accent-contrast);
+	box-shadow: 0 14px 28px -14px color-mix(in srgb, var(--accent) 90%, transparent);
+	transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.assist__btn:hover {
+	transform: translateY(-2px) rotate(-4deg);
+}
+.assist__btn:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 3px;
+}
+.assist__soon {
+	position: absolute;
+	top: -3px;
+	right: -3px;
+	width: 11px;
+	height: 11px;
+	border: 2px solid var(--bg);
+	border-radius: 50%;
+	background: var(--warning);
+}
+.assist__panel {
+	position: absolute;
+	top: calc(100% + 10px);
+	right: 0;
+	z-index: 50;
+	display: grid;
+	gap: 14px;
+	width: min(420px, calc(100vw - 24px));
+	padding: 16px;
+	border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--border));
+	border-radius: 20px;
+	background: var(--surface);
+	box-shadow: var(--shadow-lg);
+	animation: select-pop var(--dur) var(--ease) both;
+	transform-origin: top right;
+}
+.assist__head {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: start;
+	gap: 12px;
+}
+.assist__head h2 {
+	margin: 0;
+	font-size: 1rem;
+}
+.assist__head p {
+	margin: 2px 0 0;
+	color: var(--text-muted);
+	font-size: var(--fs-xs);
+}
+.assist__badge {
+	display: grid;
+	place-items: center;
+	width: 38px;
+	height: 38px;
+	border-radius: 12px;
+	background: var(--gradient-accent);
+	color: var(--accent-contrast);
+}
+.assist__tag,
+.assist__planned {
+	padding: 2px 9px;
+	border-radius: 999px;
+	background: var(--warning-soft);
+	color: var(--warning);
+	font-size: 0.66rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+.assist__list {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.assist__list li {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	align-items: start;
+	gap: 10px;
+	padding: 10px;
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	background: var(--surface-2);
+}
+.assist__icon {
+	display: grid;
+	place-items: center;
+	width: 30px;
+	height: 30px;
+	border-radius: 10px;
+	background: var(--accent-soft);
+	color: var(--accent);
+}
+.assist__list b {
+	display: block;
+	font-size: var(--fs-sm);
+}
+.assist__list small {
+	display: block;
+	margin-top: 2px;
+	color: var(--text-muted);
+	line-height: 1.35;
+}
+.assist__ask {
+	display: flex;
+	gap: 8px;
+}
+.assist__ask .input {
+	flex: 1;
+}
+@media (max-width: 720px) {
+	.sig-context {
+		display: flex;
+		flex-direction: column-reverse;
+		align-items: stretch;
+	}
+	.assist {
+		align-self: flex-end;
+		margin-bottom: 8px;
+	}
+	.assist__panel {
+		position: fixed;
+		inset: auto 12px 12px 12px;
+		top: auto;
+		width: auto;
+		max-height: 80vh;
+		overflow: auto;
+	}
+}
+.sig-context .filter-bar {
+	flex: 1 1 0;
+	min-width: 0;
+	width: auto;
+}
+.assist {
+	margin-left: auto;
+}
+@media (max-width: 720px) {
+	.sig-context .filter-bar {
+		flex: none;
+		width: 100%;
+	}
+}
+
+/* ---------- chart picker (what to show, and how to draw it) ---------- */
+.sig-chartbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-2);
+	margin: 0 0 var(--space-2);
+}
+.chart-switch {
+	display: inline-flex;
+	padding: 2px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface-2);
+}
+.chart-switch__btn {
+	padding: 3px 12px;
+	border: 0;
+	border-radius: 999px;
+	background: transparent;
+	color: var(--text-muted);
+	font: inherit;
+	font-size: var(--fs-xs);
+	font-weight: 600;
+	cursor: pointer;
+	transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.chart-switch__btn:hover {
+	color: var(--text);
+}
+.chart-switch__btn.is-on {
+	background: var(--accent);
+	color: var(--on-accent);
+}
+.chart-switch__btn:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+
+/* ---------- bar chart ---------- */
+.barchart {
+	position: relative;
+}
+.barchart__bar {
+	transform-box: fill-box;
+	transform-origin: bottom;
+	animation: barchart-grow 520ms var(--ease) both;
+	animation-delay: calc(var(--n, 0) * 35ms);
+	transition: opacity var(--dur-fast) var(--ease);
+}
+.barchart__col {
+	outline: none;
+}
+.barchart__col:focus-visible .barchart__bar {
+	stroke: var(--focus);
+	stroke-width: 2;
+}
+@keyframes barchart-grow {
+	from {
+		transform: scaleY(0);
+	}
+}
+.barchart__tip {
+	position: absolute;
+	top: 0;
+	z-index: 2;
+	display: grid;
+	gap: 2px;
+	padding: 6px 10px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	color: var(--text);
+	font-size: var(--fs-xs);
+	box-shadow: var(--shadow-lg);
+	transform: translateX(-50%);
+	pointer-events: none;
+	white-space: nowrap;
+}
+.barchart__tip i,
+.barchart__legend i {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 6px;
+	border-radius: 50%;
+}
+.barchart__legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+	margin-top: var(--space-1);
+	color: var(--text-muted);
+	font-size: var(--fs-xs);
+}
+@media (prefers-reduced-motion: reduce) {
+	.barchart__bar {
+		animation: none;
+	}
+}
+html[data-motion='reduced'] .barchart__bar {
+	animation: none;
+}
+
+/* ---------- phones: header controls wrap instead of overflowing; pills scroll inside their own track ---------- */
+@media (max-width: 720px) {
+	.sig-tools {
+		flex-wrap: wrap;
+		max-width: 100%;
+	}
+	.sig-pills {
+		flex-wrap: nowrap;
+		max-width: 100%;
+		overflow-x: auto;
+		scrollbar-width: none;
+	}
+	.sig-pill {
+		flex: none;
+	}
+}
+
+/* ---------- AI panel: never scrolls; on small screens it is just more compact ---------- */
+.assist__panel {
+	overflow: hidden;
+}
+@media (max-width: 720px) {
+	.assist__panel {
+		max-height: none;
+		overflow: hidden;
+		gap: 10px;
+		padding: 12px;
+	}
+	.assist__list {
+		gap: 6px;
+	}
+	.assist__list li {
+		padding: 8px 10px;
+	}
+}
+@media (max-height: 700px) {
+	.assist__list small {
+		display: none;
+	}
 }

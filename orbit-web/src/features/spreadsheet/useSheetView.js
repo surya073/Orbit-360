@@ -11,7 +11,11 @@ const EMPTY = Object.freeze({});
  * never change which record a cell edits. Row objects are reused while their inputs are unchanged
  * so the grid's memoised rows skip rendering.
  */
-export default function useSheetView({ rows, state, valueOf, columns, sort, filters, query, labelOf }) {
+// The grid always offers this many rows, like a blank sheet. (A mutable setting so tests can use a small sheet.)
+export const sheetConfig = { rows: 500 };
+const SLOT_RE = /^n:v\d+$/;
+
+export default function useSheetView({ rows, state, valueOf, columns, sort, filters, query, labelOf, padTo = sheetConfig.rows }) {
 	const cache = useRef(new Map());
 
 	return useMemo(() => {
@@ -52,9 +56,15 @@ export default function useSheetView({ rows, state, valueOf, columns, sort, filt
 				return { key: e.key, id: e.id, isNew: false, number: i + 1, values, dirty: edits || EMPTY, errors: fieldErrors, rowError: _row };
 			});
 		});
-		state.newRows.forEach((n, j) => {
+		// Rows typed into the blank area keep their slot (n:v<k>); rows added with 'Add row' follow the loaded records.
+		const added = state.newRows.filter((n) => !SLOT_RE.test(n.key));
+		const slotRows = new Map(state.newRows.filter((n) => SLOT_RE.test(n.key)).map((n) => [n.key, n]));
+		const base = list.length + added.length;
+		const highest = [...slotRows.keys()].reduce((m, k) => Math.max(m, Number(k.slice(3))), -1);
+		const slots = Math.max(0, padTo - base, highest + 1);
+		const newEntries = [...added.map((n, j) => [n, list.length + j]), ...Array.from({ length: slots }, (_, k) => [slotRows.get(`n:v${k}`) || { key: `n:v${k}`, values: EMPTY }, base + k])];
+		newEntries.forEach(([n, i]) => {
 			const errs = state.errors[n.key];
-			const i = list.length + j;
 			push(n.key, [n, errs, i, columns], () => {
 				const values = {};
 				const dirty = {};
@@ -63,7 +73,7 @@ export default function useSheetView({ rows, state, valueOf, columns, sort, filt
 					if (values[c.field] !== '') dirty[c.field] = true;
 				});
 				const { _row, ...fieldErrors } = errs || EMPTY;
-				return { key: n.key, id: null, isNew: true, number: i + 1, values, dirty, errors: fieldErrors, rowError: _row };
+				return { key: n.key, id: null, isNew: true, pristine: Object.keys(dirty).length === 0, number: i + 1, values, dirty, errors: fieldErrors, rowError: _row };
 			});
 		});
 		cache.current = next;

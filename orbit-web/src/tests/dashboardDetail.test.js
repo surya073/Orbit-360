@@ -70,18 +70,18 @@ describe('dashboard chart parts', () => {
 });
 
 describe('detailed dashboard', () => {
-	const setup = (extra = []) => {
-		mockFetch([...extra, ...dashboardRoutes(), [/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }])], [/^GET \/projects/, okBody([])]]);
+	const setup = (over = {}) => {
+		mockFetch([...dashboardRoutes(over), [/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }])], [/^GET \/projects/, okBody([])]]);
 		return renderWithProviders(<DashboardPage />, { user: manager });
 	};
 
 	test('the signature overview shows backend figures, the period pills and links each flag to where it is handled', async () => {
 		setup();
-		expect(await screen.findByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument();
+		expect(await screen.findByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
 		const chart = await screen.findByRole('region', { name: 'Billable hours trend' });
 		expect(await within(chart).findByText('66.7% billable')).toBeInTheDocument();
 		expect(within(chart).getByRole('button', { name: 'This month' })).toHaveAttribute('aria-pressed', 'true');
-		expect(await within(chart).findByRole('img', { name: 'Billable hours per week' })).toBeInTheDocument();
+		expect(await within(chart).findByRole('group', { name: 'Billable vs non-billable per week' })).toBeInTheDocument();
 		const attention = screen.getByRole('region', { name: 'Needs attention' });
 		expect(await within(attention).findByRole('link', { name: 'Review now' })).toHaveAttribute('href', '/time-entries');
 		const side = screen.getByRole('region', { name: 'Team snapshot' });
@@ -143,10 +143,10 @@ describe('detailed dashboard', () => {
 	test('no data: nothing is invented, and there is no chart line or sparkline', async () => {
 		const noTime = { completeness: 'insufficient_data', billableMinutes: null, nonBillableMinutes: null, totalMinutes: null, billablePercent: null, approvedEntries: 0, excluded: { pending: 0, rejected: 0 } };
 		const empty = { ...overviewFixture, time: noTime, attendance: { completeness: 'insufficient_data', lateRatePercent: null, records: 0, unknownCount: 0 }, leave: { completeness: 'insufficient_data', approvedDays: null, approvedHours: null, records: 0 }, headcount: { completeness: 'insufficient_data', total: null, byStatus: {} } };
-		setup([[/^GET \/dashboard\/overview/, okBody(empty)], [/^GET \/dashboard\/trends/, okBody({ filters: { granularity: 'week' }, truncated: false, time: [], attendance: [] })]]);
+		setup({ overview: empty, trends: { filters: { granularity: 'week' }, truncated: false, time: [], attendance: [] } });
 		const chart = await screen.findByRole('region', { name: 'Billable hours trend' });
 		expect(await within(chart).findByText(/No approved time in this period/)).toBeInTheDocument();
-		expect(within(chart).queryByText(/billable$/)).toBeNull();
+		expect(within(chart).queryByText(/% billable$/)).toBeNull();
 		expect(await screen.findByText('No approved time to break down')).toBeInTheDocument();
 		expect(screen.getByRole('region', { name: 'Billable hours' }).querySelector('.spark')).toBeNull();
 	});

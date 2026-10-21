@@ -5,7 +5,11 @@ export default function useOutsideClick(ref, onOutside, active = true) {
 	useEffect(() => {
 		if (!active) return undefined;
 		const down = (e) => ref.current && !ref.current.contains(e.target) && onOutside(e);
-		const key = (e) => e.key === 'Escape' && onOutside(e);
+		const key = (e) => {
+			if (e.key !== 'Escape') return;
+			e.preventDefault(); // closing a menu uses up the key, so a page behind it (a player, a dialog) does not also react
+			onOutside(e);
+		};
 		document.addEventListener('mousedown', down);
 		document.addEventListener('keydown', key);
 		return () => {

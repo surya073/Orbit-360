@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import useApiResource from '../../hooks/useApiResource';
+import { useAuth } from '../../app/providers/AuthProvider';
+import useCustomFields from '../../hooks/useCustomFields';
+import { customFieldsService } from '../../services/customFieldsService';
 import { resourceService } from '../../services/resourceService';
-import { buildColumns, normalizeCell, toText } from './gridModel';
+import { buildColumns, columnLetter, customColumns, keyFromLabel, normalizeCell, parseExtra, splitCustom, toText, withCustomValues } from './gridModel';
 
 export const SHEET_PAGE_SIZE = 50;
+export const SHEET_COLUMNS = 29; // A..AC: the blank columns after the last real one are named by typing in them
 const SAVE_CONCURRENCY = 3;
 const HISTORY_LIMIT = 100;
 const chunk = (list, n) => Array.from({ length: Math.ceil(list.length / n) }, (_, i) => list.slice(i * n, (i + 1) * n));
@@ -35,7 +39,10 @@ function applyOp(state, op, direction) {
 			let { edits, newRows } = state;
 			for (const c of op.changes) {
 				const value = forward ? c.after : c.before;
-				if (isNewKey(c.key)) newRows = newRows.map((r) => (r.key === c.key ? { ...r, values: { ...r.values, [c.field]: value ?? '' } } : r));
+				if (isNewKey(c.key)) {
+					if (newRows.some((r) => r.key === c.key)) newRows = newRows.map((r) => (r.key === c.key ? { ...r, values: { ...r.values, [c.field]: value ?? '' } } : r));
+					else newRows = [...newRows, { key: c.key, values: { [c.field]: value ?? '' } }]; // first value typed into a blank row
+				}
 				else edits = withEdit(edits, c.key.slice(2), c.field, value);
 			}
 			return { ...state, edits, newRows };
@@ -101,9 +108,11 @@ function reducer(state, a) {
  * fields are sent. Nothing is reported as saved until the backend confirms it.
  */
 export default function useSheetData({ resource, template, canWrite, search = '', page = 1, pageSize = SHEET_PAGE_SIZE, applyFormat }) {
-	const params = useMemo(() => ({ page, pageSize, ...(search ? { q: search } : {}) }), [page, pageSize, search]);
+	// Extra columns: definitions come from one cached request; their values ride along with the list (extra=1), so no request per row.
+	const custom = useCustomFields(resource);
+	const params = useMemo(() => ({ page, pageSize, ...(search ? { q: search } : {}), ...(custom.enabled ? { extra: 1 } : {}) }), [page, pageSize, search, custom.enabled]);
 	const res = useApiResource((signal) => resourceService.list(resource, params, { signal }), `sheet|${resource}|${JSON.stringify(params)}`, { enabled: Boolean(template), isEmpty: () => false });
-	const rows = useMemo(() => res.data || [], [res.data]);
+	const rows = useMemo(() => withCustomValues(res.data || [], custom.fields), [res.data, custom.fields]);
 	const [state, dispatch] = useReducer(reducer, initial);
 	const [saveState, setSaveState] = useState({ status: 'idle', at: null, summary: null });
 	const saving = useRef(false);
@@ -112,7 +121,14 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 	const baseline = useRef(new Map());
 	rows.forEach((r) => baseline.current.set(String(r.ROWID), r));
 
-	const columns = useMemo(() => buildColumns(template, rows), [template, rows]);
+	const { can } = useAuth();
+	const canAddColumns = can('custom_fields.create');
+	const columns = useMemo(() => {
+		const real = [...buildColumns(template, rows), ...customColumns(custom.fields)];
+		// Blank columns up to AC. Only offered where extra columns can be read at all; locked unless the user may add columns.
+		const blanks = custom.enabled ? Array.from({ length: Math.max(0, SHEET_COLUMNS - real.length) }, (_, i) => ({ field: `p:${i}`, label: '', type: 'str', maxLength: 500, required: false, fk: false, immutable: false, placeholder: true, locked: !canAddColumns })) : [];
+		return [...real, ...blanks];
+	}, [template, rows, custom.fields, custom.enabled, canAddColumns]);
 	const colByField = useMemo(() => Object.fromEntries(columns.map((c) => [c.field, c])), [columns]);
 
 	// A different module starts a clean sheet.
@@ -135,6 +151,54 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 	);
 
 	/**
+	 * Typing into a blank column creates it (named "Column D" after its letter, text type) and then enters the value.
+	 * The values wait here until the new column is in the grid.
+	 */
+	const waiting = useRef([]);
+	const addDefinition = useCallback(
+		async (label) => {
+			const taken = custom.fields.map((f) => f.field_key);
+			const key = keyFromLabel(label, taken);
+			await customFieldsService.create({ module: resource, field_key: key, label, field_type: 'text', sort_order: custom.fields.length + 1, is_active: true });
+			return key;
+		},
+		[custom.fields, resource]
+	);
+	const [columnNotice, setColumnNotice] = useState('');
+	const createColumnsFrom = useCallback(
+		async (items) => {
+			const byField = new Map();
+			items.forEach((it) => byField.set(it.field, [...(byField.get(it.field) || []), it]));
+			try {
+				for (const [field, list] of byField) {
+					const index = columns.findIndex((c) => c.field === field);
+					const key = await addDefinition(`Column ${columnLetter(index)}`);
+					waiting.current.push(list.map((it) => ({ key: it.key, field: `x:${key}`, text: it.text })));
+				}
+				custom.reload();
+			} catch (e) {
+				setColumnNotice(e.message || 'Could not add the column');
+			}
+		},
+		[addDefinition, columns, custom]
+	);
+	/** Header rename: names a blank column (creating it) or renames an extra column. */
+	const renameColumn = useCallback(
+		async (col, label) => {
+			const name = String(label || '').trim();
+			if (!name || name === col.label) return;
+			try {
+				if (col.placeholder) await addDefinition(name);
+				else if (col.custom) await customFieldsService.update(col.defId, { label: name });
+				custom.reload();
+			} catch (e) {
+				setColumnNotice(e.fieldErrors ? Object.values(e.fieldErrors)[0] : e.message || 'Could not rename the column');
+			}
+		},
+		[addDefinition, custom]
+	);
+
+	/**
 	 * Applies typed/pasted cell changes: [{ key, field, text }]. Returns { applied, rejected } where
 	 * rejected = [{ key, field, reason }]; rejected cells are left untouched.
 	 */
@@ -142,9 +206,16 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 		(changes) => {
 			const done = [];
 			const rejected = [];
+			const toCreate = [];
 			for (const { key, field, text } of changes) {
 				const col = colByField[field];
 				if (!col) continue;
+				if (col.placeholder) {
+					if (String(text ?? '').trim() === '') continue;
+					if (!canAddColumns) rejected.push({ key, field, reason: 'Only administrators can add columns' });
+					else toCreate.push({ key, field, text });
+					continue;
+				}
 				const n = normalizeCell(col, text);
 				if (n.error) {
 					rejected.push({ key, field, reason: `${col.label}: ${n.error}` });
@@ -161,7 +232,7 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 					rejected.push({ key, field, reason: `${col.label} cannot be changed after the record is created` });
 					continue;
 				}
-				if (n.value === '' && base !== '') {
+				if (n.value === '' && base !== '' && !col.custom) {
 					rejected.push({ key, field, reason: `${col.label}: a saved value cannot be cleared (the API only accepts new values)` });
 					continue;
 				}
@@ -170,10 +241,23 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 				if (current !== after) done.push({ key, field, before: current, after });
 			}
 			if (done.length) dispatch({ type: 'op', op: { type: 'cells', changes: done } });
-			return { applied: done.length, rejected };
+			if (toCreate.length) createColumnsFrom(toCreate);
+			return { applied: done.length + toCreate.length, rejected };
 		},
-		[colByField, baseText, state.edits, state.newRows]
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[colByField, baseText, state.edits, state.newRows, canAddColumns]
 	);
+
+	// Values typed into a blank column are entered once the new column has arrived.
+	const setCellsRef = useRef(null);
+	setCellsRef.current = setCells;
+	useEffect(() => {
+		if (!waiting.current.length) return;
+		const ready = waiting.current.filter((list) => colByField[list[0].field]);
+		if (!ready.length) return;
+		waiting.current = waiting.current.filter((list) => !colByField[list[0].field]);
+		setCellsRef.current(ready.flat());
+	}, [colByField]);
 
 	const addRows = useCallback(
 		(count = 1) => {
@@ -232,8 +316,8 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 				const current = new Map();
 				if (ids.length) {
 					for (const part of chunk(ids, 100)) {
-						const out = await resourceService.list(resource, { ids: part.join(','), pageSize: 100 }, { fresh: true });
-						out.data.forEach((r) => current.set(String(r.ROWID), r));
+						const out = await resourceService.list(resource, { ids: part.join(','), pageSize: 100, ...(custom.enabled ? { extra: 1 } : {}) }, { fresh: true });
+						withCustomValues(out.data, custom.fields).forEach((r) => current.set(String(r.ROWID), r));
 					}
 				}
 				for (const id of ids) {
@@ -258,8 +342,8 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 				const jobs = [
 					...toCreate.map((r) => async () => {
 						try {
-							const payload = Object.fromEntries(Object.entries(r.values).filter(([, v]) => v !== ''));
-							await resourceService.create(resource, payload);
+							const { plain, extra } = splitCustom(Object.fromEntries(Object.entries(r.values).filter(([, v]) => v !== '')));
+							await resourceService.create(resource, Object.keys(extra).length ? { ...plain, more_details: extra } : plain);
 							createdKeys.push(r.key);
 							summary.created++;
 						} catch (e) {
@@ -271,7 +355,18 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 					}),
 					...toUpdate.map((id) => async () => {
 						try {
-							await resourceService.update(resource, id, state.edits[id]);
+							// Extra values are merged into the row's current more_details (from the fresh read above) so other keys are kept.
+							const { plain, extra } = splitCustom(state.edits[id]);
+							const body = { ...plain };
+							if (Object.keys(extra).length) {
+								const merged = { ...parseExtra(current.get(id)) };
+								for (const [k, v] of Object.entries(extra)) {
+									if (v === '') delete merged[k];
+									else merged[k] = v;
+								}
+								body.more_details = merged;
+							}
+							await resourceService.update(resource, id, body);
 							updatedIds.push(id);
 							summary.updated++;
 						} catch (e) {
@@ -307,7 +402,7 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 			}
 		},
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[canWrite, columns, state.edits, state.newRows, resource, baseText, res.reload]
+		[canWrite, columns, state.edits, state.newRows, resource, baseText, res.reload, custom.enabled, custom.fields]
 	);
 
 	const deleteRecords = useCallback(
@@ -331,6 +426,11 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 		res,
 		rows,
 		columns,
+		customFields: custom,
+		renameColumn,
+		canAddColumns,
+		columnNotice,
+		clearColumnNotice: () => setColumnNotice(''),
 		state,
 		valueOf,
 		baseText,

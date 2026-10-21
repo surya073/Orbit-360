@@ -620,3 +620,55 @@
 		display: none;
 	}
 }
+
+/* ---------- individual permissions (per person) ---------- */
+.access-actions {
+	display: inline-flex;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+}
+.up-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	font-size: var(--fs-xs);
+}
+.up-cell {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 30px;
+	height: 26px;
+	padding: 0 8px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	color: var(--text-muted);
+	font: inherit;
+	font-weight: 700;
+	line-height: 1;
+}
+button.up-cell:not(:disabled) {
+	cursor: pointer;
+}
+button.up-cell:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+.up-cell--role {
+	color: var(--text);
+	background: var(--surface-2);
+}
+.up-cell--allow {
+	color: var(--on-accent);
+	background: var(--accent);
+	border-color: var(--accent);
+}
+.up-cell--deny {
+	color: var(--danger);
+	background: var(--surface);
+	border-color: var(--danger);
+}
+.up-cell--none {
+	opacity: 0.55;
+}

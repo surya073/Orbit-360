@@ -98,11 +98,6 @@ function Tool({ label, hint, onClick, disabled, danger, icon, children }) {
 	);
 }
 
-/** Icon-only editing control with its shortcut in the tooltip. */
-function IconTool({ label, hint, icon, onClick, disabled }) {
-	return <IconButton icon={icon} label={label} title={hint ? `${label} (${hint})` : label} onClick={onClick} disabled={disabled} className="sheet-iconbtn" />;
-}
-
 const STATUS_ICON = { saved: 'check', dirty: 'edit', saving: 'refresh', failed: 'alert', partial: 'alert', idle: 'check' };
 
 /**
@@ -110,7 +105,7 @@ const STATUS_ICON = { saved: 'check', dirty: 'edit', saving: 'refresh', failed: 
  * works; unavailable ones are disabled (and the editing group is hidden for read-only roles).
  */
 const SheetToolbar = forwardRef(function SheetToolbar(
-	{ title, canWrite, status, dirtyCount, saving, onSave, onDiscard, onCut, onCopy, onPaste, onAddRow, canAddRows = true, canDelete, onDelete, search, onSearch, searchLabel, searchScope, onSearchScope, canServerSearch, sortLabel, onClearSort, onExport, canExport, onReload, loading, density, onDensity, onShortcuts },
+	{ title, canWrite, status, dirtyCount, saving, onSave, onDiscard, onCut, onCopy, onPaste, canDelete, onDelete, search, onSearch, searchLabel, searchScope, onSearchScope, canServerSearch, sortLabel, onClearSort, onExport, canExport, onReload, loading, density, onDensity, onShortcuts },
 	searchRef
 ) {
 	return (
@@ -128,9 +123,6 @@ const SheetToolbar = forwardRef(function SheetToolbar(
 					<Button size="sm" variant="primary" icon="check" onClick={onSave} loading={saving} disabled={dirtyCount === 0} title={`Save changes (${MOD}S)`} aria-label={`Save changes${dirtyCount ? ` (${dirtyCount})` : ''}`}>
 						Save{dirtyCount ? ` (${dirtyCount})` : ''}
 					</Button>
-					<Tool label="Add row" icon="plus" onClick={onAddRow} disabled={!canAddRows}>
-						Add row
-					</Tool>
 					<Tool label="Discard changes" onClick={onDiscard} disabled={dirtyCount === 0 || saving}>
 						Discard
 					</Tool>
@@ -141,18 +133,11 @@ const SheetToolbar = forwardRef(function SheetToolbar(
 
 			{canWrite ? (
 				<div className="sheet-toolbar__group" role="group" aria-label="Editing">
-					<IconTool icon="cut" label="Cut" hint={`${MOD}X`} onClick={onCut} />
-					<IconTool icon="copy" label="Copy" hint={`${MOD}C`} onClick={onCopy} />
-					<IconTool icon="paste" label="Paste" hint={`${MOD}V`} onClick={onPaste} />
 					<Tool label="Delete selected rows" icon="trash" danger onClick={onDelete} disabled={!canDelete}>
 						Delete rows
 					</Tool>
 				</div>
-			) : (
-				<div className="sheet-toolbar__group" role="group" aria-label="Editing">
-					<IconTool icon="copy" label="Copy" hint={`${MOD}C`} onClick={onCopy} />
-				</div>
-			)}
+			) : null}
 
 			<div className="sheet-toolbar__spacer" />
 

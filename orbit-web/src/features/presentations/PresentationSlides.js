@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import logo from '../../assets/images/logo.svg';
 import Button from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
@@ -6,9 +6,12 @@ import ToolLogo from '../../components/common/ToolLogo';
 import { formatDate } from '../../utils/dates';
 import { EMPTY, formatNumber, humanize, metricNote } from '../../utils/format';
 import { initials, statusTone, tenureText } from './deckSlides';
+import useFitToSlide from './useFitToSlide';
 
 /** Common slide layout: kicker, title, lead and a body that scrolls (never clips) if content is tall. */
 export function SlideFrame({ kicker, title, lead, children, className = '' }) {
+	const bodyRef = useRef(null);
+	useFitToSlide(bodyRef);
 	return (
 		<div className={`pframe ${className}`.trim()}>
 			<header className="pframe__head">
@@ -16,7 +19,9 @@ export function SlideFrame({ kicker, title, lead, children, className = '' }) {
 				<h1 className="pframe__title">{title}</h1>
 				{lead ? <p className="pframe__lead">{lead}</p> : null}
 			</header>
-			<div className="pframe__body">{children}</div>
+			<div className="pframe__body" ref={bodyRef}>
+				{children}
+			</div>
 		</div>
 	);
 }

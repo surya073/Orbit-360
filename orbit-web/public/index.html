@@ -20,6 +20,7 @@
           if (['sharp', 'round'].indexOf(s.radius) > -1) r0.dataset.radius = s.radius;
           if (['small', 'large', 'xlarge'].indexOf(s.textSize) > -1) r0.dataset.text = s.textSize;
           if (s.motion === 'reduced') r0.dataset.motion = 'reduced';
+          if (typeof s.font === 'string' && /^[a-z]+$/.test(s.font)) r0.dataset.font = s.font;
           if (['wide', 'full'].indexOf(s.width) > -1) r0.dataset.width = s.width;
           if (s.accentVars) for (var k in s.accentVars) if (/^--[a-z-]+$/.test(k)) r0.style.setProperty(k, String(s.accentVars[k]));
         } catch (e) {}

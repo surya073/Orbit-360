@@ -2,7 +2,12 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import CompletenessBadge from '../../../components/cards/CompletenessBadge';
+import BarChart from '../../../components/charts/BarChart';
+import BarList from '../../../components/charts/BarList';
+import ChartSwitch from '../../../components/charts/ChartSwitch';
+import DonutChart from '../../../components/charts/DonutChart';
 import GlowAreaChart from '../../../components/charts/GlowAreaChart';
+import LineChart from '../../../components/charts/LineChart';
 import Button from '../../../components/common/Button';
 import Icon from '../../../components/common/Icon';
 import ErrorState from '../../../components/feedback/ErrorState';
@@ -12,7 +17,9 @@ import { formatMinutes, formatNumber, humanize, minutesToHours } from '../../../
 import { computeInsights } from '../../../utils/insights';
 import { PERIOD_PRESETS, presetLabel } from '../../../utils/periods';
 import { CountUp, prefersReducedMotion, useCinematic } from '../entrance';
+import { CHART_TYPES, METRICS, chartRows, hasAnyValue, metricById, typeFor } from '../billableChart';
 import { insightLink } from '../insightLinks';
+import useChartChoice from '../useChartChoice';
 import Select from '../../../components/forms/Select';
 
 /*
@@ -65,12 +72,11 @@ export function BillableCard({ overview, trends, clamped, preset, onPreset }) {
 	const billable = time ? hours(time.billableMinutes) : null;
 	const buckets = (trends.data && trends.data.time) || [];
 	const per = trends.data ? trends.data.filters.granularity : 'week';
-	const points = buckets.map((b) => ({
-		key: b.start,
-		label: formatDate(b.start).slice(0, 6),
-		tip: per === 'day' ? formatDate(b.start) : `Week of ${formatDate(b.start).slice(0, 6)}`,
-		value: hours(b.billableMinutes),
-	}));
+	// The chart is the viewer's choice (what to show, and how); it starts as grouped bars of billable and non-billable hours, is remembered on this device and uses the trends already loaded.
+	const [choice, setChoice] = useChartChoice('billable', { metric: 'split', type: 'bar' });
+	const metric = metricById(choice.metric);
+	const type = typeFor(metric, choice.type);
+	const points = chartRows(metric, trends.data);
 	return (
 		<section className="sig-card sig-balance" aria-label="Billable hours trend">
 			<header className="sig-head">
@@ -97,12 +103,34 @@ export function BillableCard({ overview, trends, clamped, preset, onPreset }) {
 					))}
 				</div>
 			</header>
+			<div className="sig-chartbar">
+				<label className="sig-chip-btn sig-chip-btn--select">
+					<span className="sr-only">Chart shows</span>
+					<Select value={metric.id} onChange={(e) => setChoice({ metric: e.target.value })}>
+						{METRICS.map((m) => (
+							<option key={m.id} value={m.id}>
+								{m.label}
+							</option>
+						))}
+					</Select>
+				</label>
+				<ChartSwitch label="How to draw the chart" options={metric.types.map((id) => ({ id, label: CHART_TYPES[id] }))} value={type} onChange={(t) => setChoice({ type: t })} />
+			</div>
 			<Load res={trends} lines={4} height={190}>
 				{points.length === 0 ? (
 					<p className="sig-empty">No approved time in this period. Weeks without data are left blank, not shown as zero.</p>
 				) : (
 					<>
-						<GlowAreaChart points={points} height={200} format={(v) => `${formatNumber(v, v < 10 ? 1 : 0)}h`} ariaLabel={`Billable hours per ${per}`} />
+						{!hasAnyValue(points, metric) ? (
+							<p className="sig-empty">There is no data for “{metric.label}” in this period. Gaps are left blank, not shown as zero.</p>
+						) : type === 'area' ? (
+							<GlowAreaChart points={points.map((p) => ({ key: p.key, label: p.label, tip: p.tip, value: p.values[metric.series[0].key] }))} height={200} format={metric.format} ariaLabel={`${metric.label} per ${per}`} />
+						) : type === 'line' ? (
+							<LineChart data={points.map((p) => ({ x: p.key, label: p.label, ...p.values }))} series={metric.series} height={200} yFormat={metric.format} ariaLabel={`${metric.label} per ${per}`} />
+						) : (
+							<BarChart points={points} series={metric.series} stacked={type === 'stacked'} height={200} format={metric.format} ariaLabel={`${metric.label} per ${per}`} />
+						)}
+						{metric.id === 'late' ? null : (
 						<div className="sig-timeline" aria-label={`Billable share per ${per}`} role="img">
 							{buckets.map((b) => (
 								<span key={b.start} className="sig-timeline__seg" title={`${formatDate(b.start)}: ${Number.isFinite(b.billablePercent) ? `${formatNumber(b.billablePercent, 1)}% billable` : 'no share'}`}>
@@ -110,6 +138,7 @@ export function BillableCard({ overview, trends, clamped, preset, onPreset }) {
 								</span>
 							))}
 						</div>
+						)}
 					</>
 				)}
 			</Load>
@@ -120,7 +149,7 @@ export function BillableCard({ overview, trends, clamped, preset, onPreset }) {
 				</span>
 				<span className="sig-legend">
 					<span>
-						<i className="sig-legend__line" /> Billable hours
+						<i className="sig-legend__line" /> {metric.id === 'split' ? 'Billable / non-billable hours' : metric.label}
 					</span>
 					<span>
 						<i className="sig-legend__share" /> Billable share
@@ -146,8 +175,8 @@ const initials = (name) =>
  * (click, Enter/Space, or the arrow keys on the deck). Leaving for another page is a separate, explicit
  * "Open" link on the front card, so browsing the stack never navigates by accident.
  */
-function SnapshotDeck({ items, count }) {
-	const [front, setFront] = useState(0);
+function SnapshotDeck({ items, count, front, onFront }) {
+	const setFront = (next) => onFront(typeof next === 'function' ? next(front) : next);
 	const n = items.length;
 	const onKeyDown = (e) => {
 		if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
@@ -192,8 +221,101 @@ function SnapshotDeck({ items, count }) {
 	);
 }
 
+/**
+ * The list under the stack follows the card in front: workforce by status, project health, or the leave
+ * overview. Same row design for all three, so switching cards feels like turning a page.
+ */
+function HealthList({ front, head, leave, projects, rows, can }) {
+	const Row = ({ mark, title, sub, value, tone = 'up', pct, tip }) => (
+		<li className="sig-row">
+			<span className="sig-row__avatar" aria-hidden="true">
+				{mark}
+			</span>
+			<span className="sig-row__text">
+				<b>{title}</b>
+				<small>{sub}</small>
+			</span>
+			<span className={`sig-row__amount sig-row__amount--${tone}`} title={tip}>
+				{value}
+				{Number.isFinite(pct) ? (
+					<span className="sig-row__bar" aria-hidden="true">
+						<i style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
+					</span>
+				) : null}
+			</span>
+		</li>
+	);
+	let head1 = 'Project health';
+	let link = can('projects.view') ? ROUTES.projects : null;
+	let body;
+	if (front === 0) {
+		head1 = 'Workforce health';
+		link = can('employees.view') ? ROUTES.employees : null;
+		const by = (head && head.byStatus) || {};
+		const total = head && Number.isFinite(head.total) ? head.total : 0;
+		const order = ['active', 'on_leave', 'inactive'];
+		const keys = [...order.filter((k) => k in by), ...Object.keys(by).filter((k) => !order.includes(k))];
+		body = keys.length ? (
+			<ul aria-label="Employees by status">
+				{keys.map((k) => (
+					<Row key={k} mark={initials(humanize(k))} title={humanize(k)} sub={`${formatNumber(by[k])} ${by[k] === 1 ? 'person' : 'people'}`} value={total ? `${formatNumber((by[k] / total) * 100, 0)}%` : '—'} pct={total ? (by[k] / total) * 100 : undefined} tone={k === 'inactive' ? 'none' : 'up'} tip="Share of everyone in scope" />
+				))}
+			</ul>
+		) : (
+			<p className="sig-empty">No employees in scope yet.</p>
+		);
+	} else if (front === 2) {
+		head1 = 'Leave overview';
+		link = can('leave.view') ? ROUTES.leave : null;
+		const by = (leave && leave.byStatus) || {};
+		const recs = leave && Number.isFinite(leave.records) ? leave.records : 0;
+		const items = [];
+		if (leave && Number.isFinite(leave.approvedDays)) items.push({ k: 'days', mark: 'D', title: 'Approved days', sub: 'Counted in days', value: `${formatNumber(leave.approvedDays, 1)} days`, tone: 'up' });
+		if (leave && Number.isFinite(leave.approvedHours)) items.push({ k: 'hours', mark: 'H', title: 'Approved hours', sub: 'Hour-based leave, kept separate', value: `${formatNumber(leave.approvedHours, 1)} h`, tone: 'up' });
+		Object.keys(by).forEach((k) => items.push({ k, mark: initials(humanize(k)), title: humanize(k), sub: 'Leave records', value: formatNumber(by[k]), pct: recs ? (by[k] / recs) * 100 : undefined, tone: k === 'requested' ? 'down' : 'up' }));
+		body = items.length ? (
+			<ul aria-label="Leave overview">
+				{items.map((r) => (
+					<Row key={r.k} mark={r.mark} title={r.title} sub={r.sub} value={r.value} pct={r.pct} tone={r.tone} />
+				))}
+			</ul>
+		) : (
+			<p className="sig-empty">No leave recorded for this period.</p>
+		);
+	} else {
+		body = (
+			<Load res={projects} lines={3}>
+				{rows.length === 0 ? (
+					<p className="sig-empty">No approved project time in this period.</p>
+				) : (
+					<ul aria-label="Busiest projects" tabIndex={rows.length > 4 ? 0 : undefined}>
+						{rows.map((p) => {
+							const burn = p.burnPercent;
+							return <Row key={p.projectId} mark={initials(p.name)} title={p.name || `Project #${p.projectId}`} sub={`${p.status ? humanize(p.status) : 'No status'} · ${formatMinutes(p.periodMinutes)}`} value={burn === null ? 'No estimate' : `${formatNumber(burn, 0)}%`} pct={burn === null ? undefined : burn} tone={burn === null ? 'none' : burn > 100 ? 'down' : 'up'} tip={burn === null ? 'No estimate recorded' : 'Lifetime approved hours against the estimate'} />;
+						})}
+					</ul>
+				)}
+			</Load>
+		);
+	}
+	return (
+		<div className="sig-list" key={front}>
+			<div className="sig-list__head">
+				<h3>{head1}</h3>
+				{link ? (
+					<Link to={link} className="sig-link">
+						View all
+					</Link>
+				) : null}
+			</div>
+			{body}
+		</div>
+	);
+}
+
 export function SidePanel({ overview, projects, onCustomize }) {
 	const { can } = useAuth();
+	const [front, setFront] = useState(1); // the card in front (0 workforce, 1 projects, 2 leave) picks the health list below
 	const count = useCount();
 	const o = overview.data;
 	const head = o && o.headcount;
@@ -218,6 +340,8 @@ export function SidePanel({ overview, projects, onCustomize }) {
 					{ key: 'leave', cls: 3, kicker: 'Time off', icon: 'calendar', label: 'Approved leave', hint: 'Approved leave in days; hours are never added to days', value: leave && Number.isFinite(leave.approvedDays) ? `${formatNumber(leave.approvedDays, 1)} days` : '—', chip: leave && leave.approvedHours > 0 ? `+ ${formatNumber(leave.approvedHours, 1)} h` : null, to: ROUTES.leave, go: 'leave records' },
 				]}
 				count={count}
+				front={front}
+				onFront={setFront}
 			/>
 
 			{can('spreadsheet.view') || can('presentations.view') ? (
@@ -235,49 +359,7 @@ export function SidePanel({ overview, projects, onCustomize }) {
 				</div>
 			) : null}
 
-			<div className="sig-list">
-				<div className="sig-list__head">
-					<h3>Project health</h3>
-					{can('projects.view') ? (
-						<Link to={ROUTES.projects} className="sig-link">
-							View all
-						</Link>
-					) : null}
-				</div>
-				<Load res={projects} lines={3}>
-					{rows.length === 0 ? (
-						<p className="sig-empty">No approved project time in this period.</p>
-					) : (
-						<ul aria-label="Busiest projects" tabIndex={rows.length > 4 ? 0 : undefined}>
-							{rows.map((p) => {
-								const burn = p.burnPercent;
-								const tone = burn === null ? 'none' : burn > 100 ? 'down' : 'up';
-								return (
-									<li key={p.projectId} className="sig-row">
-										<span className="sig-row__avatar" aria-hidden="true">
-											{initials(p.name)}
-										</span>
-										<span className="sig-row__text">
-											<b>{p.name || `Project #${p.projectId}`}</b>
-											<small>
-												{p.status ? humanize(p.status) : 'No status'} · {formatMinutes(p.periodMinutes)}
-											</small>
-										</span>
-										<span className={`sig-row__amount sig-row__amount--${tone}`} title={burn === null ? 'No estimate recorded' : 'Lifetime approved hours against the estimate'}>
-											{burn === null ? 'No estimate' : `${formatNumber(burn, 0)}%`}
-											{burn === null ? null : (
-												<span className="sig-row__bar" aria-hidden="true">
-													<i style={{ width: `${Math.min(100, burn)}%` }} />
-												</span>
-											)}
-										</span>
-									</li>
-								);
-							})}
-						</ul>
-					)}
-				</Load>
-			</div>
+			<HealthList front={front} head={head} leave={leave} projects={projects} rows={rows} can={can} />
 		</section>
 	);
 }
@@ -344,6 +426,8 @@ export function AttentionCard({ overview, projects, product, freshness }) {
 export function WorkloadCard({ projects, preset, onPreset }) {
 	const count = useCount();
 	const [sort, setSort] = useState('hours');
+	const [wc, setWc] = useChartChoice('workload', { type: 'columns' });
+	const wtype = ['columns', 'bars', 'donut'].includes(wc.type) ? wc.type : 'columns';
 	const wl = projects.data && projects.data.workload;
 	const list = wl ? wl.projects.slice(0, 6).map((p) => ({ ...p, h: hours(p.periodMinutes) || 0 })) : [];
 	const shown = sort === 'name' ? [...list].sort((a, b) => String(a.name).localeCompare(String(b.name))) : list;
@@ -368,6 +452,7 @@ export function WorkloadCard({ projects, preset, onPreset }) {
 					</p>
 				</div>
 				<div className="sig-tools">
+					<ChartSwitch label="How to draw the workload" options={[{ id: 'columns', label: 'Columns' }, { id: 'bars', label: 'Bars' }, { id: 'donut', label: 'Share' }]} value={wtype} onChange={(t) => setWc({ type: t })} />
 					<button type="button" className="sig-chip-btn" onClick={() => setSort((s) => (s === 'hours' ? 'name' : 'hours'))} aria-label={`Sort by ${sort === 'hours' ? 'name' : 'hours'}`}>
 						Sort <span aria-hidden="true">⇅</span>
 					</button>
@@ -388,6 +473,11 @@ export function WorkloadCard({ projects, preset, onPreset }) {
 				{list.length === 0 ? (
 					<p className="sig-empty">No approved project time in this period.</p>
 				) : (
+					wtype === 'bars' ? (
+						<BarList ariaLabel="Approved hours by project" items={shown.map((p) => ({ id: String(p.projectId), label: p.name || `Project #${p.projectId}`, value: p.h, display: `${hoursText(p.h)}h` }))} />
+					) : wtype === 'donut' ? (
+						<DonutChart ariaLabel="Share of approved hours by project" centerLabel="hours" segments={shown.map((p) => ({ label: p.name || `Project #${p.projectId}`, value: Math.round(p.h * 10) / 10 }))} />
+					) : (
 					<div className="sig-columns" role="img" aria-label={`Approved hours by project: ${shown.map((p) => `${p.name || `Project #${p.projectId}`} ${hoursText(p.h)} hours`).join(', ')}`}>
 						{shown.map((p, i) => {
 							const top = p.projectId === topId;
@@ -402,6 +492,7 @@ export function WorkloadCard({ projects, preset, onPreset }) {
 							);
 						})}
 					</div>
+					)
 				)}
 			</Load>
 		</section>

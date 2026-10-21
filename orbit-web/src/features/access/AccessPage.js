@@ -37,7 +37,7 @@ export default function AccessPage() {
 						<div role="tabpanel" aria-label={TABS.find((t) => t.id === tab).label} className="access-panel">
 							{tab === 'overview' ? <OverviewTab catalog={catalog.data} data={roles.data} /> : null}
 							{tab === 'roles' ? <RolesTab catalog={catalog.data} data={roles.data} reload={roles.reload} /> : null}
-							{tab === 'users' ? <UsersTab data={roles.data} reload={roles.reload} /> : null}
+							{tab === 'users' ? <UsersTab data={roles.data} catalog={catalog.data} reload={roles.reload} /> : null}
 						</div>
 					</div>
 				) : null}

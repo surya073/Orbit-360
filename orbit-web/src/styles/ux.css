@@ -91,19 +91,26 @@
 
 /* ---------- back to top ---------- */
 .to-top {
+	/* a small pill, centred at the bottom of the page area (the rail takes the left 76px on wide screens) */
 	position: fixed;
-	right: var(--space-4);
+	left: 50%;
+	transform: translateX(-50%);
 	bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
 	z-index: var(--z-header);
-	display: grid;
-	place-items: center;
-	width: 44px;
-	height: 44px;
-	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-height: 36px;
+	padding: 0 14px 0 10px;
 	border: 1px solid var(--border-strong);
-	border-radius: 50%;
+	border-radius: 999px;
 	background: var(--surface);
 	color: var(--accent);
+	font: inherit;
+	font-size: var(--fs-xs);
+	font-weight: 700;
+	white-space: nowrap;
+	cursor: pointer;
 	box-shadow: var(--shadow-lg);
 	opacity: 0;
 	translate: 0 16px;
@@ -232,7 +239,8 @@
 	.table tbody tr:hover {
 		background: var(--surface);
 	}
-	.table td {
+	.table tbody td {
+		max-width: none; /* the desktop cap (200-320px) would squeeze every card cell */
 		display: grid;
 		grid-template-columns: minmax(84px, 38%) minmax(0, 1fr);
 		align-items: baseline;
@@ -318,4 +326,28 @@
 html {
 	overflow-y: scroll;
 	scrollbar-gutter: stable;
+}
+
+/* ---------- phones: comfortable tap targets (small buttons were 24-28px high) ---------- */
+@media (max-width: 640px) {
+	.btn--sm,
+	.icon-btn,
+	.pager__nav button,
+	.chart-switch__btn,
+	.sig-pill {
+		min-height: 36px;
+	}
+	.chart-switch__btn {
+		padding-inline: 14px;
+	}
+	.pager__nav button {
+		min-width: 40px;
+	}
+}
+
+/* a popover never needs to be wider than the screen */
+@media (max-width: 640px) {
+	.popover-wrap .popover {
+		max-width: calc(100vw - 16px);
+	}
 }

@@ -9,4 +9,8 @@ export const accessService = {
 	setPermissions: (ref, permissions) => api.put(`/access/roles/${ref}/permissions`, { permissions }),
 	users: (params, o) => api.get('/access/users', { ...o, params }),
 	updateUser: (id, body) => api.patch(`/access/users/${id}`, body),
+	/** Adds the person in Catalyst Authentication (which emails the invitation) and gives them their role and team. */
+	invite: (body) => api.post('/access/invitations', body),
+	userAccess: (id, o) => api.get(`/access/users/${id}/permissions`, o),
+	setUserPermissions: (id, allow, deny) => api.put(`/access/users/${id}/permissions`, { allow, deny }),
 };

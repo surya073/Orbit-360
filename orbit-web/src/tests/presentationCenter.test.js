@@ -23,10 +23,10 @@ const contrast = (a, b) => {
 const REQUIRED = ['--bg', '--surface', '--surface-2', '--surface-3', '--border', '--border-strong', '--text', '--text-muted', '--on-accent', '--accent', '--accent-hover', '--accent-contrast', '--accent-soft', '--focus', '--ring', '--success', '--warning', '--danger', '--info', '--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5', '--chart-6', '--chart-grid', '--gradient-accent', '--p-bg', '--p-letterbox', '--p-card', '--p-card-border', '--p-kpi-bg', '--p-title-gradient', '--p-glow', '--p-font-display'];
 
 describe('presentation themes', () => {
-	test('there are exactly five, with the requested names and distinct identities', () => {
-		expect(PRESENTATION_THEMES.map((t) => t.name)).toEqual(['Aurora Executive', 'Obsidian Luxe', 'Crystal Blue', 'Sunset Prestige', 'Emerald Vision']);
-		expect(new Set(PRESENTATION_THEMES.map((t) => t.tokens['--accent'])).size).toBe(5);
-		expect(new Set(PRESENTATION_THEMES.map((t) => t.tokens['--p-bg'])).size).toBe(5);
+	test('there are ten templates, with the requested names and distinct identities', () => {
+		expect(PRESENTATION_THEMES.map((t) => t.name)).toEqual(['Aurora Executive', 'Obsidian Luxe', 'Crystal Blue', 'Sunset Prestige', 'Emerald Vision', 'Modern Editorial', 'Startup Pitch', 'Neon Poster', 'Calm Sage', 'Corporate Navy']);
+		expect(new Set(PRESENTATION_THEMES.map((t) => t.tokens['--accent'])).size).toBe(10);
+		expect(new Set(PRESENTATION_THEMES.map((t) => t.tokens['--p-bg'])).size).toBe(10);
 		expect(new Set(PRESENTATION_THEMES.map((t) => t.tokens['--p-font-display'])).size).toBeGreaterThan(1); // Obsidian speaks in a serif
 	});
 
@@ -158,13 +158,15 @@ afterEach(() => {
 describe('presentation center landing page and launcher', () => {
 	const listRoutes = () => [[/^GET \/presentations\/5$/, okBody(deckBody())], [/^GET \/presentations\/6$/, okBody(deckBody({ ROWID: '6', title: 'All hands', slides: [{ type: 'section', section: 'ai_usage' }], config: { v: 2, period: { preset: 'this_month' }, filters: {}, slides: [{ type: 'section', section: 'ai_usage' }] } }))], [/^GET \/presentations/, okBody(rows, meta(2))], [/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }], meta(1))]];
 
-	test('Play Presentation opens the launcher instead of playing; five themes are offered', async () => {
+	test('Play Presentation opens the launcher instead of playing; ten colour themes, six templates and five layouts are offered', async () => {
 		mockFetch(listRoutes());
 		renderWithProviders(<CenterRoutes />, { route: '/presentations' });
 		await screen.findByRole('heading', { name: 'Board review' });
 		await userEvent.click(screen.getByRole('button', { name: 'Play Presentation' }));
 		const dialog = await screen.findByRole('dialog', { name: 'Choose Your Presentation Experience' });
-		expect(within(dialog).getAllByRole('radio')).toHaveLength(5);
+		expect(within(within(dialog).getByRole('group', { name: 'Presentation theme' })).getAllByRole('radio')).toHaveLength(10);
+		expect(within(within(dialog).getByRole('radiogroup', { name: 'Slide layout' })).getAllByRole('radio')).toHaveLength(5);
+		expect(within(dialog).getAllByRole('button', { pressed: false }).length).toBeGreaterThanOrEqual(5); // template cards
 		expect(within(dialog).getByRole('button', { name: 'Start Presentation' })).toBeInTheDocument();
 		expect(screen.queryByTestId('where')).not.toBeInTheDocument(); // nothing is playing yet
 	});
@@ -185,7 +187,7 @@ describe('presentation center landing page and launcher', () => {
 		await userEvent.click(within(dialog).getByRole('checkbox', { name: /project record/i })); // turn records off
 		expect(people).toBeChecked();
 		await userEvent.click(within(dialog).getByRole('button', { name: 'Start Presentation' }));
-		expect(await screen.findByTestId('where')).toHaveTextContent('/presentations/5/present?theme=obsidian&people=1&records=0&reporting=1');
+		expect(await screen.findByTestId('where')).toHaveTextContent('/presentations/5/present?theme=obsidian&layout=classic&people=1&records=0&reporting=1');
 	});
 
 	test('Escape closes the launcher and Cancel does too; the theme can be changed before starting without a reload', async () => {

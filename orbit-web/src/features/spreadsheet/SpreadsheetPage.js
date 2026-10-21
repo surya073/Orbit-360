@@ -36,10 +36,13 @@ const PAINT_KEYS = ['b', 'i', 's', 'wrap', 'clip', 'align', 'valign', 'size', 'f
 
 function readToolsHidden() {
 	try {
-		return window.localStorage.getItem(TOOLS_KEY) === '1';
+		const stored = window.localStorage.getItem(TOOLS_KEY);
+		if (stored !== null) return stored === '1';
 	} catch {
-		return false;
+		/* fall through to the screen-size default */
 	}
+	// Nothing chosen yet: on a phone the formatting rows would fill the screen before the grid starts, so they begin collapsed.
+	return typeof window !== 'undefined' && window.innerWidth < 640;
 }
 
 function readDensity() {
@@ -110,6 +113,12 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 		notify('Searching all records is unavailable right now. Searching the rows loaded in the grid instead.', 'error');
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [searchFailed]);
+	useEffect(() => {
+		if (!data.columnNotice) return;
+		notify(data.columnNotice, 'error');
+		data.clearColumnNotice();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [data.columnNotice]);
 	useEffect(() => {
 		onDirty(tabId, data.dirtyCount); // the page guards unsaved work across every open sheet
 	}, [onDirty, tabId, data.dirtyCount]);
@@ -271,10 +280,10 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 		return { ...out, rejected: [...(out.rejected || []), ...refused] };
 	};
 
-	const exportCsv = () => download(`${mod.resource}.csv`, rowsToCsv(columns, view, (r, f) => r.values[f]));
+	const dataColumns = columns.filter((c) => !c.placeholder);
+	const exportCsv = () => download(`${mod.resource}.csv`, rowsToCsv(dataColumns, view.filter((r) => !r.pristine), (r, f) => r.values[f]));
 	const sortCol = sort && columns.find((c) => c.field === sort.field);
 	const { status } = data.saveState;
-	const loadedAll = res.status === 'success' || res.status === 'empty';
 	const hasRowErrors = Object.keys(state.errors).length > 0;
 
 	let saveStatus = { kind: 'saved', text: data.saveState.at ? `Saved ${data.saveState.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved' };
@@ -307,7 +316,7 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 	const activeText = activeRow && activeCol ? displayText(activeCol, activeRow.values[activeCol.field], labelOf) : '';
 
 	const searching = search.trim() !== '' || filters.length > 0;
-	const empty = loadedAll && view.length === 0 && !state.newRows.length;
+	const empty = false; // the grid is always a blank sheet to type into
 
 	return (
 		<div className="sheet-workspace" onKeyDown={onWorkspaceKeyDown}>
@@ -323,8 +332,6 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 				onCut={() => gridRef.current && gridRef.current.cut()}
 				onCopy={() => gridRef.current && gridRef.current.copy()}
 				onPaste={() => gridRef.current && gridRef.current.paste()}
-				onAddRow={addRow}
-				canAddRows={perms.create}
 				canDelete={perms.delete && selectedViewRows.length > 0}
 				onDelete={doDelete}
 				search={search}
@@ -367,7 +374,7 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 				onDecimals={changeDecimals}
 				onBorders={changeBorders}
 				onFunction={runFunction}
-				columns={columns}
+				columns={dataColumns}
 				filters={filters}
 				onFilters={setFilters}
 				zoomPct={zoomPct}
@@ -430,6 +437,7 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 								canAddRows={perms.create}
 								onSetCells={setCells}
 								onAddRows={perms.create ? data.addRows : undefined}
+								onRenameColumn={data.canAddColumns ? data.renameColumn : undefined}
 								onNotice={onNotice}
 								onUndo={data.undo}
 								onRedo={data.redo}
@@ -457,7 +465,7 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 							</span>
 						) : null}
 						<span className="muted">
-							{view.length} row{view.length === 1 ? '' : 's'} shown{res.meta ? ` of ${res.meta.total}` : ''}
+							{view.filter((r) => !r.pristine).length} row{view.filter((r) => !r.pristine).length === 1 ? '' : 's'} shown{res.meta ? ` of ${res.meta.total}` : ''}
 							{search.trim() && !serverSearch ? ' · searching loaded rows only' : ''}
 						</span>
 						<span className="muted sheet-foot__hint">Type or Enter edits · Tab moves · {`Shift+Arrows`} select · Right-click for more</span>
@@ -589,7 +597,7 @@ export default function SpreadsheetPage() {
 					<div className="sheet-filter" style={{ maxWidth: 340 }}>
 						<p className="small">Edit existing records and add new ones in a grid. Changes are saved to the same records as the Add form and Sheet import.</p>
 						<p className="small muted">
-							Columns are the fields this record type supports; new columns cannot be added because the schema is fixed. Saved values cannot be cleared, and fields that identify a record cannot be changed after it is created. Use the + tabs below to open more sheets.
+							Columns are the fields this record type supports, plus any extra columns an administrator adds (type a name in a blank column header). Saved values of built-in fields cannot be cleared, and fields that identify a record cannot be changed after it is created. Use the + tabs below to open more sheets.
 							{activeTab && !activeCanWrite ? ' Your role cannot change this record type.' : ''}
 						</p>
 						<p className="small muted">Cell formatting (colours, bold, links, zoom) is remembered in this browser only; it is not part of the record.</p>

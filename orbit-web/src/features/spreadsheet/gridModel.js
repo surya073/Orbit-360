@@ -47,6 +47,68 @@ export function buildColumns(template, rows) {
 		}));
 }
 
+// ---- custom columns: definitions from /custom-fields, values stored in each record's more_details ----
+export const CUSTOM_PREFIX = 'x:';
+export const isCustomField = (field) => typeof field === 'string' && field.startsWith(CUSTOM_PREFIX);
+const CUSTOM_TYPES = { text: 'str', number: 'num', date: 'date', choice: 'enum' };
+
+/** Grid columns for the extra fields of a record type (appended after the built-in columns). */
+export function customColumns(defs) {
+	return (defs || []).map((d) => ({
+		field: CUSTOM_PREFIX + d.field_key,
+		label: d.label,
+		type: CUSTOM_TYPES[d.field_type] || 'str',
+		required: false,
+		values: d.field_type === 'choice' ? String(d.choices || '').split(',').map((c) => c.trim()).filter(Boolean) : undefined,
+		maxLength: d.field_type === 'text' ? 500 : undefined,
+		fk: false,
+		immutable: false,
+		custom: true,
+		defId: d.ROWID,
+		order: Number(d.sort_order) || 0,
+	}));
+}
+
+export function parseExtra(row) {
+	if (!row || !row.more_details) return {};
+	try {
+		const o = typeof row.more_details === 'string' ? JSON.parse(row.more_details) : row.more_details;
+		return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+	} catch {
+		return {};
+	}
+}
+
+/** Rows with each defined extra value exposed as a plain x:key field, so the grid treats it like any column. */
+export function withCustomValues(rows, defs) {
+	if (!defs || defs.length === 0) return rows;
+	return rows.map((r) => {
+		const extra = parseExtra(r);
+		const out = { ...r };
+		for (const d of defs) if (extra[d.field_key] !== undefined && extra[d.field_key] !== null) out[CUSTOM_PREFIX + d.field_key] = extra[d.field_key];
+		return out;
+	});
+}
+
+/** Splits a row's changed values into built-in fields and the extra (more_details) ones, keyed without the prefix. */
+export function splitCustom(values) {
+	const plain = {};
+	const extra = {};
+	for (const [k, v] of Object.entries(values)) {
+		if (isCustomField(k)) extra[k.slice(CUSTOM_PREFIX.length)] = v;
+		else plain[k] = v;
+	}
+	return { plain, extra };
+}
+
+/** URL-safe key for a new column from its label: "Client tier" -> client_tier (unique among the keys already taken). */
+export function keyFromLabel(label, taken = []) {
+	const base = String(label || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').replace(/^[^a-z]+/, '').slice(0, 36) || 'field';
+	let key = base.length < 2 ? base + '_x' : base;
+	for (let i = 2; taken.includes(key); i++) key = base.slice(0, 36 - String(i).length - 1) + '_' + i;
+	return key;
+}
+
 /** Stored value -> the text shown/edited in a cell. */
 export function toText(v) {
 	if (v === null || v === undefined) return '';
@@ -75,7 +137,7 @@ export function normalizeCell(col, raw) {
 	switch (col.type) {
 		case 'enum': {
 			const key = text.toLowerCase().replace(/\s+/g, '_');
-			const hit = col.values.find((v) => v === key);
+			const hit = col.values.find((v) => v === key) || col.values.find((v) => v.toLowerCase() === text.toLowerCase());
 			return hit ? { value: hit } : { error: `Must be one of: ${col.values.join(', ')}` };
 		}
 		case 'bool': {

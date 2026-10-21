@@ -119,7 +119,7 @@ function RolesGlance({ roles, total }) {
 export default function OverviewTab({ catalog, data }) {
 	const roles = data.roles;
 	const active = roles.filter((r) => r.isActive);
-	const users = useApiResource((signal) => accessService.users({ pageSize: 1 }, { signal }), 'access-overview-count', { isEmpty: () => false });
+	const users = useApiResource((signal) => accessService.users({ pageSize: 50 }, { signal }), 'access-overview-users', { isEmpty: () => false });
 	const groups = useMemo(() => groupModules(catalog), [catalog]);
 	const total = allKeys(catalog).length;
 

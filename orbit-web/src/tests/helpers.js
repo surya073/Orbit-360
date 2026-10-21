@@ -76,7 +76,14 @@ export const aiFixture = { usage: { completeness: 'partial', missing: 'reporting
 export const freshnessFixture = { asOf: '2026-10-13 10:00:00', timeEntries: { latestDate: '2026-10-12' }, attendance: { latestDate: '2026-10-12' }, imports: { lastCompletedAt: '2026-10-10 09:00:00' } };
 
 /** Routes for every dashboard endpoint (override entries by prepending your own to mockFetch). */
-export const dashboardRoutes = () => [
+/** The one-request dashboard answer. `over` replaces a section's data, or fails it with `{ error: { status, code, message } }`. */
+export const bundleOf = (over = {}) => {
+	const base = { overview: overviewFixture, trends: trendsFixture, projects: projectsFixture, product: productFixture, ai: aiFixture, freshness: freshnessFixture };
+	return Object.fromEntries(Object.entries(base).map(([k, v]) => [k, over[k] && over[k].error ? { ok: false, error: over[k].error } : { ok: true, data: over[k] || v }]));
+};
+
+export const dashboardRoutes = (over = {}) => [
+	[/^GET \/dashboard\/bundle/, () => okBody(bundleOf(over))],
 	[/^GET \/dashboard\/overview/, okBody(overviewFixture)],
 	[/^GET \/dashboard\/trends/, okBody(trendsFixture)],
 	[/^GET \/dashboard\/projects/, okBody(projectsFixture)],

@@ -1,21 +1,21 @@
 /*
- * Dashboard card grid (KPI cards through Key insights): a softer "bento" look and a scroll-triggered entrance.
+ * Scroll-triggered entrance for the cards and tables of every page (any `.bento`), and the softer card look of the dashboard and module pages.
  * Cards are framed first, then their charts, bars and rings draw in once the card scrolls into view
- * (hooks/useBentoReveal adds .bento / .is-in). Theme tokens only; scoped to the dashboard.
+ * (hooks/useBentoReveal adds .bento / .is-in). Theme tokens only; the card look below is scoped to .dash / .mod.
  */
 
 /* ---------- entrance ---------- */
-:is(.dash, .mod) .bento {
+.bento {
 	transition: opacity 650ms var(--ease), translate 750ms var(--ease), scale 750ms var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
 	transition-delay: calc(var(--k, 0) * 70ms), calc(var(--k, 0) * 70ms), calc(var(--k, 0) * 70ms), 0s, 0s;
 }
-:is(.dash, .mod) .bento:not(.is-in) {
+.bento:not(.is-in) {
 	opacity: 0;
 	translate: 0 34px;
 	scale: 0.965;
 }
 /* hold every animated child at its first frame until the card is in view, then let them play */
-:is(.dash, .mod) .bento:not(.is-in) * {
+.bento:not(.is-in) * {
 	animation-play-state: paused !important;
 }
 /* the first-visit sequence is timed from page load; here everything is timed from the moment the card lands */
@@ -37,16 +37,16 @@
 		stroke-dasharray: var(--seg) 999;
 	}
 }
-:is(.dash, .mod) .bento .donut circle:nth-of-type(n + 2) {
+.bento .donut circle:nth-of-type(n + 2) {
 	animation: bento-seg 1100ms var(--ease) both;
 }
-:is(.dash, .mod) .bento .donut circle:nth-of-type(3) {
+.bento .donut circle:nth-of-type(3) {
 	animation-delay: 180ms;
 }
-:is(.dash, .mod) .bento .donut circle:nth-of-type(4) {
+.bento .donut circle:nth-of-type(4) {
 	animation-delay: 360ms;
 }
-:is(.dash, .mod) .bento .donut circle:nth-of-type(n + 5) {
+.bento .donut circle:nth-of-type(n + 5) {
 	animation-delay: 540ms;
 }
 
@@ -179,12 +179,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-	:is(.dash, .mod) .bento,
-	:is(.dash, .mod) .bento * {
+	.bento,
+	.bento * {
 		transition: none;
 		animation: none;
 	}
-	:is(.dash, .mod) .bento:not(.is-in) {
+	.bento:not(.is-in) {
 		opacity: 1;
 		translate: none;
 		scale: 1;

@@ -6,7 +6,10 @@ import { __clearLookupCache } from '../hooks/useLookup';
 import { __resetTemplateCache } from '../hooks/useTemplates';
 import { buildColumns, columnLetter, jumpTarget, normalizeCell, parseTsv, rangeLabel, rowsToCsv, sortRows, toTsv } from '../features/spreadsheet/gridModel';
 import SpreadsheetPage from '../features/spreadsheet/SpreadsheetPage';
+import { sheetConfig } from '../features/spreadsheet/useSheetView';
 import { admin, errBody, manager, mockFetch, okBody, renderWithProviders } from './helpers';
+
+jest.setTimeout(20000); // the grid is large; a busy machine running every suite at once needs more than 5s
 
 const template = {
 	module: 'employees',
@@ -33,6 +36,7 @@ const rows = () => [
 const meta = { page: 1, pageSize: 50, total: 3, totalPages: 1 };
 
 beforeEach(() => {
+	sheetConfig.rows = 0; // tests use the loaded rows only; one test below restores the 500-row blank sheet
 	window.localStorage.clear();
 	__resetTemplateCache();
 	__clearLookupCache();
@@ -110,8 +114,9 @@ describe('grid model', () => {
 });
 
 describe('Spreadsheet editor page', () => {
-	function setup({ user = manager, patch, post, list = rows } = {}) {
+	function setup({ user = manager, patch, post, list = rows, custom = [] } = {}) {
 		mockFetch([
+			[/^GET \/custom-fields/, okBody(custom, meta)],
 			[/^GET \/imports\/templates/, okBody([template, teamsTemplate])],
 			[/^GET \/employees\?.*ids=/, (line) => okBody(list().filter((r) => line.includes(`ids=${r.ROWID}`) || /ids=[\d%C,]+/.test(line)), meta)],
 			[/^GET \/employees/, () => okBody(list(), meta)],
@@ -140,7 +145,7 @@ describe('Spreadsheet editor page', () => {
 		const modes = screen.getByRole('navigation', { name: 'Data entry options' });
 		expect(within(modes).getAllByRole('link').map((l) => l.textContent)).toEqual([expect.stringContaining('Sheet import'), expect.stringContaining('Spreadsheet editor')]);
 		await userEvent.click(screen.getByRole('button', { name: 'About the spreadsheet editor' }));
-		expect(screen.getByText(/new columns cannot be added/)).toBeInTheDocument();
+		expect(screen.getByText(/extra columns an administrator adds/)).toBeInTheDocument();
 	});
 
 	test('edits a cell, marks it unsaved, and saves only the changed field to the existing update endpoint', async () => {
@@ -156,6 +161,39 @@ describe('Spreadsheet editor page', () => {
 		expect(call.line).toBe('PATCH /employees/1');
 		expect(JSON.parse(call.init.body)).toEqual({ job_role: 'Principal' });
 		await waitFor(() => expect(screen.getByText(/^Saved \d/)).toBeInTheDocument());
+	});
+
+	test('extra columns: values come from more_details and a save merges them into it, other keys kept', async () => {
+		const custom = [{ ROWID: '5', module: 'employees', field_key: 'client_tier', label: 'Client tier', field_type: 'choice', choices: 'Gold,Silver', sort_order: 1, is_active: true }, { ROWID: '6', module: 'employees', field_key: 'notes', label: 'Notes', field_type: 'text', sort_order: 2, is_active: true }];
+		setup({ custom, list: () => rows().map((r) => ({ ...r, more_details: r.ROWID === '1' ? '{"client_tier":"Gold","legacy":"keep"}' : null })) });
+		await screen.findByText('Asha Rao');
+		expect(screen.getByText('Client tier')).toBeInTheDocument();
+		const heads = screen.getAllByRole('columnheader').slice(1).map((h) => h.textContent);
+		const notes = heads.findIndex((h) => h.includes('Notes'));
+		expect(gridcell(0, notes - 1)).toHaveTextContent('Gold');
+		await editCell(0, notes, 'Mentor');
+		expect(gridcell(0, notes)).toHaveClass('is-dirty');
+		await userEvent.click(screen.getByRole('button', { name: /Save changes/ }));
+		await waitFor(() => expect(writes('PATCH')).toHaveLength(1));
+		expect(JSON.parse(writes('PATCH')[0].init.body)).toEqual({ more_details: { client_tier: 'Gold', legacy: 'keep', notes: 'Mentor' } });
+	});
+
+	test('the sheet is 500 rows by A..AC: typing in a blank row creates a record, typing in a blank column adds a column', async () => {
+		sheetConfig.rows = 500;
+		const created = [];
+		setup({ post: (line, init) => (created.push(JSON.parse(init.body)), { status: 201, body: okBody({ ROWID: '99' }) }) });
+		const grid = await screen.findByRole('grid', { name: 'Employees spreadsheet' });
+		await within(grid).findByText('Asha Rao');
+		expect(grid).toHaveAttribute('aria-rowcount', '501');
+		expect(grid).toHaveAttribute('aria-colcount', '30'); // A..AC plus the row-number gutter
+		const header = within(grid).getAllByRole('columnheader').map((h) => h.textContent);
+		expect(header.join(' ')).toContain('AC');
+		// a blank row: typing a name fills it in place, and Save creates exactly that record
+		await editCell(3, 0, 'Dev Kumar');
+		expect(gridcell(3, 0)).toHaveClass('is-dirty');
+		await userEvent.click(screen.getByRole('button', { name: /Save changes/ }));
+		await waitFor(() => expect(created).toHaveLength(1));
+		expect(created[0]).toEqual({ full_name: 'Dev Kumar' });
 	});
 
 	test('a failed save keeps the edit, flags the row, and a retry succeeds', async () => {
@@ -196,9 +234,10 @@ describe('Spreadsheet editor page', () => {
 	});
 
 	test('new rows: required fields block the create, then the row is created exactly once', async () => {
+		sheetConfig.rows = 500;
 		setup();
 		await screen.findByText('Asha Rao');
-		await userEvent.click(screen.getByRole('button', { name: 'Add row' }));
+		expect(screen.queryByRole('button', { name: 'Add row' })).not.toBeInTheDocument(); // rows are typed into the blank sheet
 		const newRowIdx = 3;
 		await editCell(newRowIdx, 1, 'Tester');
 		await userEvent.click(screen.getByRole('button', { name: /Save changes/ }));
@@ -283,7 +322,8 @@ describe('Spreadsheet editor page', () => {
 		renderWithProviders(<SpreadsheetPage />, { user: admin, route: '/spreadsheet?module=teams' });
 		expect(await screen.findByText('Delivery')).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: /Save changes/ })).toBeDisabled();
-		expect(screen.getByRole('button', { name: 'Add row' })).toBeEnabled();
+		expect(screen.queryByRole('button', { name: 'Add row' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: /Extra columns/ })).not.toBeInTheDocument();
 	});
 
 	describe('workspace interactions', () => {
@@ -318,7 +358,7 @@ describe('Spreadsheet editor page', () => {
 			await userEvent.keyboard('{Control>}{Shift>}{ArrowDown}{/Shift}{/Control}');
 			expect(screen.getByText('B1:B2')).toBeInTheDocument();
 			await userEvent.keyboard('{Control>}{End}{/Control}');
-			expect(screen.getByText('E3')).toBeInTheDocument();
+			expect(screen.getByText('AC3')).toBeInTheDocument(); // the sheet ends at column AC
 			await userEvent.keyboard('{Control>}{Home}{/Control}');
 			expect(screen.getByText('A1')).toBeInTheDocument();
 		});

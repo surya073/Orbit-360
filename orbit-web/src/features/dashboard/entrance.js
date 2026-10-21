@@ -6,6 +6,7 @@ import React, { createContext, useContext, useEffect, useLayoutEffect, useRef, u
  * always had, so filters, refreshes and navigation never replay a long intro.
  */
 const SEEN_KEY = 'company360.dashIntro';
+const INTRO_MS = 4500; // the longest delayed animation in styles/dashEntrance.css ends well before this
 
 /** Pure: which entrance to use. Reduced motion never gets the cinematic one. */
 export const chooseEntrance = ({ seen, reducedMotion }) => (seen || reducedMotion ? 'quick' : 'cinematic');
@@ -30,7 +31,15 @@ export function useDashboardEntrance() {
 			/* not remembered */
 		}
 	}, []);
-	return mode;
+	// Once the intro has played the page stays as it is: anything that re-renders it later (a picker, a filter, new
+	// data) must not replay the intro's delayed animations, which would leave panels blank for a second or two.
+	const [played, setPlayed] = useState(false);
+	useEffect(() => {
+		if (mode !== 'cinematic') return undefined;
+		const id = setTimeout(() => setPlayed(true), INTRO_MS);
+		return () => clearTimeout(id);
+	}, [mode]);
+	return mode === 'cinematic' && played ? 'settled' : mode;
 }
 
 /** True inside a dashboard that is playing the cinematic entrance (so cards may count up). */

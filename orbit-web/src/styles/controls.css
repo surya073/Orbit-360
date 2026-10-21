@@ -493,3 +493,27 @@ html[data-theme='volcano'] .field input[type='date']::-webkit-calendar-picker-in
 		order: 3;
 	}
 }
+
+/* A search box with an icon inside it: the generic field rule above has higher specificity than .search-input input,
+   so it reset the left padding and the text (and caret) sat under the icon. */
+.field .search-input input.input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.search-input input.input {
+	padding-left: 34px;
+	padding-right: 32px;
+}
+
+/* A search box with an icon inside it: the generic field rule above has higher specificity than .search-input input,
+   so it reset the left padding and the text (and caret) sat under the icon. */
+.field .search-input input.input,
+.search-input input.input {
+	padding-left: 34px;
+	padding-right: 32px;
+}
+
+/* A search box with an icon inside it: the generic field rule above has higher specificity than .search-input input,
+   so it reset the left padding and the text (and caret) sat under the icon. */
+.field .search-input input.input,
+.search-input input.input {
+	padding-left: 34px;
+	padding-right: 32px;
+}

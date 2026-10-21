@@ -22,6 +22,8 @@ export const isHex = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v)
 /** The custom properties that a custom accent overrides (removed again when the accent is cleared). */
 export const ACCENT_VARS = ['--accent', '--accent-hover', '--accent-contrast', '--on-accent', '--accent-soft', '--focus', '--ring', '--gradient-accent', '--chart-1'];
 
+export const CHART_VARS = ['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5', '--chart-6'];
+
 /** accentVars('#ff6600', { surface, bg }) -> { '--accent': ..., ... } adjusted for the theme's own surfaces. */
 export function accentVars(hex, { surface, bg }) {
 	const dark = luminance(surface) < 0.2;
@@ -61,4 +63,25 @@ export function accentVars(hex, { surface, bg }) {
 		'--gradient-accent': `linear-gradient(135deg, ${accent} 0%, ${mix(accent, pull, 0.28)} 100%)`,
 		'--chart-1': accent,
 	};
+}
+
+/**
+ * A chart palette for the active theme: each colour is moved toward the readable end until it has 3:1 contrast
+ * with the surface (the rule every built-in theme already meets). `colors` is a list of six hex colours.
+ */
+export function paletteVars(colors, { surface }) {
+	const dark = luminance(surface) < 0.2;
+	const pull = dark ? '#ffffff' : '#000000';
+	const out = {};
+	colors.forEach((c, i) => {
+		let v = c;
+		for (let k = 0; k < 40 && contrast(v, surface) < 3.1; k++) v = mix(v, pull, 0.06);
+		out[`--chart-${i + 1}`] = v;
+	});
+	return out;
+}
+
+/** Six tints of one colour, from the colour itself to a lighter or darker relative. */
+export function tintColors(hex) {
+	return [0, 0.18, 0.36, 0.54, 0.7, 0.84].map((t, i) => mix(hex, i % 2 ? '#ffffff' : '#000000', i === 0 ? 0 : t * 0.7));
 }

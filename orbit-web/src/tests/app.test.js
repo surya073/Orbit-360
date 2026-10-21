@@ -90,13 +90,13 @@ describe('shell and dashboard', () => {
 		render(<App />);
 		const team = await screen.findByLabelText('Team');
 		await pickOption(team, '7');
-		await waitFor(() => expect(global.fetch.calls.some((c) => c.line.startsWith('GET /dashboard/overview') && c.line.includes('team_id=7'))).toBe(true));
+		await waitFor(() => expect(global.fetch.calls.some((c) => c.line.startsWith('GET /dashboard/bundle') && c.line.includes('team_id=7'))).toBe(true));
 		expect(window.location.hash).toContain('team=7'); // filters live in the URL
 	});
 
 	test('a failing widget shows its own error and does not break the others', async () => {
 		signIn(manager);
-		mockFetch([meRoute(manager), [/^GET \/dashboard\/projects/, { status: 503, body: errBody(503, 'QUERY_BUDGET_EXCEEDED', 'Too many queries') }], ...dashboardRoutes()]);
+		mockFetch([meRoute(manager), ...dashboardRoutes({ projects: { error: { status: 503, code: 'QUERY_BUDGET_EXCEEDED', message: 'Too many queries' } } })]);
 		render(<App />);
 		expect((await screen.findAllByText('Too many queries')).length).toBeGreaterThan(0);
 		expect(within(await screen.findByRole('region', { name: 'Billable hours' })).getByText('10')).toBeInTheDocument();
@@ -108,12 +108,14 @@ describe('shell and dashboard', () => {
 		const empty = { ...overviewFixture, time: { completeness: 'insufficient_data', billableMinutes: null, nonBillableMinutes: null, totalMinutes: null, billablePercent: null, approvedEntries: 0, excluded: { pending: 0, rejected: 0 } }, attendance: { completeness: 'insufficient_data', lateRatePercent: null, records: 0, unknownCount: 0 }, leave: { completeness: 'insufficient_data', approvedDays: null, approvedHours: null, records: 0 }, headcount: { completeness: 'insufficient_data', total: null, byStatus: {} } };
 		mockFetch([
 			meRoute(manager),
-			[/^GET \/dashboard\/overview/, okBody(empty)],
-			[/^GET \/dashboard\/trends/, okBody({ filters: { granularity: 'week' }, truncated: false, time: [], attendance: [] })],
-			[/^GET \/dashboard\/projects/, okBody({ status: { completeness: 'insufficient_data', total: null, byStatus: {} }, workload: { completeness: 'insufficient_data', projects: [], projectsWithTime: 0 } })],
-			[/^GET \/dashboard\/product/, okBody({ asOf: '2026-10-13', product: { completeness: 'insufficient_data', total: null, byType: {}, byStatus: {}, overdue: null } })],
-			[/^GET \/dashboard\/ai-usage/, okBody({ usage: { completeness: 'insufficient_data', tools: [], byCategory: {}, totalRecords: null, missingPeriod: 0 } })],
-			[/^GET \/dashboard\/freshness/, okBody({ asOf: 'x', timeEntries: { latestDate: null }, attendance: { latestDate: null }, imports: { lastCompletedAt: null } })],
+			...dashboardRoutes({
+				overview: empty,
+				trends: { filters: { granularity: 'week' }, truncated: false, time: [], attendance: [] },
+				projects: { status: { completeness: 'insufficient_data', total: null, byStatus: {} }, workload: { completeness: 'insufficient_data', projects: [], projectsWithTime: 0 } },
+				product: { asOf: '2026-10-13', product: { completeness: 'insufficient_data', total: null, byType: {}, byStatus: {}, overdue: null } },
+				ai: { usage: { completeness: 'insufficient_data', tools: [], byCategory: {}, totalRecords: null, missingPeriod: 0 } },
+				freshness: { asOf: 'x', timeEntries: { latestDate: null }, attendance: { latestDate: null }, imports: { lastCompletedAt: null } },
+			}),
 			[/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }])],
 		]);
 		render(<App />);

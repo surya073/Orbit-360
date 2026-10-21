@@ -20,7 +20,7 @@ export const RESOURCE_MODULE = {
 export const moduleOfResource = (resource) => RESOURCE_MODULE[resource] || null;
 export const keyOf = (module, action) => `${module}.${action}`;
 
-const ADMIN_ONLY = new Set(['teams.create', 'teams.edit']);
+const ADMIN_ONLY = new Set(['teams.create', 'teams.edit', 'custom_fields.create', 'custom_fields.edit', 'custom_fields.delete']);
 
 /** What the two original roles could do. Used only when a session carries no permission list (older server, test fixtures). */
 export const legacyAllowed = (role, key) => role === 'admin' || (role === 'manager' && !key.startsWith('access.') && !ADMIN_ONLY.has(key));

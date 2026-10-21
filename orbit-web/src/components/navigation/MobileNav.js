@@ -131,7 +131,9 @@ export default function MobileNav({ onClose }) {
 					</span>
 				</div>
 				<nav aria-label="Mobile" className="offcanvas__nav">
-					{nav.map((item) =>
+					{nav
+						.filter((item) => item.label !== 'Settings')
+						.map((item) =>
 						item.type === 'link' ? (
 							<Item key={item.to} to={item.to} label={item.label} icon={item.icon} end={item.end} i={n++} />
 						) : (
@@ -146,6 +148,7 @@ export default function MobileNav({ onClose }) {
 				</nav>
 				<footer className="offcanvas__foot">
 					<Item to={ROUTES.settings} label="Settings" icon="settings" i={n++} />
+					{can('access.view') ? <Item to={ROUTES.access} label="Access & Permissions" icon="lock" i={n++} /> : null}
 					<button
 						type="button"
 						className="oc-item"

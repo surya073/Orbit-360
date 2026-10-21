@@ -53,12 +53,10 @@ export default function CustomRange({ from, to, onCommit, chipsHost, open = true
 
 	const pickDay = (iso) => {
 		if (step === 'start') {
-			const keepEnd = end && end >= iso;
 			setStart(iso);
-			if (!keepEnd) setEnd(null);
+			setEnd(null); // one refresh per range: it is applied when the end day is chosen, not twice
 			setStep('end');
 			setView(null);
-			if (keepEnd) onCommit({ from: iso, to: end });
 		} else {
 			setEnd(iso);
 			setView(null);

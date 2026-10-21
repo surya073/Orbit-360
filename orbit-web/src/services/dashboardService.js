@@ -2,6 +2,8 @@ import { api } from './apiClient';
 
 /** Backend-computed metrics. The UI never derives KPIs from raw records. */
 export const dashboardService = {
+	// the whole dashboard in one request (one function invocation instead of six)
+	bundle: (params, o) => api.get('/dashboard/bundle', { ...o, params }),
 	overview: (params, o) => api.get('/dashboard/overview', { ...o, params }),
 	trends: (params, o) => api.get('/dashboard/trends', { ...o, params }),
 	projects: (params, o) => api.get('/dashboard/projects', { ...o, params }),

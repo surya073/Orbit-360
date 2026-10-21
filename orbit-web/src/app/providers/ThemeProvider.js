@@ -1,8 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { IconStyleContext } from '../../components/common/iconStyle';
 import { DEFAULT_ICON_STYLE, ICON_STYLE_IDS } from '../../config/icons';
-import { APPEARANCE_KEY, DEFAULT_THEME, DENSITIES, LEGACY_THEMES, MOTIONS, RADII, SYSTEM_MAP, TEXT_SIZES, THEME_IDS, WIDTHS } from '../../config/themes';
-import { ACCENT_VARS, accentVars, isHex } from '../../utils/accent';
+import { APPEARANCE_KEY, DEFAULT_THEME, DENSITIES, LEGACY_THEMES, FONTS, MOTIONS, PALETTES, RADII, SYSTEM_MAP, TEXT_SIZES, THEME_IDS, WIDTHS } from '../../config/themes';
+import { ACCENT_VARS, CHART_VARS, accentVars, isHex, paletteVars, tintColors } from '../../utils/accent';
 import { motionReduced } from '../../utils/motion';
 
 /**
@@ -10,7 +10,7 @@ import { motionReduced } from '../../utils/motion';
  * cosmetic preference, so it is kept in localStorage (no backend call); storage failures degrade to
  * session-only. index.html applies the stored theme before first paint to avoid a flash.
  */
-const DEFAULTS = { theme: DEFAULT_THEME, density: 'comfortable', iconStyle: DEFAULT_ICON_STYLE, accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard' };
+const DEFAULTS = { theme: DEFAULT_THEME, density: 'comfortable', iconStyle: DEFAULT_ICON_STYLE, accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme' };
 const VALID_DENSITY = DENSITIES.map((d) => d.id);
 const oneOf = (list, v, fallback) => (list.some((x) => x.id === v) ? v : fallback);
 
@@ -27,6 +27,8 @@ export function readAppearance(storage = window.localStorage) {
 			textSize: oneOf(TEXT_SIZES, raw.textSize, DEFAULTS.textSize),
 			motion: oneOf(MOTIONS, raw.motion, DEFAULTS.motion),
 			width: oneOf(WIDTHS, raw.width, DEFAULTS.width),
+			font: oneOf(FONTS, raw.font, DEFAULTS.font),
+			palette: oneOf(PALETTES, raw.palette, DEFAULTS.palette),
 		};
 	} catch {
 		return DEFAULTS;
@@ -62,21 +64,32 @@ export function ThemeProvider({ children }) {
 		root.dataset.text = prefs.textSize;
 		root.dataset.motion = prefs.motion;
 		root.dataset.width = prefs.width;
+		root.dataset.font = prefs.font;
+		const font = FONTS.find((f) => f.id === prefs.font);
+		['--font-ui', '--font-display'].forEach((k) => root.style.removeProperty(k));
+		const fontVars = font && font.ui ? { '--font-ui': font.ui, '--font-display': font.display || font.ui } : null;
+		if (fontVars) Object.entries(fontVars).forEach(([k, v]) => root.style.setProperty(k, v));
 		// A custom accent is re-derived for whichever theme is active, so it stays readable on its surfaces.
 		let derived = null;
-		ACCENT_VARS.forEach((k) => root.style.removeProperty(k));
-		if (prefs.accent) {
-			const cs = window.getComputedStyle(root);
-			const surface = cs.getPropertyValue('--surface').trim();
-			const bg = cs.getPropertyValue('--bg').trim();
-			if (isHex(surface) && isHex(bg)) {
-				derived = accentVars(prefs.accent, { surface, bg });
-				Object.entries(derived).forEach(([k, v]) => root.style.setProperty(k, v));
+		[...ACCENT_VARS, ...CHART_VARS].forEach((k) => root.style.removeProperty(k));
+		const cs = window.getComputedStyle(root);
+		const surface = cs.getPropertyValue('--surface').trim();
+		const bg = cs.getPropertyValue('--bg').trim();
+		if (isHex(surface) && isHex(bg)) {
+			const pal = PALETTES.find((p) => p.id === prefs.palette);
+			const colors = prefs.palette === 'mono' ? tintColors(isHex(prefs.accent) ? prefs.accent : window.getComputedStyle(root).getPropertyValue('--accent').trim()) : pal && pal.colors;
+			if (colors && colors.every(isHex)) derived = { ...paletteVars(colors, { surface }) };
+			if (prefs.accent) {
+				const a = accentVars(prefs.accent, { surface, bg });
+				if (derived) delete a['--chart-1']; // a chosen palette owns the chart colours
+				derived = { ...(derived || {}), ...a };
 			}
+			if (derived) Object.entries(derived).forEach(([k, v]) => root.style.setProperty(k, v));
 		}
 		try {
-			// accentVars is stored too so index.html can paint the custom accent before React starts
-			window.localStorage.setItem(APPEARANCE_KEY, JSON.stringify(derived ? { ...prefs, accentVars: derived } : prefs));
+			// the derived colours and fonts are stored too so index.html can paint them before React starts
+			const stored = { ...(derived ? { accentVars: { ...derived, ...(fontVars || {}) } } : fontVars ? { accentVars: fontVars } : {}) };
+			window.localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ ...prefs, ...stored }));
 		} catch {
 			/* storage unavailable: applies for this session only */
 		}

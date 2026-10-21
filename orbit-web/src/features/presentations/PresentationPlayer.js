@@ -21,7 +21,11 @@ import { presetLabel, resolvePeriod } from '../../utils/periods';
 import useDashboardData from '../dashboard/useDashboardData';
 import FreshnessBar from '../dashboard/widgets/FreshnessBar';
 import { buildSlides, detailOptions, PEOPLE_LIMIT, PROFILE_LIMIT, RECORDS_LIMIT } from './deckSlides';
-import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, storeTheme, THEME_IDS, themeById, themeStyle } from './presentationThemes';
+import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, readStoredTransition, storeTheme, storeTransition, THEME_IDS, TRANSITIONS, themeById, themeStyle } from './presentationThemes';
+import { EntranceContext } from '../dashboard/entrance';
+import { LAYOUTS, LAYOUT_IDS, layoutById, readStoredLayout, storeLayout } from './presentationTemplates';
+import { SCENE_CHOICES, readStoredScene, sceneFor, storeScene } from './presentationScenes';
+import { motionReduced } from '../../utils/motion';
 import { Brand, ClosingSlide, DetailStateSlide, OpeningSlide, PeopleSlide, ProfileSlide, RecordsSlide, SlideFrame, TextSlide } from './PresentationSlides';
 import { ReportingSlide, ReportingStateSlide } from './ReportingSlide';
 import { buildReportingModel } from './reportingSlides';
@@ -93,6 +97,8 @@ const queryFlag = (sp, key, fallback) => (sp.has(key) ? sp.get(key) === '1' : fa
  * detail slides come from the real record endpoints. The theme is applied to every slide.
  * Keys: ← → PageUp PageDown Space Home End to move, F fullscreen, Esc to exit.
  */
+const AUTO_MS = 7000; // how long each slide stays in auto-play
+
 export default function PresentationPlayer() {
 	const { can: allowed } = useAuth(); // permissions: which optional detail slides this viewer may load
 	const { id } = useParams();
@@ -109,6 +115,10 @@ export default function PresentationPlayer() {
 	const wantReportingExtra = queryFlag(sp, 'reporting', stored.reporting);
 	const marked = useRef(false);
 	const [fullscreen, setFullscreen] = useState(false);
+	const [layout, setLayout] = useState(() => (LAYOUT_IDS.includes(sp.get('layout')) ? sp.get('layout') : readStoredLayout()));
+	const [transition, setTransition] = useState(readStoredTransition); // 'auto' = the template's own
+	const [scene, setScene] = useState(readStoredScene); // how a slide's content enters; 'auto' = a different one per slide
+	const [auto, setAuto] = useState(false); // auto-play: advance every AUTO_MS
 	const [chrome, setChrome] = useState(true);
 	const hideTimer = useRef(null);
 
@@ -161,6 +171,21 @@ export default function PresentationPlayer() {
 		[last]
 	);
 	const exit = useCallback(() => navigate(ROUTES.presentations), [navigate]);
+	const pickTransition = useCallback((id) => {
+		setTransition(id);
+		storeTransition(id);
+	}, []);
+
+	// Auto-play: each slide stays for AUTO_MS, then the next one arrives; it stops by itself on the last slide.
+	useEffect(() => {
+		if (!auto) return undefined;
+		if (index >= last) {
+			setAuto(false);
+			return undefined;
+		}
+		const timer = setTimeout(() => goTo(index + 1), AUTO_MS);
+		return () => clearTimeout(timer);
+	}, [auto, index, last, goTo]);
 
 	const toggleFullscreen = useCallback(() => {
 		try {
@@ -186,14 +211,14 @@ export default function PresentationPlayer() {
 	// One keyboard listener for the whole viewer. It reads the latest state through a ref so it is
 	// registered once (no duplicate handlers) and ignores keys meant for inputs and focused buttons.
 	const live = useRef({});
-	live.current = { index, last, goTo, exit, toggleFullscreen };
+	live.current = { index, last, goTo, exit, toggleFullscreen, toggleAuto: () => setAuto((a) => !a), cycleTransition: () => setTransition((cur) => { const ids = TRANSITIONS.map((x) => x.id); const next = ids[(ids.indexOf(cur) + 1) % ids.length]; storeTransition(next); return next; }) };
 	useEffect(() => {
 		const onKey = (e) => {
 			if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
 			const t = e.target;
 			if (t && t.closest && t.closest('input, select, textarea, [contenteditable="true"]')) return;
 			if (t && t.closest && t.closest('button, a') && (e.key === ' ' || e.key === 'Enter')) return;
-			const { index: i, last: l, goTo: go, exit: leave, toggleFullscreen: fs } = live.current;
+			const { index: i, last: l, goTo: go, exit: leave, toggleFullscreen: fs, toggleAuto, cycleTransition } = live.current;
 			const move = (n) => {
 				e.preventDefault();
 				go(n);
@@ -202,7 +227,13 @@ export default function PresentationPlayer() {
 			else if (e.key === 'ArrowLeft' || e.key === 'PageUp') move(i - 1);
 			else if (e.key === 'Home') move(0);
 			else if (e.key === 'End') move(l);
-			else if (e.key === 'f' || e.key === 'F') {
+			else if (e.key === 'a' || e.key === 'A') {
+				e.preventDefault();
+				toggleAuto();
+			} else if (e.key === 't' || e.key === 'T') {
+				e.preventDefault();
+				cycleTransition();
+			} else if (e.key === 'f' || e.key === 'F') {
 				e.preventDefault();
 				fs();
 			} else if (e.key === 'Escape') {
@@ -230,6 +261,14 @@ export default function PresentationPlayer() {
 	}, [wake]);
 
 	const scale = useFitScale(viewportRef);
+	// The ambient glow leans a little toward the pointer (a CSS variable, so no re-render per mouse move).
+	const lean = useCallback((e) => {
+		const el = rootRef.current;
+		if (!el || motionReduced()) return;
+		const r = el.getBoundingClientRect();
+		el.style.setProperty('--px', String(((e.clientX - r.left) / r.width - 0.5) * 2));
+		el.style.setProperty('--py', String(((e.clientY - r.top) / r.height - 0.5) * 2));
+	}, []);
 	const t = themeById(theme);
 	const pickTheme = (tid) => {
 		setTheme(tid);
@@ -280,21 +319,32 @@ export default function PresentationPlayer() {
 			className="pres pscope"
 			ref={rootRef}
 			data-ptheme={t.id}
+			data-pscheme={t.dark ? 'dark' : 'light'}
+			data-playout={layout}
 			data-chrome={chrome ? 'on' : 'off'}
 			style={themeStyle(t)}
 			role="dialog"
 			aria-modal="true"
 			aria-label={deck.data ? `Presentation: ${deck.data.title}` : 'Presentation'}
-			onMouseMove={wake}
+			onMouseMove={(e) => {
+				wake();
+				lean(e);
+			}}
 			onPointerDown={wake}
 			onFocus={wake}
 		>
 			<div className="pres__progress" aria-hidden="true">
 				<i style={{ width: hasSlides && total ? `${((index + 1) / total) * 100}%` : 0 }} />
 			</div>
+			{auto ? <span className="pres__auto" key={index} style={{ animationDuration: `${AUTO_MS}ms` }} aria-hidden="true" /> : null}
 
 			<div className="pres__viewport" ref={viewportRef}>
 				<div className="pres__canvas" style={{ width: CANVAS_W, height: CANVAS_H, transform: `translate(-50%, -50%) scale(${scale})` }}>
+					<div className="pres__ambient" aria-hidden="true">
+						<i />
+						<i />
+						<i />
+					</div>
 					{deck.status === 'loading' && !deck.data ? (
 						<div className="pres__state">
 							<LoadingState lines={5} />
@@ -312,8 +362,14 @@ export default function PresentationPlayer() {
 							<p className="muted">This presentation has no slides.</p>
 						</div>
 					) : (
-						<section className={`pslide pslide--${entry.kind} is-${nav.dir}`} key={`${index}-${entry.kind}`} aria-label={`Slide ${index + 1}`}>
-							{renderEntry(entry)}
+						<section className={`pslide pslide--${entry.kind} is-${nav.dir}`} data-ptrans={transition === 'auto' ? t.motion : transition} data-pscene={sceneFor(scene, index)} key={`${index}-${entry.kind}`} aria-label={`Slide ${index + 1}`}>
+							<div className="pdecor" aria-hidden="true">
+								<i />
+								<i />
+								<i />
+								<i />
+							</div>
+							<EntranceContext.Provider value={true}>{renderEntry(entry)}</EntranceContext.Provider>
 							{cover ? null : (
 								<footer className="pslide__foot">
 									<Brand size={22} />
@@ -342,6 +398,107 @@ export default function PresentationPlayer() {
 				</Button>
 				<Button size="sm" disabled={index >= last} onClick={() => goTo(index + 1)} aria-label="Next slide">
 					Next
+				</Button>
+				<Popover
+					label="Slide layout"
+					align="right"
+					placement="up"
+					trigger={({ toggle, props }) => (
+						<Button size="sm" icon="dashboard" onClick={toggle} {...props} aria-label={`Layout: ${layoutById(layout).label}`}>
+							Layout
+						</Button>
+					)}
+				>
+					{({ close }) => (
+						<ul className="pres__themes">
+							{LAYOUTS.map((l) => (
+								<li key={l.id}>
+									<button
+										type="button"
+										className={`menu-item ${l.id === layout ? 'active' : ''}`.trim()}
+										aria-pressed={l.id === layout}
+										onClick={() => {
+											setLayout(l.id);
+											storeLayout(l.id);
+											close();
+										}}
+									>
+										<span>{l.label}</span>
+										{l.id === layout ? <Icon name="check" size={14} /> : null}
+									</button>
+								</li>
+							))}
+						</ul>
+					)}
+				</Popover>
+				<Popover
+					label="Slide animation"
+					align="right"
+					placement="up"
+					trigger={({ toggle, props }) => (
+						<Button size="sm" icon="trend" onClick={toggle} {...props} aria-label={`Animation: ${(SCENE_CHOICES.find((x) => x.id === scene) || SCENE_CHOICES[0]).label}`}>
+							Animation
+						</Button>
+					)}
+				>
+					{({ close }) => (
+						<ul className="pres__themes">
+							{SCENE_CHOICES.map((x) => (
+								<li key={x.id}>
+									<button
+										type="button"
+										className={`menu-item ${x.id === scene ? 'active' : ''}`.trim()}
+										aria-pressed={x.id === scene}
+										onClick={() => {
+											setScene(x.id);
+											storeScene(x.id);
+											close();
+										}}
+									>
+										<span>
+											{x.label}
+											<small className="pscene-hint">{x.description}</small>
+										</span>
+										{x.id === scene ? <Icon name="check" size={14} /> : null}
+									</button>
+								</li>
+							))}
+						</ul>
+					)}
+				</Popover>
+				<Popover
+					label="Slide transition"
+					align="right"
+					placement="up"
+					trigger={({ toggle, props }) => (
+						<Button size="sm" icon="sparkles" onClick={toggle} {...props} aria-label={`Transition: ${(TRANSITIONS.find((x) => x.id === transition) || TRANSITIONS[0]).label}`}>
+							Motion
+						</Button>
+					)}
+				>
+					{({ close }) => (
+						<ul className="pres__themes">
+							{TRANSITIONS.map((x) => (
+								<li key={x.id}>
+									<button
+										type="button"
+										className={`menu-item ${x.id === transition ? 'active' : ''}`.trim()}
+										aria-pressed={x.id === transition}
+										onClick={() => {
+											pickTransition(x.id);
+											close();
+										}}
+									>
+										<span>{x.id === 'auto' ? `${x.label} (${(TRANSITIONS.find((y) => y.id === t.motion) || TRANSITIONS[1]).label})` : x.label}</span>
+										{x.id === transition ? <Icon name="check" size={14} /> : null}
+									</button>
+								</li>
+							))}
+						</ul>
+					)}
+				</Popover>
+				<Button size="sm" icon="play" aria-pressed={auto} onClick={() => setAuto((a) => !a)} disabled={!hasSlides || index >= last} title="Advance by itself (A)">
+					{auto ? 'Pause' : 'Auto-play'}
 				</Button>
 				<Popover
 					label="Presentation theme"

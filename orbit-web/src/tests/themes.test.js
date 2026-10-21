@@ -124,9 +124,9 @@ test('a stored theme is restored on startup; invalid stored data falls back safe
 	expect(document.documentElement.dataset.theme).toBe('volcano');
 	expect(document.documentElement.dataset.density).toBe('compact');
 	localStorage.setItem(APPEARANCE_KEY, '{not json');
-	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard' });
+	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme' });
 	localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'neon', density: 'huge' }));
-	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard' });
+	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme' });
 });
 
 test('System follows the device preference only when selected', async () => {

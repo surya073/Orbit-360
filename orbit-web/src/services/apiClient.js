@@ -37,7 +37,7 @@ const inflight = new Map();
 
 // Reads are idempotent, so a busy or cold backend is retried quietly instead of failing a card.
 // Only transient failures retry (offline, gateway/timeout, or the Data Store's own busy/timeout codes).
-export const readPolicy = { retries: 2, delays: [700, 1800], maxParallel: 3 };
+export const readPolicy = { retries: 1, delays: [900], maxParallel: 3 }; // every retry is another function invocation: one is enough
 
 const transient = (e) => e && e.name === 'ApiClientError' && (e.status === 0 || e.status === 429 || e.status === 502 || e.status === 504 || e.code === 'DATASTORE_THROTTLED' || e.code === 'DATASTORE_TIMEOUT');
 
@@ -123,6 +123,10 @@ async function execute(method, path, { params, body, signal } = {}) {
 // billed Data Store requests, so going back to a page or re-selecting a filter within a minute
 // reuses the answer. Any write, Reload or sign-in change clears it, so edits are never hidden.
 const CACHE_TTL_MS = 60000;
+// Rarely-changing reads live longer: the team list and entry templates are asked for on almost every page, and the
+// dashboard bundle is the biggest single read. (Any write, Reload or sign-in clears everything regardless.)
+const LONG_TTL = [[/^\/(teams|imports\/templates|access\/catalog|access\/roles|custom-fields)(\?|$)/, 600000], [/^\/dashboard\//, 180000]];
+const ttlFor = (path) => (LONG_TTL.find(([re]) => re.test(path)) || [null, CACHE_TTL_MS])[1];
 const CACHE_MAX = 80;
 const cache = new Map();
 
@@ -130,9 +134,9 @@ export function clearApiCache() {
 	cache.clear();
 }
 
-function remember(key, value) {
+function remember(key, value, ttl = CACHE_TTL_MS) {
 	if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
-	cache.set(key, { value, until: Date.now() + CACHE_TTL_MS });
+	cache.set(key, { value, until: Date.now() + ttl });
 }
 
 async function write(method, path, opts) {
@@ -150,16 +154,25 @@ export const api = {
 		const hit = opts.fresh ? null : cache.get(key);
 		if (hit && hit.until > Date.now()) return Promise.resolve(hit.value);
 		cache.delete(key);
-		const run = () =>
-			executeRead(path, opts).then((out) => {
-				remember(key, out);
+		const ttl = ttlFor(path);
+		const run = (o) =>
+			executeRead(path, o).then((out) => {
+				remember(key, out, ttl);
 				return out;
 			});
-		// Requests with a signal are caller-owned (abortable); only unsignalled GETs are shared.
-		if (opts.signal) return run();
-		if (opts.fresh) return run();
-		if (!inflight.has(key)) inflight.set(key, run().finally(() => inflight.delete(key)));
-		return inflight.get(key);
+		if (opts.fresh) return run(opts);
+		// Identical reads in flight share ONE request even when each caller can abort: an abort only detaches that
+		// caller (the request is already on its way and costs the same either way).
+		if (!inflight.has(key)) inflight.set(key, run({ ...opts, signal: undefined }).finally(() => inflight.delete(key)));
+		const shared = inflight.get(key);
+		const signal = opts.signal;
+		if (!signal) return shared;
+		if (signal.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
+		return new Promise((resolve, reject) => {
+			const onAbort = () => reject(new DOMException('Aborted', 'AbortError'));
+			signal.addEventListener('abort', onAbort, { once: true });
+			shared.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+		});
 	},
 	post: (path, body, opts) => write('POST', path, { ...opts, body: body ?? {} }),
 	put: (path, body, opts) => write('PUT', path, { ...opts, body }),

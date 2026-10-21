@@ -31,7 +31,7 @@ const STATUS_LIGHT = {
 	'--info-soft': '#e1edf9',
 };
 
-export const PRESENTATION_THEMES = [
+const CORE_THEMES = [
 	{
 		id: 'aurora',
 		name: 'Aurora Executive',
@@ -268,6 +268,145 @@ export const PRESENTATION_THEMES = [
 		},
 	},
 ];
+
+/** Builds a theme from a compact palette so the five templates below stay readable. */
+function make({ id, name, tagline, description, dark, swatches, motion, c }) {
+	return {
+		id,
+		name,
+		tagline,
+		description,
+		dark,
+		swatches,
+		motion,
+		tokens: {
+			'color-scheme': dark ? 'dark' : 'light',
+			'--bg': c.bg,
+			'--surface': c.surface,
+			'--surface-2': c.surface2,
+			'--surface-3': c.surface3,
+			'--border': c.border,
+			'--border-strong': c.strong,
+			'--text': c.text,
+			'--text-muted': c.muted,
+			'--on-accent': c.onAccent,
+			'--accent': c.accent,
+			'--accent-hover': c.hover,
+			'--accent-contrast': c.onAccent,
+			'--accent-soft': c.soft,
+			'--focus': c.hover,
+			'--ring': `rgb(${c.glow} / 0.35)`,
+			...(dark ? STATUS_DARK : STATUS_LIGHT),
+			'--chart-1': c.charts[0],
+			'--chart-2': c.charts[1],
+			'--chart-3': c.charts[2],
+			'--chart-4': c.charts[3],
+			'--chart-5': c.charts[4],
+			'--chart-6': c.charts[5],
+			'--chart-grid': c.grid,
+			'--scrollbar': c.strong,
+			'--shadow-rgb': dark ? '0 0 0' : '40 36 30',
+			'--gradient-accent': c.gradient,
+			'--gradient-wash': `radial-gradient(900px 420px at 85% -10%, rgb(${c.glow} / 0.18), transparent 70%)`,
+			'--p-bg': c.pBg,
+			'--p-letterbox': c.letterbox,
+			'--p-card': c.card,
+			'--p-card-border': c.cardBorder,
+			'--p-kpi-bg': c.kpi,
+			'--p-title-gradient': c.title,
+			'--p-glow': c.glow,
+			'--p-font-display': c.font,
+			'--p-heading-weight': c.weight,
+		},
+	};
+}
+
+// Five more templates, in the spirit of the styles that presentation galleries favour: an editorial paper look, a
+// startup pitch deck, a neon poster, a calm natural palette and a classic corporate navy. Every one is checked for
+// WCAG AA contrast by tests/presentationCenter.test.js, like the first five.
+const NEW_THEMES = [
+	make({
+		id: 'editorial',
+		name: 'Modern Editorial',
+		tagline: 'Magazine style · Cream paper, ink black and signal red',
+		description: 'Warm paper, a confident serif and one red accent: reads like a printed annual report.',
+		dark: false,
+		motion: 'flip',
+		swatches: ['#f6f1e7', '#1b1713', '#c8102e', '#b7791f'],
+		c: { bg: '#f6f1e7', surface: '#fffaf0', surface2: '#efe7d6', surface3: '#e4d9c2', border: '#d8ccb3', strong: '#b8a98a', text: '#1b1713', muted: '#5b5245', accent: '#c8102e', hover: '#e0243f', onAccent: '#ffffff', soft: '#fbe3df', glow: '200 16 46', charts: ['#c8102e', '#1f4e79', '#b7791f', '#2f7a55', '#6b3fa0', '#555555'], grid: '#d8ccb3', gradient: 'linear-gradient(135deg, #c8102e 0%, #e8553f 100%)', pBg: 'radial-gradient(900px 520px at 100% 0%, #fde7c8 0%, transparent 60%), linear-gradient(180deg, #f8f3e9 0%, #f1e9d7 100%)', letterbox: '#e7dfcb', card: 'linear-gradient(160deg, rgb(255 255 255 / 0.9), rgb(255 250 240 / 0.75))', cardBorder: 'rgb(27 23 19 / 0.16)', kpi: 'linear-gradient(150deg, rgb(200 16 46 / 0.12), rgb(255 250 240 / 0.7))', title: 'linear-gradient(100deg, #1b1713 0%, #7a1020 60%, #c8102e 100%)', font: "Georgia, 'Iowan Old Style', 'Palatino Linotype', serif", weight: '700' },
+	}),
+	make({
+		id: 'pitch',
+		name: 'Startup Pitch',
+		tagline: 'Pitch deck · Ink black, indigo glow and electric lime',
+		description: 'High-contrast and fast: dark indigo with a lime accent, made for the numbers you want people to remember.',
+		dark: true,
+		motion: 'slide',
+		swatches: ['#0a0a14', '#7c5cff', '#c6ff3d', '#33d6ff'],
+		c: { bg: '#0a0a14', surface: '#13131f', surface2: '#1c1c2c', surface3: '#26263a', border: '#2f2f48', strong: '#4b4b72', text: '#f5f5ff', muted: '#b3b3d1', accent: '#c6ff3d', hover: '#d9ff7a', onAccent: '#0b1200', soft: '#2a3410', glow: '198 255 61', charts: ['#c6ff3d', '#7c5cff', '#33d6ff', '#ff5ca8', '#ffb347', '#3ddc97'], grid: '#2b2b44', gradient: 'linear-gradient(135deg, #7c5cff 0%, #c6ff3d 100%)', pBg: 'radial-gradient(900px 600px at 0% 0%, #2b1d6e 0%, transparent 60%), radial-gradient(800px 500px at 100% 100%, #123a2a 0%, transparent 55%), linear-gradient(160deg, #0d0d1c 0%, #0a0a14 100%)', letterbox: '#05050c', card: 'linear-gradient(160deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02))', cardBorder: 'rgb(198 255 61 / 0.25)', kpi: 'linear-gradient(150deg, rgb(124 92 255 / 0.32), rgb(198 255 61 / 0.08))', title: 'linear-gradient(100deg, #ffffff 10%, #e7ffa6 55%, #c6ff3d 100%)', font: "'Space Grotesk', 'Manrope Variable', 'Manrope', system-ui, sans-serif", weight: '800' },
+	}),
+	make({
+		id: 'neon',
+		name: 'Neon Poster',
+		tagline: 'Bold and loud · Midnight violet, hot pink and cyan',
+		description: 'Glowing gradients and a poster-style frame: for launches, campaigns and creative reviews.',
+		dark: true,
+		motion: 'zoom',
+		swatches: ['#0d0615', '#7a1fa8', '#ff3cc7', '#2ee6ff'],
+		c: { bg: '#0d0615', surface: '#170b24', surface2: '#220f35', surface3: '#2f1648', border: '#46206b', strong: '#7a35b8', text: '#fff0fb', muted: '#d9b8e6', accent: '#ff3cc7', hover: '#ff7ad8', onAccent: '#1a0016', soft: '#2f0a2c', glow: '255 60 199', charts: ['#ff3cc7', '#2ee6ff', '#b6ff4d', '#ffb52e', '#9b7bff', '#ff6b6b'], grid: '#3a1a58', gradient: 'linear-gradient(135deg, #ff3cc7 0%, #9b7bff 55%, #2ee6ff 100%)', pBg: 'radial-gradient(900px 560px at 85% -5%, #7a1fa8 0%, transparent 55%), radial-gradient(800px 500px at 0% 105%, #0a5a78 0%, transparent 55%), linear-gradient(160deg, #16082a 0%, #0d0615 100%)', letterbox: '#070310', card: 'linear-gradient(160deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.02))', cardBorder: 'rgb(255 60 199 / 0.35)', kpi: 'linear-gradient(150deg, rgb(255 60 199 / 0.3), rgb(46 230 255 / 0.1))', title: 'linear-gradient(100deg, #ffffff 5%, #ffb3ec 45%, #7df0ff 100%)', font: "'Trebuchet MS', 'Manrope Variable', 'Manrope', system-ui, sans-serif", weight: '900' },
+	}),
+	make({
+		id: 'sage',
+		name: 'Calm Sage',
+		tagline: 'Natural and calm · Sage green, cream and clay',
+		description: 'Soft greens and a clay highlight on warm white: relaxed, readable and good for people-focused reviews.',
+		dark: false,
+		motion: 'rise',
+		swatches: ['#eef3ea', '#2f6b3f', '#c2692f', '#3a7ca5'],
+		c: { bg: '#eef3ea', surface: '#fbfdf9', surface2: '#e3ecdd', surface3: '#d5e2cc', border: '#c5d6b9', strong: '#9db58b', text: '#1c2a1e', muted: '#4a5d4c', accent: '#2f6b3f', hover: '#255532', onAccent: '#ffffff', soft: '#d6e8d2', glow: '47 107 63', charts: ['#2f6b3f', '#c2692f', '#3a7ca5', '#8a5a9e', '#b8860b', '#5b6b5d'], grid: '#c5d6b9', gradient: 'linear-gradient(135deg, #2f6b3f 0%, #5f9b6a 100%)', pBg: 'radial-gradient(900px 560px at 100% 0%, #d4e6cd 0%, transparent 60%), radial-gradient(700px 500px at 0% 100%, #f3ead2 0%, transparent 55%), linear-gradient(170deg, #f3f7ef 0%, #e8f0e2 100%)', letterbox: '#dde8d6', card: 'linear-gradient(160deg, rgb(255 255 255 / 0.9), rgb(246 251 243 / 0.75))', cardBorder: 'rgb(47 107 63 / 0.22)', kpi: 'linear-gradient(150deg, rgb(47 107 63 / 0.14), rgb(255 255 255 / 0.6))', title: 'linear-gradient(100deg, #1c2a1e 0%, #2f6b3f 60%, #5f9b6a 100%)', font: "'Avenir Next', 'Manrope Variable', 'Manrope', system-ui, sans-serif", weight: '700' },
+	}),
+	make({
+		id: 'corporate',
+		name: 'Corporate Navy',
+		tagline: 'Classic business · White, navy and a bright blue lift',
+		description: 'The safe, familiar boardroom look: white space, deep navy type and a restrained blue accent.',
+		dark: false,
+		motion: 'wipe',
+		swatches: ['#f4f6fa', '#0b3d91', '#1e66d0', '#f2711c'],
+		c: { bg: '#f4f6fa', surface: '#ffffff', surface2: '#e8edf5', surface3: '#d9e1ee', border: '#cdd6e6', strong: '#9fb0cc', text: '#0e1b33', muted: '#4a5a78', accent: '#0b3d91', hover: '#082f70', onAccent: '#ffffff', soft: '#dbe6fb', glow: '11 61 145', charts: ['#0b3d91', '#c2410c', '#0f766e', '#7a4fb5', '#2e7d32', '#64748b'], grid: '#cdd6e6', gradient: 'linear-gradient(135deg, #0b3d91 0%, #1e66d0 100%)', pBg: 'radial-gradient(1000px 600px at 100% 0%, #dbe6fb 0%, transparent 60%), linear-gradient(180deg, #f7f9fc 0%, #eef2f9 100%)', letterbox: '#e3e9f3', card: 'linear-gradient(160deg, rgb(255 255 255 / 0.95), rgb(244 247 252 / 0.8))', cardBorder: 'rgb(11 61 145 / 0.2)', kpi: 'linear-gradient(150deg, rgb(11 61 145 / 0.12), rgb(255 255 255 / 0.7))', title: 'linear-gradient(100deg, #0b2a66 0%, #0b3d91 55%, #1e66d0 100%)', font: "'Manrope Variable', 'Manrope', system-ui, sans-serif", weight: '800' },
+	}),
+];
+
+// The transition each of the first five opens with (the viewer can still pick another one in the player).
+const OPENING_MOTION = { aurora: 'slide', obsidian: 'blur', crystal: 'zoom', sunset: 'wipe', emerald: 'rise' };
+export const PRESENTATION_THEMES = [...CORE_THEMES, ...NEW_THEMES].map((t) => ({ ...t, motion: t.motion || OPENING_MOTION[t.id] || 'slide' }));
+
+/** Slide transitions the player can use (CSS in presentations.css). 'auto' means the theme's own. */
+export const TRANSITIONS = [
+	{ id: 'auto', label: 'Theme default' },
+	{ id: 'slide', label: 'Slide' },
+	{ id: 'zoom', label: 'Zoom' },
+	{ id: 'blur', label: 'Dissolve' },
+	{ id: 'flip', label: 'Flip' },
+	{ id: 'wipe', label: 'Wipe' },
+	{ id: 'rise', label: 'Rise' },
+];
+const TRANSITION_KEY = 'company360.presentationTransition';
+export function readStoredTransition() {
+	try {
+		const v = window.localStorage.getItem(TRANSITION_KEY);
+		return TRANSITIONS.some((t) => t.id === v) ? v : 'auto';
+	} catch {
+		return 'auto';
+	}
+}
+export function storeTransition(id) {
+	try {
+		if (TRANSITIONS.some((t) => t.id === id)) window.localStorage.setItem(TRANSITION_KEY, id);
+	} catch {
+		/* not remembered */
+	}
+}
 
 export const DEFAULT_PRESENTATION_THEME = 'aurora';
 export const THEME_IDS = PRESENTATION_THEMES.map((t) => t.id);

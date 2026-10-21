@@ -14,6 +14,8 @@ import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { accessService } from '../../services/accessService';
 import { resourceService } from '../../services/resourceService';
 import { SCOPE_LABEL } from './RolesTab';
+import InviteModal from './InviteModal';
+import UserPermissionsModal from './UserPermissionsModal';
 import Select from '../../components/forms/Select';
 
 /**
@@ -148,13 +150,15 @@ const personInitials = (name = '') =>
 		.join('') || '?';
 
 /** People who can sign in, with the role each holds. Managers of a team only ever see their own team. */
-export default function UsersTab({ data, reload: reloadRoles }) {
+export default function UsersTab({ data, catalog, reload: reloadRoles }) {
 	const { can, user } = useAuth();
 	const canManage = can('access.manage_users') && data.tablesReady;
 	const [q, setQ] = useState('');
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
 	const [editing, setEditing] = useState(null);
+	const [permsFor, setPermsFor] = useState(null);
+	const [inviting, setInviting] = useState(false);
 	const dq = useDebouncedValue(q, 300).trim();
 	const res = useApiResource((signal) => accessService.users({ q: dq || undefined, page, pageSize }, { signal }), `access-users|${dq}|${page}|${pageSize}`, { isEmpty: () => false });
 	const teams = useApiResource((signal) => resourceService.list('teams', { pageSize: 100 }, { signal }), 'access-teams', { enabled: can('teams.view'), isEmpty: () => false });
@@ -183,6 +187,11 @@ export default function UsersTab({ data, reload: reloadRoles }) {
 					}}
 				/>
 				<span className="access-toolbar__spacer" />
+				{canManage ? (
+					<Button variant="primary" size="sm" icon="plus" onClick={() => setInviting(true)}>
+						Invite user
+					</Button>
+				) : null}
 				{res.meta ? (
 					<span className="muted small" role="status" aria-live="polite">
 						{res.meta.total} {res.meta.total === 1 ? 'person' : 'people'}
@@ -228,6 +237,7 @@ export default function UsersTab({ data, reload: reloadRoles }) {
 								},
 								{ key: 'teamId', label: 'Team', render: (r) => nameOfTeam(r.teamId) },
 								{ key: 'isActive', label: 'Status', render: (r) => <span className={`badge badge--${r.isActive ? 'success' : 'neutral'}`}>{r.isActive ? 'Active' : 'Inactive'}</span> },
+								{ key: 'overrideCount', label: 'Individual', render: (r) => (r.overrideCount ? <span className="badge badge--info">{r.overrideCount} custom</span> : <span className="muted small">Role only</span>) },
 							]}
 							rows={rows}
 							rowActions={
@@ -236,9 +246,14 @@ export default function UsersTab({ data, reload: reloadRoles }) {
 											r.id === user.userId ? (
 												<span className="muted small">You</span>
 											) : (
-												<Button size="sm" icon="edit" aria-label={`Edit access for ${r.displayName}`} onClick={() => setEditing(r)}>
-													Edit access
-												</Button>
+												<span className="access-actions">
+													<Button size="sm" icon="edit" aria-label={`Edit access for ${r.displayName}`} onClick={() => setEditing(r)}>
+														Edit access
+													</Button>
+													<Button size="sm" icon="lock" aria-label={`Individual permissions for ${r.displayName}`} onClick={() => setPermsFor(r)}>
+														Permissions
+													</Button>
+												</span>
 											)
 									: undefined
 							}
@@ -247,6 +262,31 @@ export default function UsersTab({ data, reload: reloadRoles }) {
 					</>
 				)}
 			</StateView>
+			{inviting ? (
+				<InviteModal
+					roles={data.roles}
+					teams={teamList}
+					canPickTeam={user.scopeType === 'all_teams' && can('teams.view')}
+					ownTeamId={user.scopeType === 'all_teams' ? '' : user.teamId}
+					onClose={() => setInviting(false)}
+					onInvited={() => {
+						setInviting(false);
+						res.reload();
+						reloadRoles();
+					}}
+				/>
+			) : null}
+			{permsFor ? (
+				<UserPermissionsModal
+					person={permsFor}
+					catalog={catalog}
+					onClose={() => setPermsFor(null)}
+					onSaved={() => {
+						setPermsFor(null);
+						res.reload();
+					}}
+				/>
+			) : null}
 			{editing ? (
 				<EditAccessModal
 					person={editing}

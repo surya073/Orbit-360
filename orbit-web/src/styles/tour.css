@@ -18,6 +18,12 @@
 	backdrop-filter: blur(14px) saturate(1.2);
 	animation: tour-fade 380ms var(--ease) both;
 }
+.tour-welcome__orbs {
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	pointer-events: none;
+}
 .tour-welcome__orbs i {
 	position: absolute;
 	border-radius: 50%;

@@ -13,6 +13,7 @@ import { resolvePeriod } from '../../utils/periods';
 import DashboardLayoutEditor from './DashboardLayoutEditor';
 import { EntranceContext, useDashboardEntrance } from './entrance';
 import CustomRange from './CustomRange';
+import AiAssistant from './AiAssistant';
 import ScopeTimeline, { MONTH_NAMES, fmtDay, monthRange } from './ScopeTimeline';
 import { AttentionCard, BillableCard, SidePanel, WorkloadCard } from './signature/Signature';
 import useDashboardData from './useDashboardData';
@@ -85,10 +86,8 @@ export default function DashboardPage() {
 	return (
 		<EntranceContext.Provider value={entrance === 'cinematic'}>
 			<div className={`dash dash--${entrance}`}>
-				<section className="sig-context" aria-label="Overview filters">
-					<div className="sig-context__text">
-						<h1 className="sig-context__title">Overview</h1>
-					</div>
+				<section className="sig-context" aria-label="Dashboard filters">
+					<h1 className="sr-only">Dashboard</h1>
 					<FilterBar label="Dashboard filters">
 						<div className={`ofilter ${activeCount ? 'is-filtered' : ''}`.trim()} ref={bar}>
 							<div className="ofilter__row">
@@ -165,6 +164,7 @@ export default function DashboardPage() {
 							)}
 						</div>
 					</FilterBar>
+					<AiAssistant />
 				</section>
 
 				{!f.valid ? (

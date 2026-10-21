@@ -237,6 +237,13 @@
 	box-shadow: var(--shadow-lg);
 	animation: fade-up var(--dur-slow) var(--ease) both;
 }
+/* the glow layer sits behind the content; as a grid item it would take a column of its own */
+.pc-hero__ambient {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	pointer-events: none;
+}
 .pc-hero__ambient i {
 	position: absolute;
 	border-radius: 50%;
@@ -329,7 +336,8 @@
 }
 .pc-hero__stage {
 	position: relative;
-	min-height: 220px;
+	align-self: center;
+	min-height: clamp(240px, 26vw, 360px);
 }
 .pc-hero__card {
 	position: absolute;
@@ -771,10 +779,13 @@
 }
 .pres__toolbar {
 	position: absolute;
-	left: 50%;
+	/* centred with auto margins, not left: 50%, which would cap its width at half the screen and stack every button */
+	left: 12px;
+	right: 12px;
+	width: fit-content;
+	margin-inline: auto;
 	bottom: 18px;
 	z-index: 6;
-	transform: translateX(-50%);
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
@@ -794,7 +805,7 @@
 }
 .pres[data-chrome='off'] .pres__toolbar:not(:focus-within) {
 	opacity: 0;
-	transform: translateX(-50%) translateY(12px);
+	transform: translateY(12px);
 	pointer-events: none;
 }
 .pres__title {
@@ -925,10 +936,9 @@
 .pframe__body {
 	flex: 1;
 	min-height: 0;
-	overflow: auto;
+	overflow: hidden; /* a slide never scrolls: tall content is scaled to fit (useFitToSlide) */
 	margin-top: 36px;
 	padding: 4px 8px 8px 0;
-	scrollbar-width: thin;
 }
 .ptext {
 	margin: 0;

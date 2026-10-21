@@ -2,7 +2,8 @@
 .shell {
 	min-height: 100vh;
 	display: grid;
-	grid-template-columns: var(--rail-w, 76px) minmax(0, 1fr);
+	/* the sidebar is not scaled by Settings -> Text size (see appearance.css), so its column is divided by the zoom */
+	grid-template-columns: calc(var(--rail-w, 76px) / var(--text-zoom, 1)) minmax(0, 1fr);
 }
 .shell__body {
 	display: flex;

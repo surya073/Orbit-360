@@ -13,6 +13,7 @@ import DensitySelector from './DensitySelector';
 import IconStyleSelector from './IconStyleSelector';
 import OptionGroup from './OptionGroup';
 import ProfilePanel from './ProfilePanel';
+import { FontPicker, PalettePicker, TemplatePicker } from './StylePickers';
 import ThemeSelector from './ThemeSelector';
 
 // Personal preferences only (they never change what anyone may do). ids are linked from the account menu (?tab=...).
@@ -27,11 +28,20 @@ function AppearancePanel() {
 	const { radius, textSize, motion, setAppearance } = useTheme();
 	return (
 		<div className="stack">
+			<Card title="Style templates" subtitle="One tap sets a theme, shape, font and chart colours that work together. You can still change each piece below.">
+				<TemplatePicker />
+			</Card>
 			<Card title="Theme" subtitle="29 themes, dark and light. It applies immediately across the app.">
 				<ThemeSelector />
 			</Card>
 			<Card title="Accent colour" subtitle="Keep the theme's own accent, or put your colour on top of any theme.">
 				<AccentPicker />
+			</Card>
+			<Card title="Fonts" subtitle="Choose the typeface for the whole app. Each option is drawn in its own font.">
+				<FontPicker />
+			</Card>
+			<Card title="Chart colours" subtitle="The colours used by every chart and bar. Pick a set that suits your audience, including a colour-blind safe one.">
+				<PalettePicker />
 			</Card>
 			<Card title="Shape, text and motion" subtitle="How rounded, how big and how animated the interface feels.">
 				<div className="optlist">

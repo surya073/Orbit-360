@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import { isGroupActive, isLinkActive, visibleNav } from '../../config/navigation';
-import { ROUTES } from '../../config/routes';
 import { navTarget } from '../../config/tour';
 import Icon from '../common/Icon';
 import AccountMenu from './AccountMenu';
@@ -67,7 +66,9 @@ export default function SideNav({ side = 'left', onSide }) {
 		document.documentElement.style.setProperty('--rail-w', expanded ? '248px' : '76px');
 		return () => document.documentElement.style.removeProperty('--rail-w');
 	}, [expanded]);
-	const nav = visibleNav(can);
+	const all = visibleNav(can);
+	const nav = all.filter((n) => n.label !== 'Settings');
+	const settings = all.find((n) => n.label === 'Settings'); // the last module: it sits at the foot of the rail
 
 	return (
 		<aside className={`rail ${expanded ? 'is-expanded' : ''}`.trim()} aria-label="Sidebar">
@@ -90,13 +91,12 @@ export default function SideNav({ side = 'left', onSide }) {
 				)}
 			</nav>
 			<div className="rail__bottom">
-				{/* themes and layout live in Settings */}
-				<NavLink to={ROUTES.settings} data-tour="appearance" data-label="Settings" aria-label="Settings" className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}>
-					<span className="rail-item__icon" data-tip="Settings">
-						<Icon name="settings" size={20} />
-					</span>
-					<span className="rail-item__label">Settings</span>
-				</NavLink>
+				{/* themes and layout live in Settings, and Access & Permissions sits inside it */}
+				{settings ? (
+					<Link to={settings.items[0].to} data-tour="appearance" data-label="Settings" aria-label="Settings" aria-current={isGroupActive(settings, pathname) ? 'true' : undefined} className={`rail-item ${isGroupActive(settings, pathname) ? 'active' : ''}`.trim()}>
+						<Inner item={settings} />
+					</Link>
+				) : null}
 				{onSide ? (
 					<button type="button" data-label="Move sidebar" aria-label={`Move sidebar to the ${side === 'left' ? 'right' : 'left'}`} className="rail-item rail-side" onClick={() => onSide(side === 'left' ? 'right' : 'left')}>
 						<span className="rail-item__icon" data-tip={`Move to the ${side === 'left' ? 'right' : 'left'}`}>

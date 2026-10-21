@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Card from '../../../components/cards/Card';
 import CompletenessBadge from '../../../components/cards/CompletenessBadge';
 import ProgressBar from '../../../components/charts/ProgressBar';
-import StackedBar from '../../../components/charts/StackedBar';
+import DonutChart from '../../../components/charts/DonutChart';
 import { colorAt } from '../../../components/charts/scale';
 import EmptyState from '../../../components/feedback/EmptyState';
 import StateView from '../../../components/feedback/StateView';
@@ -37,7 +37,7 @@ export default function AiUsageCard({ res, drill = false }) {
 									</span>
 								</div>
 							</div>
-							<StackedBar ariaLabel="Usage records by category" segments={Object.entries(u.byCategory).map(([k, v], i) => ({ label: humanize(k), value: v, color: colorAt(i) }))} />
+							<DonutChart ariaLabel="Usage records by category" centerLabel="records" segments={Object.entries(u.byCategory).map(([k, v], i) => ({ label: humanize(k), value: v, color: colorAt(i) }))} />
 							<p className="small muted">Percentages are self-reported and are not a productivity or billing measure.{u.missingPeriod > 0 ? ` ${u.missingPeriod} records without a reporting period are excluded.` : ''}</p>
 							{drill ? (
 								<Link to={ROUTES.usage} className="card__link">

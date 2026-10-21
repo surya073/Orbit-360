@@ -33,12 +33,21 @@ export const NAV = [
 	// The spreadsheet editor is one of the data-entry modes inside Imports, so Imports stays marked while it is open.
 	{ type: 'link', to: ROUTES.imports, label: 'Imports', icon: 'upload', permission: 'imports.view', alsoActive: [ROUTES.spreadsheet] },
 	{ type: 'link', to: ROUTES.presentations, label: 'Presentations', icon: 'present', permission: 'presentations.view' },
-	{ type: 'link', to: ROUTES.access, label: 'Access', icon: 'lock', permission: 'access.view' },
+	// Settings is the last module and sits at the foot of the sidebar; Access & Permissions lives inside it.
+	{
+		type: 'group',
+		label: 'Settings',
+		icon: 'settings',
+		items: [
+			{ to: ROUTES.settings, label: 'Settings', description: 'Themes, layout, backup and profile', icon: 'settings', permission: null },
+			{ to: ROUTES.access, label: 'Access & Permissions', description: 'Roles and who can do what', icon: 'lock', permission: 'access.view' },
+		],
+	},
 ];
 
 /** The navigation this user may see. `can` is `(permissionKey) => boolean` (see useAuth). A group with nothing visible disappears. */
 export const visibleNav = (can) =>
-	NAV.map((n) => (n.type === 'group' ? { ...n, items: n.items.filter((i) => can(i.permission)) } : n)).filter((n) => (n.type === 'group' ? n.items.length > 0 : can(n.permission)));
+	NAV.map((n) => (n.type === 'group' ? { ...n, items: n.items.filter((i) => !i.permission || can(i.permission)) } : n)).filter((n) => (n.type === 'group' ? n.items.length > 0 : can(n.permission)));
 
 /** Flat list of every destination, used by mobile navigation and the search palette's page shortcuts. */
 export const flatDestinations = (can) =>
@@ -55,6 +64,7 @@ export const activeGroup = (can, pathname) => visibleNav(can).find((n) => n.type
 
 /** The first page this user may open (where "home" goes when the Dashboard is not allowed). */
 export const firstDestination = (can) => {
-	const all = flatDestinations(can);
+	// Settings is always there; it is not a place to land when nothing else is allowed
+	const all = flatDestinations(can).filter((d) => d.group !== 'Settings');
 	return all.length ? all[0].to : null;
 };

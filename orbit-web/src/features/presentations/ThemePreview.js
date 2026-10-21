@@ -6,10 +6,10 @@ import { themeById, themeStyle } from './presentationThemes';
  * is what the viewer renders. `kind="cover"` mirrors the opening slide (the deck's real title);
  * `kind="content"` shows a layout sketch (blocks and shapes only: no numbers or labels are made up).
  */
-export default function ThemePreview({ theme, title = 'Executive briefing', subtitle, kind = 'cover', className = '' }) {
+export default function ThemePreview({ theme, title = 'Executive briefing', subtitle, kind = 'cover', layout = 'classic', className = '' }) {
 	const t = typeof theme === 'string' ? themeById(theme) : theme;
 	return (
-		<div className={`pscope pprev ${className}`.trim()} data-ptheme={t.id} style={themeStyle(t)} aria-hidden="true">
+		<div className={`pscope pprev ${className}`.trim()} data-ptheme={t.id} data-playout={layout} style={themeStyle(t)} aria-hidden="true">
 			<div className={`pprev__slide pprev__slide--${kind}`}>
 				<span className="pprev__ambient">
 					<i />

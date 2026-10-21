@@ -7,7 +7,8 @@ import { Checkbox } from '../../components/forms/Choice';
 import useApiResource from '../../hooks/useApiResource';
 import { presentationsService } from '../../services/presentationsService';
 import { detailOptions } from './deckSlides';
-import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, storeOptions, storeTheme, themeById, themeStyle } from './presentationThemes';
+import { PRESENTATION_THEMES, readStoredOptions, readStoredTheme, storeOptions, storeTheme, storeTransition, themeById, themeStyle } from './presentationThemes';
+import { DECK_TEMPLATES, LAYOUTS, layoutById, readStoredLayout, storeLayout } from './presentationTemplates';
 import ThemePreview from './ThemePreview';
 import Select from '../../components/forms/Select';
 
@@ -26,6 +27,7 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 	const returnTo = useRef(document.activeElement);
 	const [closing, setClosing] = useState(false);
 	const [theme, setTheme] = useState(readStoredTheme);
+	const [layout, setLayout] = useState(readStoredLayout);
 	const [deckId, setDeckId] = useState(() => String(initialId || (decks[0] && decks[0].ROWID) || ''));
 	const [opts, setOpts] = useState(readStoredOptions);
 	const deck = decks.find((d) => String(d.ROWID) === String(deckId)) || decks[0];
@@ -84,10 +86,22 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 		storeTheme(id); // remembered for next time, even if the launcher is closed without starting
 	};
 
+	const pickLayout = (id) => {
+		setLayout(id);
+		storeLayout(id);
+	};
+	// A template sets the colour theme, the layout and the slide transition together.
+	const applyTemplate = (tpl) => {
+		pick(tpl.theme);
+		pickLayout(tpl.layout);
+		storeTransition(tpl.transition);
+	};
+
 	const start = () => {
 		storeTheme(theme);
+		storeLayout(layout);
 		storeOptions(opts);
-		onStart({ id: deckId, theme, people: offered.people && opts.people, records: offered.records && opts.records, reporting: offered.reporting && opts.reporting });
+		onStart({ id: deckId, theme, layout, people: offered.people && opts.people, records: offered.records && opts.records, reporting: offered.reporting && opts.reporting });
 	};
 
 	const t = themeById(theme);
@@ -107,6 +121,43 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 				</header>
 
 				<div className="pl__body">
+					<section className="pl__templates" aria-label="Templates">
+						<h3 className="pl__sub">Templates</h3>
+						<div className="pl__tpls">
+							{DECK_TEMPLATES.map((tpl) => {
+								const on = tpl.theme === theme && tpl.layout === layout;
+								return (
+									<button key={tpl.id} type="button" className={`ptpl ${on ? 'is-selected' : ''}`.trim()} aria-pressed={on} onClick={() => applyTemplate(tpl)}>
+										<ThemePreview theme={tpl.theme} layout={tpl.layout} kind="content" className="ptpl__thumb" />
+										<b>{tpl.name}</b>
+										<small>{tpl.description}</small>
+										<em>
+											{layoutById(tpl.layout).label} layout · {themeById(tpl.theme).name}
+										</em>
+									</button>
+								);
+							})}
+						</div>
+					</section>
+
+					<section className="pl__layouts" aria-label="Layout">
+						<h3 className="pl__sub">Layout</h3>
+						<div className="pl__layoutrow" role="radiogroup" aria-label="Slide layout">
+							{LAYOUTS.map((l) => (
+								<button key={l.id} type="button" role="radio" aria-checked={l.id === layout} className={`play ${l.id === layout ? 'is-selected' : ''}`.trim()} onClick={() => pickLayout(l.id)}>
+									<span className="play__wire" data-wire={l.id} aria-hidden="true">
+										<i />
+										<i />
+										<i />
+									</span>
+									<b>{l.label}</b>
+									<small>{l.description}</small>
+								</button>
+							))}
+						</div>
+					</section>
+
+					<h3 className="pl__sub">Colour theme</h3>
 					<fieldset className="pl__themes">
 						<legend className="sr-only">Presentation theme</legend>
 						{PRESENTATION_THEMES.map((th, i) => (
@@ -132,8 +183,8 @@ export default function PresentationLauncher({ decks, initialId, onClose, onStar
 
 					<section className="pl__preview" aria-label={`${t.name} preview`} aria-live="polite">
 						<div className="pl__previewgrid" key={t.id}>
-							<ThemePreview theme={t} title={deck ? deck.title : undefined} kind="cover" />
-							<ThemePreview theme={t} kind="content" />
+							<ThemePreview theme={t} layout={layout} title={deck ? deck.title : undefined} kind="cover" />
+							<ThemePreview theme={t} layout={layout} kind="content" />
 						</div>
 						<div className="pl__about">
 							<h3>{t.name}</h3>

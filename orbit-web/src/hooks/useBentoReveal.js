@@ -8,8 +8,13 @@ import { motionReduced } from '../utils/motion';
  * Nothing is hidden without IntersectionObserver or for reduced-motion users, and tests never see it.
  */
 const DEFAULT_SELECTOR = '.grid--kpi > .card, .grid--widgets > .widget';
+/** Every page: the blocks that make up a screen (the dashboard and module pages run their own, richer selectors). */
+export const PAGE_SELECTOR = ['.card', '.sig-card', '.table-wrap', '.banner', '.filter-bar', '.pager', '.access-stat', '.access-role', '.empty', '.rs-card', '.settings-section', '.pcard', '.pthemecard', '.hcard'].join(',');
+const ALWAYS_SKIP = '.sheet, .sheet-editor, [data-no-reveal], .modal, [role="dialog"], .popover, .select__menu';
+const MAX_STAGGER = 6; // so the twelfth card in a list does not wait a second
 
-export default function useBentoReveal(rootSelector, deps, selector = DEFAULT_SELECTOR) {
+/** `skip` is a selector for blocks another reveal already owns (e.g. '.dash, .mod'). */
+export default function useBentoReveal(rootSelector, deps, selector = DEFAULT_SELECTOR, skip = '') {
 	useEffect(() => {
 		const root = document.querySelector(rootSelector);
 		if (!root || typeof IntersectionObserver === 'undefined') return undefined;
@@ -22,14 +27,16 @@ export default function useBentoReveal(rootSelector, deps, selector = DEFAULT_SE
 					en.target.classList.add('is-in');
 					io.unobserve(en.target);
 				}),
-			{ threshold: 0.18, rootMargin: '0px 0px -4% 0px' }
+			{ threshold: 0.18 } // no bottom margin: a block at the very end of a short page must still be able to reveal
 		);
 		const scan = () => {
 			root.querySelectorAll(selector).forEach((el) => {
 				if (seen.has(el)) return;
 				seen.add(el);
+				if (el.closest(ALWAYS_SKIP) || (skip && el.closest(skip))) return;
+				if (el.parentElement && el.parentElement.closest('.bento')) return; // a card inside a revealed card rides along with it
 				const siblings = [...el.parentElement.children];
-				el.style.setProperty('--k', String(Math.max(0, siblings.indexOf(el))));
+				el.style.setProperty('--k', String(Math.min(MAX_STAGGER, Math.max(0, siblings.indexOf(el)))));
 				el.classList.add('bento');
 				if (el.getBoundingClientRect().top < window.innerHeight * 0.92) el.classList.add('is-in');
 				else io.observe(el);

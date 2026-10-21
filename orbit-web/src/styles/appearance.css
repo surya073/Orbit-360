@@ -12,13 +12,20 @@ html[data-radius='round'] {
 	--radius-lg: 20px;
 }
 html[data-text='small'] {
+	--text-zoom: 0.93;
 	zoom: 0.93;
 }
 html[data-text='large'] {
+	--text-zoom: 1.1;
 	zoom: 1.1;
 }
 html[data-text='xlarge'] {
+	--text-zoom: 1.2;
 	zoom: 1.2;
+}
+/* The sidebar always keeps its default size: it undoes the page zoom, and the layout grid divides its column by the same factor. */
+.rail {
+	zoom: calc(1 / var(--text-zoom, 1));
 }
 html[data-width='wide'] {
 	--content-max: 1680px;
@@ -221,4 +228,153 @@ html[data-motion='reduced'] *::after {
 	border-radius: 999px;
 	background: var(--surface-2);
 	font-size: var(--fs-xs);
+}
+
+/* ---------- style templates ---------- */
+.tpl-grid,
+.font-grid,
+.pal-grid {
+	display: grid;
+	gap: var(--space-3);
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.tpl,
+.fontopt,
+.palopt {
+	position: relative;
+	display: grid;
+	gap: var(--space-2);
+	padding: var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.tpl:hover,
+.fontopt:hover,
+.palopt:hover {
+	border-color: var(--accent);
+	transform: translateY(-2px);
+	box-shadow: var(--shadow-md);
+}
+.tpl[aria-checked='true'],
+.fontopt[aria-checked='true'],
+.palopt[aria-checked='true'] {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.tpl:focus-visible,
+.fontopt:focus-visible,
+.palopt:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+.tpl__preview {
+	display: grid;
+	grid-template-columns: auto 1fr 1fr 1fr;
+	align-items: center;
+	gap: 6px;
+	padding: 10px;
+	border-radius: var(--radius-md);
+	background: var(--bg);
+	color: var(--text);
+}
+.tpl__preview b {
+	font-size: 1.3rem;
+	color: var(--accent);
+}
+.tpl__preview i {
+	height: 22px;
+	border-radius: var(--radius-sm);
+	background: var(--surface-2);
+	border: 1px solid var(--border);
+}
+.tpl__preview i:nth-of-type(1) {
+	background: var(--accent);
+	border-color: transparent;
+}
+.tpl__preview i:nth-of-type(2) {
+	background: var(--chart-2);
+	border-color: transparent;
+}
+.tpl__meta {
+	display: grid;
+	gap: 2px;
+}
+.tpl__meta small,
+.fontopt small,
+.palopt small {
+	color: var(--text-muted);
+	font-size: var(--fs-xs);
+	line-height: 1.35;
+}
+.tpl__meta em {
+	color: var(--accent);
+	font-size: var(--fs-xs);
+	font-style: normal;
+	font-weight: 600;
+}
+.tpl__tick {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: var(--accent);
+	color: var(--accent-contrast);
+}
+
+/* ---------- fonts ---------- */
+.fontopt {
+	grid-template-columns: auto 1fr;
+	align-items: center;
+	gap: var(--space-3);
+}
+.fontopt__aa {
+	display: grid;
+	place-items: center;
+	width: 52px;
+	height: 52px;
+	border-radius: var(--radius-md);
+	background: var(--accent-soft);
+	color: var(--accent);
+	font-family: var(--sample-head);
+	font-size: 1.5rem;
+	font-weight: 700;
+}
+.fontopt__text {
+	display: grid;
+	gap: 2px;
+	min-width: 0;
+}
+.fontopt__sample {
+	margin-top: 4px;
+	font-family: var(--sample);
+	font-size: var(--fs-sm);
+}
+
+/* ---------- chart palettes ---------- */
+.palopt__strip {
+	display: flex;
+	height: 26px;
+	overflow: hidden;
+	border-radius: 999px;
+	box-shadow: inset 0 0 0 1px var(--border);
+}
+.palopt__strip i {
+	flex: 1;
+}
+
+@media (max-width: 560px) {
+	.tpl-grid,
+	.font-grid,
+	.pal-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }

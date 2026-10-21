@@ -42,9 +42,9 @@ function Toast({ item, onDone }) {
 	}, [start]);
 
 	return (
-		<div className={`toast toast--${item.tone} ${leaving ? 'is-leaving' : ''}`.trim()} role={item.tone === 'error' ? 'alert' : 'status'} style={{ '--toast-ms': `${t.ms}ms` }} onMouseEnter={pause} onMouseLeave={start} onFocus={pause} onBlur={start}>
+		<div className={`toast toast--${item.tone} ${leaving ? 'is-leaving' : ''}`.trim()} role={item.tone === 'error' ? 'alert' : 'status'} onMouseEnter={pause} onMouseLeave={start} onFocus={pause} onBlur={start}>
 			<span className="toast__icon" aria-hidden="true">
-				<Icon name={t.icon} size={17} />
+				<Icon name={t.icon} size={16} />
 			</span>
 			<div className="toast__text">
 				<div className="toast__title">{item.title || t.title}</div>
@@ -53,7 +53,6 @@ function Toast({ item, onDone }) {
 			<button type="button" className="toast__close" aria-label="Dismiss notification" onClick={dismiss}>
 				<Icon name="x" size={14} />
 			</button>
-			<span className="toast__bar" aria-hidden="true" />
 		</div>
 	);
 }

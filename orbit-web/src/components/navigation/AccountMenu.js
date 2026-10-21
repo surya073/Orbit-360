@@ -32,7 +32,9 @@ export default function AccountMenu() {
 	useLayoutEffect(() => {
 		if (!open || !trigger.current) return;
 		const r = trigger.current.getBoundingClientRect();
-		setPos({ left: r.right + 14, bottom: Math.max(window.innerHeight - r.bottom - 4, 12) });
+		const bottom = Math.max(window.innerHeight - r.bottom - 4, 12);
+		// beside the rail, on whichever side it is docked
+		setPos(trigger.current.closest('.shell--rail-right') ? { right: window.innerWidth - r.left + 14, bottom } : { left: r.right + 14, bottom });
 	}, [open]);
 
 	useEffect(() => {
@@ -68,7 +70,7 @@ export default function AccountMenu() {
 			</button>
 			{open
 				? createPortal(
-						<div ref={menu} className="rail-menu" role="group" aria-label="Account" style={pos ? { left: pos.left, bottom: pos.bottom } : { visibility: 'hidden' }}>
+						<div ref={menu} className="rail-menu" role="group" aria-label="Account" style={pos || { visibility: 'hidden' }}>
 							<div className="popover__head">
 								<strong>{user.displayName}</strong>
 								{user.email}

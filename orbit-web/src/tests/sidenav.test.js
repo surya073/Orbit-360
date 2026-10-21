@@ -210,3 +210,22 @@ describe('phone navigation (offcanvas)', () => {
 		expect(drawer.contains(document.activeElement)).toBe(true); // Tab wraps inside the panel
 	});
 });
+
+describe('sidebar side', () => {
+	test('one button in the rail moves it to the other side and the label follows', async () => {
+		const onSide = jest.fn();
+		const { unmount } = renderWithProviders(<SideNav side="left" onSide={onSide} />, { user: admin });
+		await userEvent.click(await screen.findByRole('button', { name: 'Move sidebar to the right' }));
+		expect(onSide).toHaveBeenCalledWith('right');
+		unmount();
+		renderWithProviders(<SideNav side="right" onSide={onSide} />, { user: admin });
+		await userEvent.click(await screen.findByRole('button', { name: 'Move sidebar to the left' }));
+		expect(onSide).toHaveBeenLastCalledWith('left');
+	});
+
+	test('without a handler there is no move button', async () => {
+		renderWithProviders(<SideNav />, { user: admin });
+		await screen.findByRole('navigation', { name: 'Primary' });
+		expect(screen.queryByRole('button', { name: /Move sidebar/ })).not.toBeInTheDocument();
+	});
+});

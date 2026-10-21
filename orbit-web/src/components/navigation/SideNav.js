@@ -53,7 +53,7 @@ function RailGroup({ group, active }) {
  * into the content. Which entries appear follows the user's permissions. UX only: the backend
  * authorizes every request.
  */
-export default function SideNav() {
+export default function SideNav({ side = 'left', onSide }) {
 	const { can } = useAuth();
 	const { pathname } = useLocation();
 	const [expanded, setExpanded] = useState(readExpanded);
@@ -97,6 +97,14 @@ export default function SideNav() {
 					</span>
 					<span className="rail-item__label">Settings</span>
 				</NavLink>
+				{onSide ? (
+					<button type="button" data-label="Move sidebar" aria-label={`Move sidebar to the ${side === 'left' ? 'right' : 'left'}`} className="rail-item rail-side" onClick={() => onSide(side === 'left' ? 'right' : 'left')}>
+						<span className="rail-item__icon" data-tip={`Move to the ${side === 'left' ? 'right' : 'left'}`}>
+							<Icon name={side === 'left' ? 'chevronRight' : 'chevronLeft'} size={20} />
+						</span>
+						<span className="rail-item__label">Move to the {side === 'left' ? 'right' : 'left'}</span>
+					</button>
+				) : null}
 				<AccountMenu />
 			</div>
 		</aside>

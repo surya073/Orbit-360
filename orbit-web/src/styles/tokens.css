@@ -53,6 +53,16 @@
 	--z-listbox: 85;
 	--z-toast: 90;
 	--z-present: 70;
+
+	/* Toast fills: solid, theme-independent so success/error/warning read the same everywhere. */
+	--toast-success-bg: #15803d;
+	--toast-success-fg: #ffffff;
+	--toast-error-bg: #c62828;
+	--toast-error-fg: #ffffff;
+	--toast-warning-bg: #f5b301;
+	--toast-warning-fg: #241a00;
+	--toast-info-bg: #1d4ed8;
+	--toast-info-fg: #ffffff;
 }
 
 :root[data-density='compact'] {

@@ -378,10 +378,10 @@ describe('Spreadsheet editor page', () => {
 			await userEvent.type(screen.getByRole('searchbox', { name: 'Search loaded rows' }), 'designer');
 			await waitFor(() => expect(screen.getByText(/1 row shown of 3/)).toBeInTheDocument());
 			expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument();
-			expect(screen.getByText('Bala Iyer')).toBeInTheDocument();
+			expect(within(screen.getByRole('grid')).getByText('Bala Iyer')).toBeInTheDocument();
 			expect(global.fetch.calls.length).toBe(before);
 			await userEvent.clear(screen.getByRole('searchbox'));
-			expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+			expect(within(screen.getByRole('grid')).getByText('Asha Rao')).toBeInTheDocument();
 		});
 
 		test('typing filters the loaded rows at once, before the server has answered', async () => {
@@ -395,7 +395,7 @@ describe('Spreadsheet editor page', () => {
 			await screen.findByText('Asha Rao');
 			await userEvent.type(screen.getByRole('searchbox', { name: /Search employees/ }), 'bala');
 			await waitFor(() => expect(screen.queryByText('Asha Rao')).not.toBeInTheDocument()); // instant, server still pending
-			expect(screen.getByText('Bala Iyer')).toBeInTheDocument();
+			expect(within(screen.getByRole('grid')).getByText('Bala Iyer')).toBeInTheDocument();
 		});
 
 		test('if searching all records fails, the sheet falls back to the loaded rows instead of going dead', async () => {

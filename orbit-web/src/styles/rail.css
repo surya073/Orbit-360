@@ -569,3 +569,54 @@
 		flex: none;
 	}
 }
+
+/* ---------- Sidebar docked on the right (Move to the right / left button in the rail) ---------- */
+@media (min-width: 901px) {
+	.shell--rail-right {
+		grid-template-columns: minmax(0, 1fr) var(--rail-w, 76px);
+	}
+	.shell--rail-right .shell__body {
+		grid-column: 1;
+		grid-row: 1;
+	}
+	.shell--rail-right .rail {
+		grid-column: 2;
+		grid-row: 1;
+		border-radius: 30px 0 0 30px;
+		box-shadow: -10px 0 34px -22px color-mix(in srgb, var(--accent) 70%, transparent);
+	}
+	.shell--rail-right .rail-item {
+		margin-left: 0;
+		margin-right: 12px;
+		border-radius: 0 28px 28px 0;
+	}
+	.shell--rail-right .rail-account {
+		margin: 0 12px 0 14px;
+	}
+	.shell--rail-right .rail-account .rail-item {
+		margin-right: 0;
+	}
+	/* the active page's neck joins the page on the rail's left edge */
+	.shell--rail-right .rail-item.active::before,
+	.shell--rail-right .rail-item.active::after {
+		right: auto;
+		left: 0;
+	}
+	.shell--rail-right .rail-item.active::before {
+		background: radial-gradient(circle at 100% 0, transparent calc(var(--rail-curve) - 0.5px), var(--bg) var(--rail-curve));
+	}
+	.shell--rail-right .rail-item.active::after {
+		background: radial-gradient(circle at 100% 100%, transparent calc(var(--rail-curve) - 0.5px), var(--bg) var(--rail-curve));
+	}
+	.shell--rail-right .rail:not(.is-expanded) .rail-item__icon::after {
+		left: auto;
+		right: calc(100% + 22px);
+		translate: 6px -50%;
+	}
+	.to-top--clear-rail {
+		right: calc(var(--rail-w, 76px) + var(--space-4));
+	}
+}
+.rail-side .rail-item__icon {
+	background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+}

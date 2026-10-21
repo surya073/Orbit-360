@@ -149,8 +149,14 @@ function Steps({ steps, index, setIndex, onClose }) {
 		if (!rect) return setPlace({ center: true });
 		const w = c.offsetWidth;
 		const h = c.offsetHeight;
-		// Items in the left rail: the card opens to their right, level with the item.
-		if (rect.left + rect.width < 180) {
+		// Items in the sidebar: the card opens beside them (to the right of a left rail, to the left of a right one), level with the item.
+		const railEl = document.querySelector('.rail');
+		const rr = railEl ? railEl.getBoundingClientRect() : null;
+		const inRail = rr && rr.width > 0 && rect.left >= rr.left - 1 && rect.left + rect.width <= rr.right + 1;
+		if (inRail && rr.left > vw / 2) {
+			const left = rect.left - SPOT_PAD - CARD_GAP - w;
+			if (left >= EDGE) return setPlace({ top: clamp(rect.top + rect.height / 2 - h / 2, EDGE, vh - h - EDGE), left });
+		} else if (rect.left + rect.width < 180) {
 			const left = rect.left + rect.width + SPOT_PAD + CARD_GAP;
 			if (left + c.offsetWidth <= vw - EDGE) return setPlace({ top: clamp(rect.top + rect.height / 2 - c.offsetHeight / 2, EDGE, window.innerHeight - c.offsetHeight - EDGE), left });
 		}

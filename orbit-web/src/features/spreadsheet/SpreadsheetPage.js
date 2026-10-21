@@ -20,7 +20,8 @@ import SheetFormatBar from './SheetFormatBar';
 import SheetTabBar from './SheetTabBar';
 import { addTab, loadStore, reconcile, removeTab, renameTab, saveStore } from './tabStore';
 import useSheetFormat from './useSheetFormat';
-import { rowsToCsv } from './gridModel';
+import { EDGES, isNumericText, MAX_DECIMALS, mergeEdges, shownDecimals } from './sheetFormat';
+import { displayText, rowsToCsv } from './gridModel';
 import SheetGrid from './SheetGrid';
 import SheetShortcuts from './SheetShortcuts';
 import SheetToolbar from './SheetToolbar';
@@ -30,6 +31,16 @@ import useSheetView from './useSheetView';
 
 const FK_COLUMNS = ['employee_id', 'reports_to_employee_id', 'assignee_employee_id', 'project_id', 'team_id', 'primary_team_id'];
 const DENSITY_KEY = 'company360.sheetDensity';
+const TOOLS_KEY = 'company360.sheetToolsHidden';
+const PAINT_KEYS = ['b', 'i', 's', 'wrap', 'clip', 'align', 'valign', 'size', 'font', 'color', 'fill', 'nf', 'bd'];
+
+function readToolsHidden() {
+	try {
+		return window.localStorage.getItem(TOOLS_KEY) === '1';
+	} catch {
+		return false;
+	}
+}
 
 function readDensity() {
 	try {
@@ -123,6 +134,102 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 		const cells = cellsOf();
 		if (cells.length) record(fmt.clear(cells));
 	};
+	// Applies one patch per distinct value, so cells that need different results still share one undo step.
+	const applyGrouped = (entries) => {
+		const groups = new Map();
+		for (const { cell, patch } of entries) {
+			const k = JSON.stringify(patch);
+			if (!groups.has(k)) groups.set(k, { patch, cells: [] });
+			groups.get(k).cells.push(cell);
+		}
+		record([...groups.values()].flatMap((g) => fmt.apply(g.cells, g.patch)));
+	};
+	const rowByKey = () => new Map(view.map((r) => [r.key, r]));
+	const colByField = () => new Map(columns.map((c) => [c.field, c]));
+	const shownText = (rows, cols, c) => {
+		const r = rows.get(c.key);
+		const col = cols.get(c.field);
+		return r && col ? displayText(col, r.values[c.field], labelOf) : '';
+	};
+	const changeDecimals = (delta) => {
+		const rows = rowByKey();
+		const cols = colByField();
+		const entries = [];
+		for (const c of cellsOf()) {
+			const f = fmtOf(c);
+			const text = shownText(rows, cols, c);
+			if (!isNumericText(text)) continue;
+			const d = Math.min(MAX_DECIMALS, Math.max(0, shownDecimals(text, f.nf) + delta));
+			entries.push({ cell: c, patch: { nf: { t: f.nf && f.nf.t !== 'text' ? f.nf.t : 'auto', d } } });
+		}
+		applyGrouped(entries);
+	};
+	const changeBorders = (kind) => {
+		const cells = cellsOf();
+		if (!cells.length) return;
+		const rowIdx = new Map(view.map((r, i) => [r.key, i]));
+		const colIdx = new Map(columns.map((c, i) => [c.field, i]));
+		const rs = cells.map((c) => rowIdx.get(c.key));
+		const cs = cells.map((c) => colIdx.get(c.field));
+		const [r0, r1, c0, c1] = [Math.min(...rs), Math.max(...rs), Math.min(...cs), Math.max(...cs)];
+		const entries = cells.map((c) => {
+			if (kind === 'none') return { cell: c, patch: { bd: null } };
+			const r = rowIdx.get(c.key);
+			const k = colIdx.get(c.field);
+			const edges = kind === 'all' ? EDGES.join('') : EDGES.filter((e) => (kind === 'outer' || kind === e) && ((e === 't' && r === r0) || (e === 'b' && r === r1) || (e === 'l' && k === c0) || (e === 'r' && k === c1) || kind === 'all')).join('');
+			return { cell: c, patch: edges ? { bd: mergeEdges(fmtOf(c).bd, edges) } : {} };
+		});
+		applyGrouped(entries.filter((e) => Object.keys(e.patch).length));
+	};
+	const [calc, setCalc] = useState(null);
+	const selText = selInfo ? selInfo.label : '';
+	useEffect(() => {
+		setCalc(null); // a result belongs to the selection it was computed for
+	}, [selText]);
+	const runFunction = (name) => {
+		const rows = rowByKey();
+		const cols = colByField();
+		const nums = cellsOf()
+			.map((c) => shownText(rows, cols, c).replace(/,/g, '').trim())
+			.filter(isNumericText)
+			.map(Number);
+		const label = name.toUpperCase();
+		if (!nums.length) return setCalc({ label, text: name === 'count' ? '0' : 'no numbers in the selection' });
+		const sum = nums.reduce((a, b) => a + b, 0);
+		const value = { sum, average: sum / nums.length, count: nums.length, max: Math.max(...nums), min: Math.min(...nums) }[name];
+		setCalc({ label, text: Number(value.toFixed(4)).toLocaleString('en-GB') });
+	};
+
+	// Paint format: copy the active cell's look, then apply it to the next selection once the pointer is released.
+	const [painter, setPainter] = useState(null);
+	const selLabel = useRef('');
+	selLabel.current = selText;
+	const setFmtRef = useRef(setFmt);
+	setFmtRef.current = setFmt;
+	useEffect(() => {
+		if (!painter) return undefined;
+		const done = () =>
+			setTimeout(() => {
+				if (selLabel.current === painter.from) return;
+				setFmtRef.current(Object.fromEntries(PAINT_KEYS.map((k) => [k, painter.fmt[k] ?? null])));
+				setPainter(null);
+			}, 0);
+		document.addEventListener('pointerup', done);
+		return () => document.removeEventListener('pointerup', done);
+	}, [painter]);
+	const startPaint = () => {
+		if (painter) return setPainter(null);
+		if (activeFmt && selInfo) setPainter({ fmt: activeFmt, from: selInfo.label });
+	};
+	const [toolsHidden, setToolsHidden] = useState(readToolsHidden);
+	const hideTools = (hidden) => {
+		setToolsHidden(hidden);
+		try {
+			window.localStorage.setItem(TOOLS_KEY, hidden ? '1' : '0');
+		} catch {
+			/* the choice is just not remembered */
+		}
+	};
 
 	const toggleSort = useCallback((field) => setSort((s) => (!s || s.field !== field ? { field, dir: 'asc' } : s.dir === 'asc' ? { field, dir: 'desc' } : null)), []);
 	const onNotice = useCallback((message, tone = 'error') => notify(message, tone), [notify]);
@@ -194,6 +301,11 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 		}
 	};
 
+	// Name box + formula bar (read-only mirror of the active cell; typing happens in the cell itself).
+	const activeRow = selInfo && selInfo.active ? view.find((r) => r.key === selInfo.active.key) : null;
+	const activeCol = selInfo && selInfo.active ? columns.find((c) => c.field === selInfo.active.field) : null;
+	const activeText = activeRow && activeCol ? displayText(activeCol, activeRow.values[activeCol.field], labelOf) : '';
+
 	const searching = search.trim() !== '' || filters.length > 0;
 	const empty = loadedAll && view.length === 0 && !state.newRows.length;
 
@@ -208,10 +320,6 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 				saving={status === 'saving'}
 				onSave={save}
 				onDiscard={data.discard}
-				canUndo={data.canUndo}
-				canRedo={data.canRedo}
-				onUndo={data.undo}
-				onRedo={data.redo}
 				onCut={() => gridRef.current && gridRef.current.cut()}
 				onCopy={() => gridRef.current && gridRef.current.copy()}
 				onPaste={() => gridRef.current && gridRef.current.paste()}
@@ -225,9 +333,6 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 				searchScope={scope}
 				onSearchScope={setScope}
 				canServerSearch={Boolean(mod.search)}
-				columns={columns}
-				filters={filters}
-				onFilters={setFilters}
 				sortLabel={sortCol ? `${sortCol.label} ${sort.dir === 'asc' ? '↑' : '↓'}` : null}
 				onClearSort={() => setSort(null)}
 				onExport={exportCsv}
@@ -238,7 +343,50 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 				onDensity={changeDensity}
 				onShortcuts={() => setShortcuts(true)}
 			/>
-			<SheetFormatBar fmt={activeFmt} hasSelection={Boolean(selInfo)} onSet={setFmt} onToggle={toggleFmt} onClearFormat={clearFmt} zoomPct={zoomPct} onZoom={onZoom} />
+			<SheetFormatBar
+				resource={mod.resource}
+				fmt={activeFmt}
+				hasSelection={Boolean(selInfo)}
+				canWrite={canWrite}
+				canUndo={data.canUndo}
+				canRedo={data.canRedo}
+				onUndo={data.undo}
+				onRedo={data.redo}
+				onSearch={() => {
+					if (searchRef.current) {
+						searchRef.current.focus();
+						searchRef.current.select();
+					}
+				}}
+				onPrint={() => window.print()}
+				painting={Boolean(painter)}
+				onPaint={startPaint}
+				onSet={setFmt}
+				onToggle={toggleFmt}
+				onClearFormat={clearFmt}
+				onDecimals={changeDecimals}
+				onBorders={changeBorders}
+				onFunction={runFunction}
+				columns={columns}
+				filters={filters}
+				onFilters={setFilters}
+				zoomPct={zoomPct}
+				onZoom={onZoom}
+				collapsed={toolsHidden}
+				onCollapse={hideTools}
+			/>
+			<div className="sheet-formula">
+				<span className="sheet-formula__name" title="Selected cell">
+					{selInfo ? selInfo.label : ''}
+				</span>
+				<span className="sheet-formula__fx" aria-hidden="true">
+					<i>f</i>
+					<i>x</i>
+				</span>
+				<span className="sheet-formula__value" title={activeText || undefined}>
+					{activeText}
+				</span>
+			</div>
 			{res.status === 'error' ? (
 				<ErrorState error={res.error} onRetry={res.reload} />
 			) : res.status === 'loading' && !res.data ? (
@@ -301,15 +449,13 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 					)}
 					<div className="sheet-foot">
 						<span className="sheet-foot__sel" aria-live="off">
-							{selInfo ? (
-								<>
-									<b>{selInfo.label}</b>
-									{selInfo.cells > 1 ? ` · ${selInfo.cells} cells` : ''}
-								</>
-							) : (
-								'No selection'
-							)}
+							{selInfo ? (selInfo.cells > 1 ? `${selInfo.cells} cells selected` : '') : 'No selection'}
 						</span>
+						{calc ? (
+							<span className="sheet-foot__calc" role="status">
+								<b>{calc.label}</b> {calc.text}
+							</span>
+						) : null}
 						<span className="muted">
 							{view.length} row{view.length === 1 ? '' : 's'} shown{res.meta ? ` of ${res.meta.total}` : ''}
 							{search.trim() && !serverSearch ? ' · searching loaded rows only' : ''}

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import Icon from '../../components/common/Icon';
 import CellEditor from './CellEditor';
 import { columnLetter, displayText, jumpTarget, parseTsv, rangeLabel, toTsv } from './gridModel';
-import { cellStyle, linkFor, zoomIn, zoomOut } from './sheetFormat';
+import { cellStyle, formatNumberText, linkFor, zoomIn, zoomOut } from './sheetFormat';
 
 const WIDTHS = { text: 240, str: 170, enum: 130, bool: 90, date: 120, datetime: 170, int: 110, num: 110, id: 190 };
 const MIN_WIDTH = 60;
@@ -45,8 +45,8 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom,
 				const dirty = row.dirty[col.field];
 				const error = row.errors[col.field];
 				const locked = readOnly || (!row.isNew && col.immutable);
-				const cls = ['sheet__cell', f && f.wrap && 'is-wrap', f && f.fill && 'has-fill', selected && 'is-selected', selected && rTop && 'edge-t', selected && rBottom && 'edge-b', selected && c === c0 && 'edge-l', selected && c === c1 && 'edge-r', active && 'is-active', dirty && 'is-dirty', error && 'has-error', locked && 'is-locked', col.type === 'int' || col.type === 'num' ? 'is-num' : ''].filter(Boolean).join(' ');
-				const text = displayText(col, row.values[col.field], labelOf);
+				const cls = ['sheet__cell', f && f.wrap && 'is-wrap', f && f.clip && 'is-clip', f && f.note && 'has-note', f && f.fill && 'has-fill', selected && 'is-selected', selected && rTop && 'edge-t', selected && rBottom && 'edge-b', selected && c === c0 && 'edge-l', selected && c === c1 && 'edge-r', active && 'is-active', dirty && 'is-dirty', error && 'has-error', locked && 'is-locked', col.type === 'int' || col.type === 'num' ? 'is-num' : ''].filter(Boolean).join(' ');
+				const text = f && f.nf ? formatNumberText(displayText(col, row.values[col.field], labelOf), f.nf) : displayText(col, row.values[col.field], labelOf);
 				const shown = text || (f && f.link ? f.link : '');
 				const href = linkFor(f, row.values[col.field]);
 				return (
@@ -60,7 +60,7 @@ const Row = memo(function Row({ row, r, columns, labelOf, c0, c1, rTop, rBottom,
 						aria-invalid={error ? true : undefined}
 						className={cls}
 						style={{ width: `calc(var(--col-${c}) * var(--sheet-zoom, 1))`, ...cellStyle(f) }}
-						title={error || undefined}
+						title={error || (f && f.note) || undefined}
 						onMouseDown={(e) => handlers.cellDown(r, c, e)}
 						onMouseEnter={() => handlers.cellEnter(r, c)}
 						onDoubleClick={() => handlers.cellEdit(r, c)}

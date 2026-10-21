@@ -6,7 +6,7 @@ import { humanize } from '../../utils/format';
 import { FILTER_OPS } from './gridModel';
 import Select from '../../components/forms/Select';
 
-function FilterPanel({ columns, filters, onChange }) {
+export function FilterPanel({ columns, filters, onChange }) {
 	const [field, setField] = useState(columns[0] ? columns[0].field : '');
 	const [op, setOp] = useState('contains');
 	const [value, setValue] = useState('');
@@ -110,7 +110,7 @@ const STATUS_ICON = { saved: 'check', dirty: 'edit', saving: 'refresh', failed: 
  * works; unavailable ones are disabled (and the editing group is hidden for read-only roles).
  */
 const SheetToolbar = forwardRef(function SheetToolbar(
-	{ title, canWrite, status, dirtyCount, saving, onSave, onDiscard, canUndo, canRedo, onUndo, onRedo, onCut, onCopy, onPaste, onAddRow, canAddRows = true, canDelete, onDelete, search, onSearch, searchLabel, searchScope, onSearchScope, canServerSearch, columns, filters, onFilters, sortLabel, onClearSort, onExport, canExport, onReload, loading, density, onDensity, onShortcuts },
+	{ title, canWrite, status, dirtyCount, saving, onSave, onDiscard, onCut, onCopy, onPaste, onAddRow, canAddRows = true, canDelete, onDelete, search, onSearch, searchLabel, searchScope, onSearchScope, canServerSearch, sortLabel, onClearSort, onExport, canExport, onReload, loading, density, onDensity, onShortcuts },
 	searchRef
 ) {
 	return (
@@ -141,9 +141,6 @@ const SheetToolbar = forwardRef(function SheetToolbar(
 
 			{canWrite ? (
 				<div className="sheet-toolbar__group" role="group" aria-label="Editing">
-					<IconTool icon="undo" label="Undo" hint={`${MOD}Z`} onClick={onUndo} disabled={!canUndo} />
-					<IconTool icon="redo" label="Redo" hint={`${MOD}Y`} onClick={onRedo} disabled={!canRedo} />
-					<span className="sheet-toolbar__sep" aria-hidden="true" />
 					<IconTool icon="cut" label="Cut" hint={`${MOD}X`} onClick={onCut} />
 					<IconTool icon="copy" label="Copy" hint={`${MOD}C`} onClick={onCopy} />
 					<IconTool icon="paste" label="Paste" hint={`${MOD}V`} onClick={onPaste} />
@@ -185,17 +182,6 @@ const SheetToolbar = forwardRef(function SheetToolbar(
 						<option value="loaded">Loaded rows</option>
 					</Select>
 				) : null}
-				<Popover
-					label="Filter rows"
-					align="right"
-					trigger={({ toggle, props }) => (
-						<Button size="sm" variant={filters.length ? 'secondary' : 'ghost'} icon="filter" onClick={toggle} {...props}>
-							Filter{filters.length ? ` (${filters.length})` : ''}
-						</Button>
-					)}
-				>
-					<FilterPanel columns={columns} filters={filters} onChange={onFilters} />
-				</Popover>
 				{sortLabel ? (
 					<Button size="sm" variant="secondary" onClick={onClearSort} title="Clear sort">
 						Sort: {sortLabel} ✕

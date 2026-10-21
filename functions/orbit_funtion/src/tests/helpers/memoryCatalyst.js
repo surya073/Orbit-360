@@ -131,6 +131,17 @@ function createMemoryCatalyst(store, { latencyMs = 0, hooks = {}, aggregateKeys 
 	};
 	const pause = () => (latencyMs ? new Promise((r) => setTimeout(r, latencyMs)) : Promise.resolve());
 	const admin = {
+		// Catalyst Authentication: registering a person "emails" them and returns the new Catalyst user.
+		userManagement: () => ({
+			registerUser: async (signupConfig, userConfig) => {
+				store.invites = store.invites || [];
+				if (store.invites.some((i) => i.userConfig.email_id === userConfig.email_id)) throw Object.assign(new Error('already exists'), { code: 'EXISTS' });
+				if (hooks.registerUser) await hooks.registerUser(signupConfig, userConfig);
+				const user_id = String(7000 + store.invites.length);
+				store.invites.push({ signupConfig, userConfig, user_id });
+				return { user_details: { user_id, email_id: userConfig.email_id, first_name: userConfig.first_name, last_name: userConfig.last_name } };
+			},
+		}),
 		zcql: () => ({
 			executeZCQLQuery: async (sql) => {
 				store.queries.push(sql);

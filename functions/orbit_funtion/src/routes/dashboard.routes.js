@@ -1,11 +1,13 @@
 'use strict';
 
 const c = require('../controllers/dashboard.controller');
-const { overviewQuery, trendsQuery, snapshotBody, peopleProfilesQuery } = require('../validators/dashboard.validators');
+const { overviewQuery, trendsQuery, bundleQuery, snapshotBody, peopleProfilesQuery } = require('../validators/dashboard.validators');
 const { idParams } = require('../validators/query.validators');
 const { parsePaging } = require('../utils/pagination');
 
 module.exports = [
+	// The whole dashboard in one request: six sections, each succeeding or failing on its own. Own budget: it runs six services.
+	{ method: 'GET', path: '/dashboard/bundle', permission: 'dashboard.view', validate: { query: bundleQuery }, budget: 40, handler: c.bundle },
 	{ method: 'GET', path: '/dashboard/overview', permission: 'dashboard.view', validate: { query: overviewQuery }, handler: c.overview },
 	{ method: 'GET', path: '/dashboard/trends', permission: 'dashboard.view', validate: { query: trendsQuery }, handler: c.trends },
 	{ method: 'GET', path: '/dashboard/projects', permission: 'dashboard.view', validate: { query: overviewQuery }, handler: c.projects },

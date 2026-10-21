@@ -54,7 +54,21 @@ function createAccessRepository(db) {
 		allAssignments: () => db.select(`SELECT ROWID, user_id, role_id FROM user_roles LIMIT 0, ${MAX}`, 'user_roles'),
 		assignedTo: (roleId) => db.select(`SELECT ROWID, user_id, role_id FROM user_roles WHERE role_id = ${lit('id', roleId)} LIMIT 0, ${MAX}`, 'user_roles'),
 
+		// ---- per-person permission overrides (table user_permissions; effect allow | deny | inherit) --
+		overridesFor: (userId) => db.select(`SELECT ROWID, user_id, permission_key, effect FROM user_permissions WHERE user_id = ${lit('id', userId)} LIMIT 0, ${MAX}`, 'user_permissions'),
+		overridesForUsers(userIds) {
+			if (userIds.length === 0) return Promise.resolve([]);
+			return db.select(`SELECT ROWID, user_id, permission_key, effect FROM user_permissions WHERE user_id IN (${idList(userIds)}) LIMIT 0, ${MAX}`, 'user_permissions');
+		},
+		insertOverrides: (rows) => db.insertMany('user_permissions', rows),
+		updateOverrides: (rows) => db.updateMany('user_permissions', rows),
+
 		// ---- users ---------------------------------------------------------------------------------
+		async findUserByEmail(email) {
+			const rows = await db.select(`SELECT ${USER_COLS} FROM users WHERE email = ${lit('str', email)} LIMIT 0, 1`, 'users', ['is_active']);
+			return rows[0] || null;
+		},
+		insertUser: (row) => db.insert('users', row),
 		async findUser(id) {
 			const rows = await db.select(`SELECT ${USER_COLS} FROM users WHERE ROWID = ${lit('id', id)} LIMIT 0, 1`, 'users', ['is_active']);
 			return rows[0] || null;

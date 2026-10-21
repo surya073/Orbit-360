@@ -6,6 +6,7 @@ const { resources } = require('../config/resources');
 const { audit } = require('./audit.service');
 const { requirePermission } = require('../middleware/authorization');
 const { KEY, moduleOfResource } = require('../config/permissions');
+const customFields = require('./customFields.service');
 const { prepareRow, immutableFields, loadReferences, applyReferences } = require('./recordRules');
 
 function resourceOf(name) {
@@ -54,17 +55,21 @@ async function get(ctx, name, id) {
 	return row;
 }
 
-async function create(ctx, name, value) {
+async function create(ctx, name, input) {
+	let value = input;
 	const resource = writable(name, ctx, 'create');
 	const { scope } = ctx;
+	if (value.more_details !== undefined) value = { ...value, more_details: await customFields.checkMoreDetails(ctx, name, value.more_details, null) };
 	const refs = await loadReferences(ctx, resource, [value]);
 	const row = prepareRow(resource, applyReferences(scope, resource, { ...value }, refs));
 	const inserted = await ctx.repos.table(name).insert(scope, row);
+	if (name === 'custom_fields') customFields.invalidate();
 	await audit(ctx, { action: 'create', table: resource.table, rowId: inserted.ROWID, teamId: teamOf(resource, row), after: row });
 	return { ...value, ROWID: String(inserted.ROWID) };
 }
 
-async function update(ctx, name, id, patch) {
+async function update(ctx, name, id, input) {
+	let patch = input;
 	const resource = writable(name, ctx, 'edit');
 	const { scope } = ctx;
 	const repo = ctx.repos.table(name);
@@ -77,12 +82,14 @@ async function update(ctx, name, id, patch) {
 		throw errors.forbidden('Cannot move records to another team');
 	}
 
+	if (patch.more_details !== undefined) patch = { ...patch, more_details: await customFields.checkMoreDetails(ctx, name, patch.more_details, existing.more_details) };
 	const merged = { ...existing, ...patch };
 	const out = { ...patch };
 	if (resource.derive) for (const [k, v] of Object.entries(resource.derive(merged))) if (v !== undefined) out[k] = v;
 	if (resource.dedupe && !resource.randomDedupe) out.dedupe_key = prepareRow(resource, merged).dedupe_key;
 	if (resource.table === 'time_entries') Object.assign(out, { approval_status: 'pending', approved_by_user_id: null, approved_at: null }); // edits must be re-approved
 	await repo.update(scope, existing, out);
+	if (name === 'custom_fields') customFields.invalidate();
 	await audit(ctx, { action: 'update', table: resource.table, rowId: existing.ROWID, teamId: teamOf(resource, existing), before: pick(existing, Object.keys(patch)), after: patch });
 	return { ROWID: String(existing.ROWID), ...patch };
 }
@@ -95,7 +102,8 @@ async function remove(ctx, name, id) {
 	const repo = ctx.repos.table(name);
 	const existing = await repo.findById(ctx.scope, id);
 	if (!existing) throw errors.notFound();
-	await repo.update(ctx.scope, existing, { is_deleted: 'true', deleted_at: businessNow(), deleted_by_user_id: ctx.actor.userId });
+	await repo.update(ctx.scope, existing, { is_deleted: 'true', ...(resource.noDeleteStamp ? {} : { deleted_at: businessNow(), deleted_by_user_id: ctx.actor.userId }) });
+	if (name === 'custom_fields') customFields.invalidate();
 	await audit(ctx, { action: 'delete', table: resource.table, rowId: existing.ROWID, teamId: teamOf(resource, existing) });
 	return { ROWID: String(existing.ROWID), deleted: true };
 }

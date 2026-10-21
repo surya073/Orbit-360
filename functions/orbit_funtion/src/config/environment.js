@@ -20,6 +20,9 @@ function intVar(env, name, fallback, min, max) {
  *   USER_CACHE_SECONDS   how long a signed-in user's role/team row is reused per function instance (0 disables)
  *   IMPORT_BATCH_SIZE    rows per preview/commit call
  *   LOG_LEVEL            debug | info | warn | error
+ *   CATALYST_APP_ROLE_ID   Catalyst Authentication role (Console > Authentication > Roles, e.g. "App User") given to invited people
+ *   INVITE_REDIRECT_URL    where an invited person lands after setting their password (default: the app's own start page)
+ *   INVITE_SENDER_EMAIL    sender of the invitation email; when set, the invitation uses our own subject and wording
  */
 function loadEnvironment(env = process.env) {
 	return Object.freeze({
@@ -29,6 +32,9 @@ function loadEnvironment(env = process.env) {
 		importBatchSize: intVar(env, 'IMPORT_BATCH_SIZE', LIMITS.maxImportBatch, 1, LIMITS.maxImportBatch),
 		logLevel: ['debug', 'info', 'warn', 'error'].includes(env.LOG_LEVEL) ? env.LOG_LEVEL : 'info',
 		snapshotRetentionDays: intVar(env, 'SNAPSHOT_RETENTION_DAYS', 365, 1, 3650),
+		inviteRoleId: /^\d{1,20}$/.test(env.CATALYST_APP_ROLE_ID || '') ? env.CATALYST_APP_ROLE_ID : '',
+		inviteRedirectUrl: String(env.INVITE_REDIRECT_URL || '').slice(0, 300),
+		inviteSender: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.INVITE_SENDER_EMAIL || '') ? env.INVITE_SENDER_EMAIL : '',
 		isProduction: env.X_ZOHO_CATALYST_ENVIRONMENT === 'Production' || env.NODE_ENV === 'production',
 	});
 }

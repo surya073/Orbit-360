@@ -33,6 +33,7 @@ function createAccessResolver(ttlSeconds = 0) {
 	const users = new Map();
 	const roles = new Map();
 	let missing = { until: 0 }; // access tables not created: skip the (failing) queries for a while
+	let overridesMissing = { until: 0 }; // table user_permissions not created: roles keep working without per-person overrides
 
 	const fresh = (entry) => entry && entry.until > Date.now();
 	const put = (map, key, value) => {
@@ -92,6 +93,25 @@ function createAccessResolver(ttlSeconds = 0) {
 			}
 		}
 		if (!role) role = builtIn(legacyKey);
+		// Per-person overrides (the protected Administrator role always holds everything, so it ignores them).
+		const overrides = { allow: [], deny: [] };
+		if (role.roleKey !== PROTECTED_ROLE_KEY && !fresh(overridesMissing)) {
+			try {
+				for (const o of await repo.overridesFor(user.ROWID)) {
+					if (!isPermissionKey(o.permission_key)) continue;
+					if (o.effect === 'allow') overrides.allow.push(o.permission_key);
+					else if (o.effect === 'deny') overrides.deny.push(o.permission_key);
+				}
+			} catch (err) {
+				if (!isSchemaError(err)) throw err;
+				overridesMissing = { until: Date.now() + (ttl || 1) };
+			}
+		}
+		if (overrides.allow.length || overrides.deny.length) {
+			const permissions = new Set([...role.permissions, ...overrides.allow]);
+			overrides.deny.forEach((k) => permissions.delete(k));
+			role = { ...role, permissions, overrides, rolePermissions: role.permissions };
+		}
 		put(users, String(user.ROWID), role);
 		return role;
 	}
@@ -104,6 +124,7 @@ function createAccessResolver(ttlSeconds = 0) {
 			users.clear();
 			roles.clear();
 			missing = { until: 0 };
+			overridesMissing = { until: 0 };
 		},
 	};
 }

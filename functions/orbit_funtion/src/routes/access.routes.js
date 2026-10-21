@@ -14,5 +14,8 @@ module.exports = [
 	{ method: 'PATCH', path: '/access/roles/:ref', permission: 'access.manage_roles', budget, validate: { params: v.refParams, body: v.updateRoleBody }, handler: c.updateRole },
 	{ method: 'PUT', path: '/access/roles/:ref/permissions', permission: 'access.manage_roles', budget, validate: { params: v.refParams, body: v.permissionsBody }, handler: c.setPermissions },
 	{ method: 'GET', path: '/access/users', permission: 'access.view', budget, validate: { query: v.usersQuery }, handler: c.listUsers },
+	{ method: 'POST', path: '/access/invitations', permission: 'access.manage_users', budget, validate: { body: v.inviteBody }, handler: c.inviteUser },
+	{ method: 'GET', path: '/access/users/:id/permissions', permission: 'access.view', budget, validate: { params: idParams }, handler: c.getUserAccess },
+	{ method: 'PUT', path: '/access/users/:id/permissions', permission: 'access.manage_users', budget, validate: { params: idParams, body: v.userPermissionsBody }, handler: c.setUserPermissions },
 	{ method: 'PATCH', path: '/access/users/:id', permission: 'access.manage_users', budget, validate: { params: idParams, body: v.updateUserBody }, handler: c.updateUser },
 ];

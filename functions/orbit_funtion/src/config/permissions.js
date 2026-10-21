@@ -42,6 +42,7 @@ const MODULES = Object.freeze([
 	{ key: 'imports', label: 'Imports', group: 'Data', description: 'Bulk import from sheets (each import also needs Create on the target module)', actions: ['view', 'create'], managerDefaults: ['view', 'create'] },
 	{ key: 'spreadsheet', label: 'Spreadsheet', group: 'Data', description: 'Spreadsheet editor (record changes also need Edit/Create on the module)', actions: ['view', 'export'], managerDefaults: ['view', 'export'] },
 	{ key: 'presentations', label: 'Presentations', group: 'Data', description: 'Saved presentations', actions: CRUD, managerDefaults: CRUD },
+	{ key: 'custom_fields', label: 'Custom columns', group: 'Data', description: 'Extra columns shown in the spreadsheet and forms (people with Edit on a module fill them in)', actions: CRUD, managerDefaults: ['view'], resource: 'custom_fields' },
 	{ key: 'access', label: 'Access & Permissions', group: 'Administration', description: 'Roles, users and permissions', actions: ['view', 'manage_roles', 'manage_users'], managerDefaults: [] },
 ]);
 

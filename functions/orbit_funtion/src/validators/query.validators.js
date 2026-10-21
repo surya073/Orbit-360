@@ -58,6 +58,8 @@ function listQuery(resource) {
 			if (!(resource.sortable || []).includes(raw.sort)) throw errors.badRequest('sort column is not allowed');
 			out.sort = raw.sort;
 		}
+		// extra=1 also returns each row's more_details (the spreadsheet's custom columns); it costs no extra request.
+		if (raw.extra === '1' && resource.fields && !resource.noMoreDetails) out.extra = true;
 		if (present(raw.dir)) {
 			if (raw.dir !== 'asc' && raw.dir !== 'desc') throw errors.badRequest('dir must be asc or desc');
 			out.dir = raw.dir;

@@ -32,8 +32,8 @@ function classifyDbError(err) {
 	const msg = String((err && err.message) || err || '');
 	if (err instanceof ApiError) return { error: err, kind: 'api' };
 	if (/duplicate/i.test(msg) || /unique/i.test(msg)) return { error: errors.conflict('A record with the same unique value already exists'), kind: 'duplicate' };
-	if (/privilege|permission|not authori[sz]ed/i.test(msg)) return { error: new ApiError(500, 'DATASTORE_PERMISSION', 'The server is not permitted to perform this data operation'), kind: 'permission' };
 	if (/column.*not found|table.*not found|invalid (column|table)|no such/i.test(msg)) return { error: new ApiError(500, 'DATASTORE_SCHEMA', 'The data model does not match the server configuration'), kind: 'schema' };
+	if (/privilege|permission|not authori[sz]ed/i.test(msg)) return { error: new ApiError(500, 'DATASTORE_PERMISSION', 'The server is not permitted to perform this data operation'), kind: 'permission' };
 	if (/too many|rate|429|limit/i.test(msg)) return { error: new ApiError(503, 'DATASTORE_THROTTLED', 'The data service is busy. Retry shortly.'), kind: 'throttled' };
 	if (/timeout|timed out|ETIMEDOUT|ECONNRESET/i.test(msg)) return { error: new ApiError(504, 'DATASTORE_TIMEOUT', 'The data service did not respond in time. Retry shortly.'), kind: 'timeout' };
 	return { error: new ApiError(500, 'INTERNAL_ERROR', 'Unexpected server error'), kind: 'unknown' };

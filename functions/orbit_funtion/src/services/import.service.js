@@ -466,7 +466,7 @@ async function listRows(ctx, id, query) {
 function templates(actor) {
 	const importable = importableModules();
 	return Object.values(resources)
-		.filter((r) => r.fields)
+		.filter((r) => r.fields && !r.internal)
 		.map((r) => ({
 			module: r.name,
 			importable: importable.includes(r.name),

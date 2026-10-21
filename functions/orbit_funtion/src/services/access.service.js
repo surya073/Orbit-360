@@ -159,7 +159,13 @@ async function listUsers(ctx, q) {
 	}
 	const { models } = await loadRoles(ctx, { withGrants: false });
 	const eff = effectiveRoles(rows, assignments, models);
-	return { rows: rows.map((u) => userModel(u, eff.get(String(u.ROWID)))), total, page: q.paging.page, pageSize: q.paging.pageSize };
+	const overrideCount = new Map();
+	try {
+		for (const o of await repo.overridesForUsers(rows.map((r) => String(r.ROWID)))) if (o.effect === 'allow' || o.effect === 'deny') overrideCount.set(String(o.user_id), (overrideCount.get(String(o.user_id)) || 0) + 1);
+	} catch (err) {
+		if (!isSchemaError(err)) throw err; // user_permissions not created yet: no overrides to show
+	}
+	return { rows: rows.map((u) => ({ ...userModel(u, eff.get(String(u.ROWID))), overrideCount: overrideCount.get(String(u.ROWID)) || 0 })), total, page: q.paging.page, pageSize: q.paging.pageSize };
 }
 
 // ---- role changes --------------------------------------------------------------------------------
@@ -383,4 +389,157 @@ async function updateUser(ctx, id, patch) {
 	return { id: String(target.ROWID) };
 }
 
-module.exports = { getCatalog, listRoles, listUsers, createRole, updateRole, setRolePermissions, updateUser, slug };
+// ---- inviting people and per-person permissions --------------------------------------------------
+
+const overridesMissing = () => new ApiError(409, 'ACCESS_TABLES_MISSING', 'The user_permissions table has not been created yet. Create it as described in data/access-permissions-schema.md, then try again.');
+
+/** A user the actor may manage: team-scoped managers cannot tell whether other teams' users exist. */
+async function manageableUser(ctx, id) {
+	const target = await ctx.repos.access.findUser(id);
+	if (!target || (!ctx.scope.isAdmin && String(target.team_id) !== ctx.scope.teamId)) throw errors.notFound('User not found');
+	return target;
+}
+
+async function roleOfUser(ctx, target) {
+	const repo = ctx.repos.access;
+	const { models } = await loadRoles(ctx, { withGrants: true });
+	let assignment = null;
+	try {
+		assignment = await repo.assignmentFor(target.ROWID);
+	} catch (err) {
+		if (!isSchemaError(err)) throw err;
+	}
+	return effectiveRoles([target], assignment ? [assignment] : [], models).get(String(target.ROWID)).role;
+}
+
+/**
+ * Invites a person: Catalyst Authentication adds them and emails the invitation (they set their password on
+ * Catalyst's page and sign in through the embedded login). We create their application user and role at the
+ * same time, so the first sign-in already has the right access.
+ */
+async function inviteUser(ctx, body) {
+	requirePermission(ctx, 'access.manage_users');
+	const repo = ctx.repos.access;
+	const roleRow = await roleFromRef(ctx, body.roleId);
+	if (roleRow.is_active === false) throw errors.conflict('That role is inactive');
+	assertScopeAllowed(ctx, roleRow.scope_type);
+	if (roleRow.role_key === PROTECTED_ROLE_KEY && !isAdminActor(ctx)) throw escalation('Only an Administrator can invite an Administrator');
+	if (roleRow.role_key !== PROTECTED_ROLE_KEY) {
+		assertCanGrant(ctx, (await currentGrants(repo, roleRow.ROWID)).filter((g) => g.is_allowed === true).map((g) => g.permission_key));
+	}
+
+	// Team: a team-scoped manager can only invite into their own team.
+	let teamId = body.teamId || null;
+	if (!ctx.scope.isAdmin) {
+		if (teamId && teamId !== ctx.scope.teamId) throw errors.forbidden('You can only invite people into your own team', 'FORBIDDEN');
+		teamId = ctx.scope.teamId;
+	}
+	if (roleRow.scope_type === SCOPE_TYPES.OWN_TEAM && !teamId) throw errors.validation([{ field: 'teamId', code: 'REQUIRED', message: 'Choose a team: this role works with one team' }]);
+	if (teamId && !(await repo.teamExists(teamId))) throw errors.validation([{ field: 'teamId', code: 'NOT_FOUND', message: 'That team does not exist' }]);
+	if (await repo.findUserByEmail(body.email)) throw new ApiError(409, 'USER_EXISTS', 'Someone with this email address already has access');
+
+	const signupConfig = { platform_type: 'web' };
+	if (ctx.env.inviteRedirectUrl) signupConfig.redirect_url = ctx.env.inviteRedirectUrl;
+	if (ctx.env.inviteSender) {
+		signupConfig.template_details = {
+			senders_mail: ctx.env.inviteSender,
+			subject: 'You have been invited to %APP_NAME%',
+			message: '<p>Hello ' + body.firstName + ',</p><p>You have been invited to %APP_NAME%. Use this link to set your password and sign in:</p><p><a href="%LINK%">%LINK%</a></p><p>If you were not expecting this, you can ignore this email.</p>',
+		};
+	}
+	const userConfig = { first_name: body.firstName, last_name: body.lastName, email_id: body.email };
+	if (ctx.env.inviteRoleId) userConfig.role_id = ctx.env.inviteRoleId;
+
+	let invited;
+	try {
+		invited = await ctx.auth.registerUser(signupConfig, userConfig);
+	} catch (err) {
+		ctx.logger.warn('invite_failed', { code: err && err.code, status: err && err.statusCode });
+		throw new ApiError(502, 'INVITE_FAILED', 'Catalyst could not send the invitation. Check the email address, and that the person has not already been added in Catalyst Authentication.');
+	}
+	const catalystUserId = invited && invited.user_details && invited.user_details.user_id;
+	if (!catalystUserId || !/^\d{1,20}$/.test(String(catalystUserId))) throw new ApiError(502, 'INVITE_FAILED', 'Catalyst did not return the new user. Check Authentication in the Catalyst console before inviting again.');
+
+	const user = await repo.insertUser({
+		catalyst_user_id: String(catalystUserId),
+		email: body.email,
+		display_name: `${body.firstName} ${body.lastName}`.trim(),
+		app_role: roleRow.role_key === PROTECTED_ROLE_KEY ? 'admin' : 'manager',
+		...(teamId ? { team_id: teamId } : {}),
+		is_active: 'true',
+	});
+	await needTables(() => repo.insertAssignment({ user_id: String(user.ROWID), role_id: String(roleRow.ROWID), assigned_by_user_id: ctx.actor.userId }));
+	await audit(ctx, { action: 'create', table: 'users', rowId: user.ROWID, teamId: teamId || undefined, after: { role: roleRow.role_key, team_id: teamId, invited: true } });
+	ctx.caches.clear();
+	return { id: String(user.ROWID), email: body.email, displayName: `${body.firstName} ${body.lastName}`.trim(), roleKey: roleRow.role_key, teamId, status: 'invited' };
+}
+
+/** What one person can do: their role, the individual allow/deny overrides on top, and the result. */
+async function getUserAccess(ctx, id) {
+	requirePermission(ctx, 'access.view');
+	return userAccessOf(ctx, await manageableUser(ctx, id));
+}
+
+async function userAccessOf(ctx, target) {
+	const role = await roleOfUser(ctx, target);
+	let rows = [];
+	try {
+		rows = await ctx.repos.access.overridesFor(target.ROWID);
+	} catch (err) {
+		if (!isSchemaError(err)) throw err;
+	}
+	const allow = rows.filter((o) => o.effect === 'allow' && isPermissionKey(o.permission_key)).map((o) => o.permission_key);
+	const deny = rows.filter((o) => o.effect === 'deny' && isPermissionKey(o.permission_key)).map((o) => o.permission_key);
+	const isProtected = role && role.key === PROTECTED_ROLE_KEY;
+	const rolePermissions = role ? role.permissions : [];
+	const effective = isProtected ? [...ALL_KEYS] : [...new Set([...rolePermissions, ...allow])].filter((k) => !deny.includes(k));
+	return {
+		user: { id: String(target.ROWID), email: target.email, displayName: target.display_name || target.email },
+		role: role ? { id: role.id, key: role.key, name: role.name } : null,
+		rolePermissions,
+		allow,
+		deny,
+		effective,
+		locked: Boolean(isProtected),
+		canEdit: !isProtected && can(ctx.actor, 'access.manage_users') && String(target.ROWID) !== String(ctx.actor.userId),
+	};
+}
+
+/** Replaces one person's overrides. Same escalation rules as everywhere: nothing you do not hold yourself can be granted. */
+async function setUserPermissions(ctx, id, { allow, deny }) {
+	requirePermission(ctx, 'access.manage_users');
+	const repo = ctx.repos.access;
+	const target = await manageableUser(ctx, id);
+	if (String(target.ROWID) === String(ctx.actor.userId)) throw escalation('You cannot change your own access. Ask another administrator.');
+	const role = await roleOfUser(ctx, target);
+	if (role && role.key === PROTECTED_ROLE_KEY) throw errors.forbidden('Administrators always hold every permission; individual changes do not apply to them', 'PROTECTED_ROLE');
+
+	let existing = [];
+	try {
+		existing = await repo.overridesFor(target.ROWID);
+	} catch (err) {
+		if (isSchemaError(err)) throw overridesMissing();
+		throw err;
+	}
+	const wasAllowed = new Set(existing.filter((o) => o.effect === 'allow').map((o) => o.permission_key));
+	assertCanGrant(ctx, allow.filter((k) => !wasAllowed.has(k))); // only newly granted keys must be ones the actor holds
+
+	const want = new Map([...allow.map((k) => [k, 'allow']), ...deny.map((k) => [k, 'deny'])]);
+	const byKey = new Map(existing.map((o) => [o.permission_key, o]));
+	const inserts = [];
+	const updates = [];
+	for (const [key, effect] of want) {
+		const row = byKey.get(key);
+		if (!row) inserts.push({ user_id: String(target.ROWID), permission_key: key, effect, dedupe_key: `${target.ROWID}|${key}` });
+		else if (row.effect !== effect) updates.push({ ROWID: row.ROWID, effect });
+	}
+	for (const row of existing) if (!want.has(row.permission_key) && row.effect !== 'inherit') updates.push({ ROWID: row.ROWID, effect: 'inherit' });
+	for (const part of chunks(inserts, MAX_BULK)) await needTables(() => repo.insertOverrides(part));
+	for (const part of chunks(updates, MAX_BULK)) await needTables(() => repo.updateOverrides(part));
+
+	await audit(ctx, { action: 'update', table: 'user_permissions', rowId: target.ROWID, teamId: target.team_id ? String(target.team_id) : undefined, before: { allow: [...wasAllowed] }, after: { allow, deny } });
+	ctx.caches.clear();
+	return userAccessOf(ctx, target);
+}
+
+module.exports = { inviteUser, getUserAccess, setUserPermissions, getCatalog, listRoles, listUsers, createRole, updateRole, setRolePermissions, updateUser, slug };

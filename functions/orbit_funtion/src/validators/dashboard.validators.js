@@ -43,6 +43,16 @@ function trendsQuery(raw) {
 	return { ...f, granularity };
 }
 
+/**
+ * GET /dashboard/bundle: everything the dashboard shows in ONE request (one function invocation instead of six).
+ * Takes the usual filters plus the trend window (trend_from, trend_to, granularity).
+ */
+function bundleQuery(raw) {
+	const base = parseDashboardFilters(raw);
+	const trend = trendsQuery({ from: raw.trend_from, to: raw.trend_to, granularity: raw.granularity, team_id: raw.team_id, project_id: raw.project_id, employee_id: raw.employee_id });
+	return { base, trend };
+}
+
 const PROFILE_MAX = 12;
 /** GET /dashboard/people-profiles?employee_ids=1,2,3 plus the usual period/team filters. */
 function peopleProfilesQuery(raw) {
@@ -59,4 +69,5 @@ function peopleProfilesQuery(raw) {
 /** POST /dashboard/snapshots takes the same filters in the body. */
 const snapshotBody = (raw) => parseDashboardFilters(raw || {});
 
-module.exports = { parseDashboardFilters, overviewQuery, trendsQuery, snapshotBody, peopleProfilesQuery };
+module.exports = {
+	bundleQuery, parseDashboardFilters, overviewQuery, trendsQuery, snapshotBody, peopleProfilesQuery };

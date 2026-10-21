@@ -57,6 +57,9 @@ function createApp({ catalyst, env = defaultEnv, logger = createLogger({}, env.l
 		ctx.db = createDb(adminApp, { budget: route.budget || env.queryBudget, logger: ctx.logger });
 		ctx.repos = createRepositories(ctx.db);
 		ctx.caches = caches;
+		ctx.env = env;
+		// Catalyst Authentication: adds the person and emails them the invitation (admin scope).
+		ctx.auth = { registerUser: (signupConfig, userConfig) => adminApp.userManagement().registerUser(signupConfig, userConfig) };
 		ctx.actor = await authenticate(userApp, ctx.repos, { userCache, access: accessResolver });
 		authorize(ctx, route);
 

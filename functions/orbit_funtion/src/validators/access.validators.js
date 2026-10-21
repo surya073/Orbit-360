@@ -89,4 +89,35 @@ function usersQuery(raw = {}) {
 	return { q: q || undefined, teamId: present(raw.team_id) ? String(raw.team_id) : undefined, paging: parsePaging(raw, { maxPageSize: 50, defaultPageSize: 20 }) };
 }
 
-module.exports = { refParams, createRoleBody, updateRoleBody, permissionsBody, updateUserBody, usersQuery };
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]+\.[^\s@]{2,}$/;
+const PERSON_RE = /^[\p{L}][\p{L} .'-]{0,49}$/u;
+
+/** First and last name, email, the role (chosen before inviting) and, for team roles, the team. */
+function inviteBody(raw = {}) {
+	const email = text(raw.email, 'email', { required: true, max: 120 });
+	if (!EMAIL_RE.test(email)) throw bad('email', 'Enter a valid email address');
+	const ref = String(raw.roleId ?? '');
+	if (!REF_RE.test(ref)) throw bad('roleId', 'Choose a role');
+	const out = {
+		firstName: text(raw.firstName, 'firstName', { required: true, max: 50, re: PERSON_RE }),
+		lastName: text(raw.lastName, 'lastName', { required: true, max: 50, re: PERSON_RE }),
+		email: email.toLowerCase(),
+		roleId: ref,
+	};
+	if (present(raw.teamId)) {
+		if (!isId(String(raw.teamId))) throw bad('teamId', 'Choose a team');
+		out.teamId = String(raw.teamId);
+	}
+	return out;
+}
+
+/** What one person may additionally do (allow) or may not do (deny), on top of their role. Empty lists clear the overrides. */
+function userPermissionsBody(raw = {}) {
+	const allow = raw.allow === undefined ? [] : permissionList(raw.allow, 'allow');
+	const deny = raw.deny === undefined ? [] : permissionList(raw.deny, 'deny');
+	const both = allow.find((k) => deny.includes(k));
+	if (both) throw bad('deny', `${both} cannot be both allowed and denied`);
+	return { allow, deny };
+}
+
+module.exports = { inviteBody, userPermissionsBody, refParams, createRoleBody, updateRoleBody, permissionsBody, updateUserBody, usersQuery };

@@ -13,5 +13,8 @@ module.exports = {
 		const r = await access.listUsers(ctx, ctx.input.query);
 		return paged(r.rows, r);
 	},
+	inviteUser: async (ctx) => ({ status: 201, body: ok(await access.inviteUser(ctx, ctx.input.body)) }),
+	getUserAccess: async (ctx) => ok(await access.getUserAccess(ctx, ctx.input.params.id)),
+	setUserPermissions: async (ctx) => ok(await access.setUserPermissions(ctx, ctx.input.params.id, ctx.input.body)),
 	updateUser: async (ctx) => ok(await access.updateUser(ctx, ctx.input.params.id, ctx.input.body)),
 };

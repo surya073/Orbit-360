@@ -298,17 +298,44 @@ const resources = {
 		defaultSort: ['CREATEDTIME', 'desc'],
 		filters: { entity_table: 'str', action: 'str', actor_user_id: 'id' },
 	},
+	// Definitions of the extra columns a module can carry. The values live in each row's `more_details`.
+	custom_fields: {
+		table: 'custom_fields',
+		internal: true, // not a record type of its own: hidden from /imports/templates and bulk import
+		adminWrite: true,
+		noMoreDetails: true,
+		noDeleteStamp: true, // the table has no deleted_at / deleted_by columns
+		unscoped: true, // global configuration, readable by every role that holds custom_fields.view
+		list: ['ROWID', 'module', 'field_key', 'label', 'field_type', 'choices', 'sort_order', 'is_active', ...TS],
+		bools: ['is_active'],
+		sortable: ['sort_order', 'label', 'CREATEDTIME'],
+		defaultSort: ['sort_order', 'asc'],
+		filters: { module: 'str' },
+		fields: {
+			module: f.str(60, { req: true }), // narrowed to the writable resources below
+			field_key: f.str(40, { req: true }),
+			label: f.str(80, { req: true }),
+			field_type: f.oneOf(['text', 'number', 'date', 'choice'], { req: true }),
+			choices: f.text(600),
+			sort_order: f.int({ min: 0, max: 1000 }),
+			is_active: f.bool(),
+		},
+		crossFieldRules: [
+			(v) => (v.field_key && !/^[a-z][a-z0-9_]{1,39}$/.test(v.field_key) ? { field: 'field_key', code: 'INVALID_KEY', message: 'Use lowercase letters, digits and underscores, starting with a letter' } : null),
+			(v) => (v.field_type === 'choice' && !(v.choices || '').split(',').some((c) => c.trim()) ? { field: 'choices', code: 'REQUIRED', message: 'Add at least one choice, separated by commas' } : null),
+		],
+	},
 };
 
 // Tables with soft delete (is_deleted column). Others are filtered without it.
-const SOFT_DELETE = new Set(['employees', 'projects', 'project_assignments', 'time_entries', 'attendance_records', 'leave_records', 'performance_records', 'ai_usage_records', 'product_items']);
+const SOFT_DELETE = new Set(['employees', 'projects', 'project_assignments', 'time_entries', 'attendance_records', 'leave_records', 'performance_records', 'ai_usage_records', 'product_items', 'custom_fields']);
 
 // Every writable table carries the optional `more_details` JSON column; imports may also
 // carry a stable `source_record_id` used for idempotent de-duplication.
 for (const [name, r] of Object.entries(resources)) {
 	r.name = name;
 	r.softDelete = SOFT_DELETE.has(r.table);
-	if (r.fields) {
+	if (r.fields && !r.noMoreDetails) {
 		r.fields.more_details = f.json();
 		r.importFields = { ...r.fields, source_record_id: f.str(120) };
 		// Time entries may arrive already approved (historical data); default remains pending.
@@ -326,5 +353,11 @@ for (const [name, r] of Object.entries(resources)) {
 		if (r.importFields.approval_status) r.importColumns.push('approval_status');
 	}
 }
+
+// Extra columns can be defined for every record type that carries `more_details`.
+resources.custom_fields.fields.module = f.oneOf(
+	Object.values(resources).filter((r) => r.fields && !r.noMoreDetails).map((r) => r.name),
+	{ req: true }
+);
 
 module.exports = { resources, SOFT_DELETE };

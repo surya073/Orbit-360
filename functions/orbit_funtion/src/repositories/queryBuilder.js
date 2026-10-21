@@ -81,7 +81,7 @@ function buildListQueries(resource, input, scope, refIds) {
 		page,
 		pageSize,
 		countSql: `SELECT COUNT(ROWID) AS total FROM ${resource.table}${where}`,
-		listSql: `SELECT ${resource.list.join(', ')} FROM ${resource.table}${where}${buildOrder(resource, input)} LIMIT ${offset}, ${pageSize}`,
+		listSql: `SELECT ${[...resource.list, ...(input.extra ? ['more_details'] : [])].join(', ')} FROM ${resource.table}${where}${buildOrder(resource, input)} LIMIT ${offset}, ${pageSize}`,
 	};
 }
 

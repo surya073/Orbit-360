@@ -200,3 +200,40 @@ CREATE INDEX ix_user_roles_role ON user_roles(role_id);
   cannot be demoted or deactivated; an own-team role needs a team.
 - **Adding people:** users are still provisioned in Catalyst Authentication and in the `users` table as before.
   The Access screen manages the role, team and active flag of existing users; it does not send invitations.
+
+## Table 4 (optional): `user_permissions`
+
+Purpose: what ONE person may do beyond, or less than, their role. Effective permissions = the role's permissions
+plus every `allow` row, minus every `deny` row. The protected Administrator role ignores these rows. Until this
+table exists everything works on roles alone, and saving an individual permission answers
+`409 ACCESS_TABLES_MISSING`.
+
+| Column | Type | Required | Unique | Notes |
+|---|---|---|---|---|
+| `user_id` | foreign key → `users` (`ROWID`) | Y | | On delete: cascade. |
+| `permission_key` | varchar(80) | Y | | `module.action`, e.g. `employees.delete`. |
+| `effect` | varchar(10) | Y | | `allow`, `deny`, or `inherit` (a cleared override; rows are never deleted). |
+| `dedupe_key` | varchar(140) | Y | **Y** | `<user_id>\|<permission_key>`. |
+
+Suggested index: `user_id`. Rules (enforced by the server): nobody changes their own access, nobody grants a
+permission they do not hold themselves, an Administrator's access cannot be overridden, a team-scoped manager only
+reaches users of their own team.
+
+## Inviting people (Catalyst Authentication)
+
+`POST /access/invitations` (needs `access.manage_users`) takes first name, last name, email, a role (and a team for
+roles that cover one team). The function calls Catalyst's `userManagement().registerUser(...)`, which adds the person
+and emails them a link to set their password; it then creates their `users` row and `user_roles` row, so their role
+and team are in place when they first sign in through the embedded login. The Catalyst id returned by the invitation
+is stored in `users.catalyst_user_id`.
+
+Optional function environment variables:
+
+| Variable | Meaning |
+|---|---|
+| `CATALYST_APP_ROLE_ID` | The Catalyst Authentication role (Console → Authentication → Roles, e.g. "App User") given to invited people. |
+| `INVITE_REDIRECT_URL` | Where the person lands after setting their password. Defaults to Catalyst's own. |
+| `INVITE_SENDER_EMAIL` | When set, the invitation uses our own subject and wording from this sender (the sender must be allowed in Catalyst Mail settings). Otherwise Catalyst's default template is used. |
+
+Unverified against live Catalyst (nothing has run there): the exact `registerUser` behaviour in your project, the
+email delivery, and that development allows at most 25 invited users.

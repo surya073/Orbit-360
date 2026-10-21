@@ -50,6 +50,7 @@ test('another team\'s record is a 404 for reads, edits and deletes (no IDOR, no 
 test('detail reads include more_details; a manager can edit within the team only', async () => {
 	const w = buildWorld();
 	const id = w.e[0].ROWID;
+	w.store.insert('custom_fields', { module: 'employees', field_key: 'grade', label: 'Grade', field_type: 'text', is_active: 'true', is_deleted: 'false' });
 	const upd = await w.api(w.ids.mgr1, 'PATCH', `/employees/${id}`, { job_role: 'Lead', more_details: { grade: 'L3' } });
 	assert.equal(upd.status, 200);
 	const got = await w.api(w.ids.mgr1, 'GET', `/employees/${id}`);
@@ -187,7 +188,7 @@ test('trends: bounded range, grouped queries only, gaps are not zeros', async ()
 	assert.equal(r.status, 200);
 	assert.deepEqual(r.body.data.time.map((p) => p.start), ['2026-10-05', '2026-10-19']);
 	assert.equal(r.body.data.truncated, false);
-	const used = w.store.queries.slice(before).filter((s) => !s.startsWith('SELECT ROWID, catalyst_user_id') && !/FROM (user_roles|roles|role_permissions)/.test(s));
+	const used = w.store.queries.slice(before).filter((s) => !s.startsWith('SELECT ROWID, catalyst_user_id') && !/FROM (user_roles|roles|role_permissions|user_permissions)/.test(s));
 	assert.equal(used.length, 3); // time, pending, attendance - regardless of table size
 	assert.ok(used.every((s) => /GROUP BY/.test(s) && /work_date >= '2026-10-01'|attendance_date >= '2026-10-01'/.test(s)));
 	assert.equal((await w.api(w.ids.mgr1, 'GET', '/dashboard/trends?from=2026-01-01&to=2026-12-31')).status, 400);

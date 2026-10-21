@@ -534,3 +534,18 @@ Configuration key/values.
 | `description` | text |  |  |  |
 | `dedupe_key` | varchar(255) |  | Y | scope|team_id|setting_key |
 | `more_details` | text |  |  | Optional. Serialized JSON object of unmapped source columns/extra attributes. Never holds structured fields. Validate: valid JSON object, size cap (confirm Console Text limit) |
+
+## `custom_fields`
+
+Definitions of the extra columns an administrator adds to a record type (spreadsheet today). The values are stored in each record's `more_details` JSON, keyed by `field_key`; this table holds only the definitions. Read by every role with `custom_fields.view` (cached about 10 minutes per function instance); changed only with `custom_fields.create/edit/delete` (administrators by default). Removing a column is a soft delete: values already stored are kept.
+
+| Column | Type | Req | Unique | Notes |
+|---|---|---|---|---|
+| `module` | varchar(60) | Y |  | Resource name, e.g. `employees`, `projects`, `time_entries` |
+| `field_key` | varchar(40) | Y |  | Lowercase letters, digits, underscores; starts with a letter. Key inside `more_details` |
+| `label` | varchar(80) | Y |  | Column heading |
+| `field_type` | varchar(10) | Y |  | `text` / `number` / `date` / `choice` |
+| `choices` | text |  |  | Comma-separated, for `choice` |
+| `sort_order` | int |  |  |  |
+| `is_active` | boolean |  |  |  |
+| `is_deleted` | boolean |  |  | Soft delete; default false |

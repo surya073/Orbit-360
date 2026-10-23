@@ -8,11 +8,11 @@ export default function Logo({ link = true }) {
 	const inner = (
 		<>
 			<img src={logo} alt="" width="24" height="24" />
-			<span>Company 360</span>
+			<span>Meeting 360</span>
 		</>
 	);
 	return link ? (
-		<Link to={ROUTES.dashboard} className="brand" aria-label="Company 360 home">
+		<Link to={ROUTES.dashboard} className="brand" aria-label="Meeting 360 home">
 			{inner}
 		</Link>
 	) : (

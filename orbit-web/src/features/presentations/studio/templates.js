@@ -119,7 +119,7 @@ function coverSlide(c) {
 	const light = c.coverInvert;
 	const objects = [...c.coverExtra(c)];
 	if (c.coverLeftText) {
-		objects.push(T('QUARTERLY REVIEW', 90, 140, 560, 44, { fs: 24, fw: 700, color: '#8fb4ff', ls: 4 }), T('Company 360', 90, 900, 560, 60, { fs: 36, fw: 600, color: '#ffffff' }));
+		objects.push(T('QUARTERLY REVIEW', 90, 140, 560, 44, { fs: 24, fw: 700, color: '#8fb4ff', ls: 4 }), T('Meeting 360', 90, 900, 560, 60, { fs: 36, fw: 600, color: '#ffffff' }));
 		objects.push(T('Delivery and people, Q3', 800, 360, 1000, 300, { fs: 112, fw: c.fw, color: c.ink, lh: 1.02 }, anim('rise')), T('Presented to the leadership team', 800, 700, 1000, 60, { fs: 38, fw: 400, color: c.muted }, anim('rise', 150)));
 	} else if (light) {
 		objects.push(T('Delivery and people, Q3', 160, 130, 1500, 460, { fs: 210, fw: c.fw, color: c.ink, lh: 0.96, ls: -6 }, anim('rise')), T('Quarterly review for the leadership team', 160, 840, 1300, 70, { fs: 44, fw: 500, color: '#ffffff' }, anim('rise', 200)));

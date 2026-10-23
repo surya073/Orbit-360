@@ -42,7 +42,7 @@ export function TemplatePicker() {
 							<b>{t.label}</b>
 							<small>{t.description}</small>
 							<em>
-								{theme ? theme.label : t.prefs.theme} · {font ? font.label : 'Company 360'}
+								{theme ? theme.label : t.prefs.theme} · {font ? font.label : 'Meeting 360'}
 							</em>
 						</span>
 						{on ? (

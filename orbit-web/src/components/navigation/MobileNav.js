@@ -116,7 +116,7 @@ export default function MobileNav({ onClose }) {
 				<header className="offcanvas__head">
 					<span className="offcanvas__brand">
 						<img src={logo} alt="" width="26" height="26" />
-						<b>Company 360</b>
+						<b>Meeting 360</b>
 					</span>
 					<IconButton icon="x" label="Close navigation" className="offcanvas__close" onClick={onClose} />
 				</header>

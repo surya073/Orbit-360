@@ -38,7 +38,7 @@ describe('story templates', () => {
 	const { SECTION_RENDERERS, SECTION_NEEDS } = require('../features/presentations/sections');
 
 	test('there are five stories, each with an audience, a purpose and only slides the viewer can really render (no repeats)', () => {
-		expect(STORY_TEMPLATES.map((s) => s.name)).toEqual(['Executive Overview', 'Team Performance Review', 'Project Portfolio Review', 'People and Reporting Structure', 'Comprehensive Company 360']);
+		expect(STORY_TEMPLATES.map((s) => s.name)).toEqual(['Executive Overview', 'Team Performance Review', 'Project Portfolio Review', 'People and Reporting Structure', 'Comprehensive Meeting 360']);
 		for (const s of STORY_TEMPLATES) {
 			expect(s.audience.length).toBeGreaterThan(3);
 			expect(s.purpose.length).toBeGreaterThan(20);

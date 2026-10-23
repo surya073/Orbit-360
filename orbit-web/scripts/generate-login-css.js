@@ -46,10 +46,10 @@ html, body {
   background: ${t.bg} !important;
   color: ${t.text} !important;
   border: 1px solid ${t['border-strong']} !important;
-  border-radius: 8px !important;
-  height: 42px !important;
+  border-radius: ${t.radius || '8px'} !important;
+  height: ${t.height || '42px'} !important;
   text-indent: 0 !important;
-  padding: 0 12px !important;
+  padding: 0 ${t.pad || '12px'} !important;
   font-size: 14px !important;
   transition: border-color .15s ease, box-shadow .15s ease !important;
 }
@@ -69,8 +69,8 @@ html, body {
   background: ${t.accent} !important;
   color: ${t['accent-contrast']} !important;
   box-shadow: none !important;
-  height: 42px !important;
-  border-radius: 8px !important;
+  height: ${t.height || '42px'} !important;
+  border-radius: ${t.radius || '8px'} !important;
   text-transform: none !important;
   letter-spacing: 0 !important;
   font-size: 14px !important;
@@ -158,9 +158,13 @@ const forgot = (t) => `
 .tryanother, .extra_options { color: ${t.accent} !important; }
 `;
 
+// The sign-in page is a fixed light, botanical design (UI_Design/b4492ab0...jpg), so the hosted forms get one matching
+// sheet of their own instead of following the app theme: pill fields and a dark green pill button.
+const BOTANICAL = { surface: '#fcfcfb', bg: '#ffffff', 'surface-2': '#eef2ef', text: '#1f2a24', 'text-muted': '#5d6b63', border: '#d9dedb', 'border-strong': '#7c8a82', focus: '#44594b', accent: '#44594b', 'accent-hover': '#34473b', 'accent-contrast': '#ffffff', danger: '#b3261e', radius: '999px', height: '44px', pad: '18px' };
+
 fs.mkdirSync(path.join(ROOT, 'public/auth'), { recursive: true });
-for (const id of ids) {
-	const t = tokens(id);
+for (const id of [...ids, 'botanical']) {
+	const t = id === 'botanical' ? BOTANICAL : tokens(id);
 	fs.writeFileSync(path.join(ROOT, `public/auth/login-iframe-${id}.css`), header(id, 'embedded_signin.css', 'Sign-in form') + signin(t) + controls(t));
 	fs.writeFileSync(path.join(ROOT, `public/auth/forgot-iframe-${id}.css`), header(id, 'embedded_password_reset.css', 'Forgot-password flow') + forgot(t) + controls(t));
 	console.log('wrote', id);

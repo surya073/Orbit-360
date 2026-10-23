@@ -30,7 +30,7 @@ export function Brand({ size = 28 }) {
 	return (
 		<span className="pbrand">
 			<img src={logo} alt="" width={size} height={size} />
-			<span>Company 360</span>
+			<span>Meeting 360</span>
 		</span>
 	);
 }
@@ -89,7 +89,7 @@ export function ClosingSlide({ title, periodText, rangeText, generatedText }) {
 					{rangeText ? ` · ${rangeText}` : ''}
 				</span>
 				<span>
-					<Icon name="clock" size={20} /> Prepared from live Company 360 data on {generatedText}
+					<Icon name="clock" size={20} /> Prepared from live Meeting 360 data on {generatedText}
 				</span>
 			</div>
 		</div>

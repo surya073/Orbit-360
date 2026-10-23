@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '../app/providers/ThemeProvider';
@@ -26,37 +26,29 @@ beforeEach(() => authService.renderLogin.mockResolvedValue());
 const options = (theme) => ({ cssUrl: expect.stringMatching(new RegExp(`/auth/login-iframe-${theme}\\.css$`)), forgotCssUrl: expect.stringMatching(new RegExp(`/auth/forgot-iframe-${theme}\\.css$`)) });
 
 describe('sign-in page', () => {
-	test('shows the brand story, the sign-in card and the access note', async () => {
+	test('shows the sign-in card and the access note (no marketing panel: the form and the artwork are the page)', async () => {
 		renderLogin();
 		expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
-		expect(screen.getByRole('complementary', { name: 'About Company 360' })).toBeInTheDocument();
-		expect(screen.getByText('Numbers you can trust')).toBeInTheDocument();
-		expect(screen.getByText('Scoped to your team')).toBeInTheDocument();
 		expect(screen.getByText(/Access is by invitation/)).toBeInTheDocument();
+		expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
 		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalled());
 	});
 
-	test('both hosted pages (sign-in and forgot password) get the stylesheet for the active theme', async () => {
+	test('both hosted pages (sign-in and forgot password) get the fixed botanical stylesheet', async () => {
 		renderLogin();
-		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledWith('login-container', options('ember')));
+		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledWith('login-container', options('botanical')));
 		expect(document.getElementById('login-container')).toBeInTheDocument();
 	});
 
-	test('switching theme re-themes both hosted pages (the iframe cannot read our CSS variables)', async () => {
+	test('the sign-in page keeps its own look when the app theme changes (no theme menu, no re-render of the hosted form)', async () => {
 		renderLogin();
 		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledTimes(1));
-		await userEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-		await userEvent.click(screen.getByRole('radio', { name: 'Black Current' }));
-		expect(document.documentElement.dataset.theme).toBe('blackcurrant');
-		await waitFor(() => expect(authService.renderLogin).toHaveBeenLastCalledWith('login-container', options('blackcurrant')));
-	});
-
-	test('the pre-login theme menu offers themes but no link into the (authenticated) settings page', async () => {
-		renderLogin();
-		await userEvent.click(screen.getByRole('button', { name: 'Appearance' }));
-		const menu = screen.getByRole('radiogroup', { name: 'Theme' });
-		expect(within(menu).getAllByRole('radio')).toHaveLength(THEME_IDS.length + 1);
-		expect(screen.queryByRole('link', { name: /Appearance settings/ })).not.toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: 'Appearance' })).not.toBeInTheDocument();
+		act(() => {
+			document.documentElement.dataset.theme = 'blackcurrant';
+		});
+		await new Promise((r) => setTimeout(r, 30));
+		expect(authService.renderLogin).toHaveBeenCalledTimes(1);
 	});
 
 	test('an SDK failure is explained with a retry that renders the form again', async () => {
@@ -82,11 +74,12 @@ describe('sign-in page', () => {
 		expect(forgotCssPath('sunset')).toMatch(/\/auth\/forgot-iframe-sunset\.css$/);
 	});
 
-	test('decorative elements are hidden from assistive technology and every animated block is a plain reveal', () => {
+	test('the artwork is decorative: hidden from assistive technology', () => {
 		renderLogin();
-		expect(document.querySelectorAll('.login__orb[aria-hidden="true"]').length).toBe(2);
-		expect(document.querySelector('.login-art')).toHaveAttribute('aria-hidden', 'true');
-		expect(document.querySelectorAll('.reveal').length).toBeGreaterThanOrEqual(8);
+		expect(document.querySelector('.login__art')).toHaveAttribute('aria-hidden', 'true');
+		expect(document.querySelector('.login-botanical')).toHaveAttribute('aria-hidden', 'true');
+		expect(document.querySelector('.login-backdrop')).toHaveAttribute('aria-hidden', 'true');
+		expect(document.querySelectorAll('.reveal').length).toBeGreaterThanOrEqual(5);
 	});
 });
 
@@ -172,5 +165,15 @@ describe('generated iframe stylesheets', () => {
 			expect(css).toContain('.textbox');
 		}
 		expect(fs.readFileSync(path.join(__dirname, `../../public/auth/forgot-iframe-${id}.css`), 'utf8')).toContain('.recovery_container');
+	});
+});
+
+describe('botanical hosted-form stylesheets', () => {
+	test.each(['login', 'forgot'])('%s sheet keeps the platform base and gives pill fields and a dark green pill button', (kind) => {
+		const css = fs.readFileSync(path.join(__dirname, `../../public/auth/${kind}-iframe-botanical.css`), 'utf8');
+		expect(css.startsWith(`@import url("/__catalyst/auth/static-file?file_name=${kind === 'login' ? 'embedded_signin.css' : 'embedded_password_reset.css'}");`)).toBe(true);
+		expect(css).toContain('border-radius: 999px');
+		expect(css.toLowerCase()).toContain('#44594b');
+		expect(css).toContain('.textbox');
 	});
 });

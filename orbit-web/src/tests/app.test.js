@@ -33,11 +33,11 @@ describe('authentication', () => {
 		render(<App />);
 		expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
 		expect(global.fetch).not.toHaveBeenCalled();
-		expect(authService.renderLogin).toHaveBeenCalledWith('login-container', expect.objectContaining({ cssUrl: expect.stringMatching(/login-iframe-ember\.css$/) }));
+		expect(authService.renderLogin).toHaveBeenCalledWith('login-container', expect.objectContaining({ cssUrl: expect.stringMatching(/login-iframe-botanical\.css$/) }));
 	});
 	test('an unprovisioned user is told so and gets no data', async () => {
 		authService.isSignedIn.mockResolvedValue(true);
-		mockFetch([[/^GET \/me/, { status: 403, body: errBody(403, 'NOT_PROVISIONED', 'Your account has not been provisioned for Company 360') }]]);
+		mockFetch([[/^GET \/me/, { status: 403, body: errBody(403, 'NOT_PROVISIONED', 'Your account has not been provisioned for Meeting 360') }]]);
 		render(<App />);
 		expect(await screen.findByText('Access not available')).toBeInTheDocument();
 		expect(screen.getByText(/has not been provisioned/)).toBeInTheDocument();

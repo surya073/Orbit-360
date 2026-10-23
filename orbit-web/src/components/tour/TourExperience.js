@@ -89,7 +89,7 @@ function Welcome({ user, onBegin, onClose }) {
 				<span className="tour-eyebrow">
 					<Icon name="sparkles" size={14} /> A one-minute tour
 				</span>
-				<h1 id={titleId}>{name ? `Welcome, ${name}` : 'Welcome to Company 360'}</h1>
+				<h1 id={titleId}>{name ? `Welcome, ${name}` : 'Welcome to Meeting 360'}</h1>
 				<p className="tour-welcome__lead">Your people, projects and performance in one place. Let us show you where everything lives, so you can get to work faster.</p>
 				<ul className="tour-welcome__tiles">
 					{TILES.map((t, i) => (

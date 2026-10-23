@@ -66,7 +66,7 @@ async function authenticate(userApp, repos, { userCache: cache, access }) {
 		u = await users.findByCatalystId(catalystId);
 		if (cache) cache.set(catalystId, u);
 	}
-	if (!u) throw errors.forbidden('Your account has not been provisioned for Company 360', 'NOT_PROVISIONED');
+	if (!u) throw errors.forbidden('Your account has not been provisioned for Meeting 360', 'NOT_PROVISIONED');
 	if (u.is_active !== true) throw errors.forbidden('Your account is inactive', 'ACCOUNT_INACTIVE');
 	if (u.app_role !== ROLES.ADMIN && u.app_role !== ROLES.MANAGER) throw errors.forbidden('Your account has no valid role', 'INVALID_ROLE');
 	const role = await access.resolve(repos.access, u);

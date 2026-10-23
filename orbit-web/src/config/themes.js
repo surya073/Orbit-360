@@ -58,7 +58,7 @@ export const ACCENT_PRESETS = ['#ff8a3d', '#e5484d', '#e93d82', '#8e4ec6', '#5b5
 
 // Fonts: the two self-hosted families, plus system stacks (nothing is downloaded). `ui` / `display` are CSS font stacks.
 export const FONTS = [
-	{ id: 'default', label: 'Company 360', hint: 'DM Sans with Manrope headings', ui: null, display: null },
+	{ id: 'default', label: 'Meeting 360', hint: 'DM Sans with Manrope headings', ui: null, display: null },
 	{ id: 'system', label: 'System', hint: 'Your device’s own interface font', ui: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", display: null },
 	{ id: 'humanist', label: 'Humanist', hint: 'Warm and open, easy on long reading', ui: "'Segoe UI', 'Gill Sans', Optima, Candara, 'Trebuchet MS', sans-serif", display: null },
 	{ id: 'rounded', label: 'Rounded', hint: 'Soft, friendly letterforms', ui: "ui-rounded, 'SF Pro Rounded', 'Nunito', 'Varela Round', system-ui, sans-serif", display: null },
@@ -85,5 +85,5 @@ export const TEMPLATES = [
 	{ id: 'report', label: 'Paper report', description: 'Warm paper tones that read like a printed report', prefs: { theme: 'paper', accent: '', radius: 'sharp', font: 'serif', palette: 'earth', density: 'comfortable', textSize: 'default' } },
 	{ id: 'focus', label: 'Calm focus', description: 'Nord blues, larger text, gentle motion', prefs: { theme: 'nord', accent: '', radius: 'round', font: 'humanist', palette: 'pastel', density: 'comfortable', textSize: 'large' } },
 	{ id: 'neon', label: 'Neon studio', description: 'Cyberpunk neon with vivid charts', prefs: { theme: 'cyber', accent: '', radius: 'round', font: 'default', palette: 'vivid', density: 'comfortable', textSize: 'default' } },
-	{ id: 'classic', label: 'Company 360', description: 'Back to the original Ember look', prefs: { theme: 'ember', accent: '', radius: 'default', font: 'default', palette: 'theme', density: 'comfortable', textSize: 'default' } },
+	{ id: 'classic', label: 'Meeting 360', description: 'Back to the original Ember look', prefs: { theme: 'ember', accent: '', radius: 'default', font: 'default', palette: 'theme', density: 'comfortable', textSize: 'default' } },
 ];

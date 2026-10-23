@@ -141,7 +141,7 @@ export const STORY_TEMPLATES = [
 	},
 	{
 		id: 'company_360',
-		name: 'Comprehensive Company 360',
+		name: 'Comprehensive Meeting 360',
 		audience: 'Annual and quarterly reviews',
 		purpose: 'The whole picture: people, attendance, time, projects, product work, AI usage and the key insights.',
 		slides: ['executive_summary', 'employee_overview', 'attendance_leave', 'billable_hours', 'project_performance', 'product_development', 'ai_usage', 'reporting_structure', 'key_insights'],

@@ -78,7 +78,7 @@ export default function SideNav() {
 				</button>
 				<span className="rail__brand" aria-hidden="true">
 					<img src={logo} alt="" width="22" height="22" />
-					<b>Company 360</b>
+					<b>Meeting 360</b>
 				</span>
 			</div>
 			<nav className="rail__nav" aria-label="Primary">

@@ -20,6 +20,8 @@ You are setting up the Zoho Catalyst backend resources for an existing, already-
 - Never print or store passwords or tokens in your report.
 - Do not redeploy the function or client unless a step below says so. Code changes are out of scope.
 
+> **Status (checked 2026-10-23 with a read-only `catalyst ds:export`):** Tasks 1, 2 and 5 are already done. `product_items` has the column `item_priority` (not `priority`, which is reserved in the Data Store) and holds the 24 sample rows; `roles`, `role_permissions`, `user_roles` and `user_permissions` exist with exactly the columns below. Do not recreate or rename anything; only Tasks 3, 4 and 6 (environment variables, authentication, live verification) can still be needed.
+
 ## 3. What already exists
 Data Store has these 22 tables (created by hand earlier): teams, users, employees, projects, project_assignments, time_entries, attendance_records, leave_records, performance_records, metric_definitions, ai_usage_records, product_items, application_settings, report_snapshots, import_jobs, import_rows, audit_logs, custom_fields, team_memberships and the rest of the original set. The source of truth for every table is in the repository: `data/database-schema.md` and `data/company360.schema.json` (if you cannot read the repo, use the Console's own column lists and the definitions in this prompt). Booleans are stored as the strings `true` / `false`. System columns (ROWID, CREATORID, CREATEDTIME, MODIFIEDTIME) are automatic.
 Sample data is already imported (12 employees, 6 projects, assignments, 84 time entries, attendance, leave, AI usage). Sign-in works for karthickbala112@gmail.com (admin row exists in `users`).
@@ -28,12 +30,12 @@ Sample data is already imported (12 employees, 6 projects, assignments, 84 time 
 
 ### Task 1: Close every column gap in the existing tables
 1. For each existing table, compare the live columns with `data/database-schema.md`. List missing columns.
-2. Known gap: table **product_items** has no column **priority**. Add: name `priority`, type Var Char, max length 20, not mandatory, not unique.
+2. ~~Known gap: `product_items.priority`~~ Resolved: the column is named `item_priority` (varchar 20) and already exists. Do not add `priority`.
 3. Also verify these in the live tables and add anything missing (same rule: add only): `users` (catalyst_user_id unique, email unique, display_name, app_role, team_id, employee_id, is_active), `teams` (team_code, name, description, is_active), `time_entries` (approval_status, source_record_id, dedupe_key, is_deleted), `import_jobs`, `import_rows`, `audit_logs`, `custom_fields`, `application_settings`, `report_snapshots`, `presentations` / presentation table if present in the schema.
 4. Do not add `source_record_id` to `teams` (teams are never imported).
 Report each change as "table.column: added".
 
-### Task 2: Create the four access tables (they do NOT exist yet)
+### Task 2: The four access tables (ALREADY CREATED; kept here as the reference definition)
 Create exactly these tables with exactly these columns. Use the same table permissions as `users` and `employees`; do NOT grant App User access to any of them.
 
 **roles**
@@ -84,7 +86,7 @@ Confirm Authentication is enabled with the embedded/hosted sign-in the app uses,
 Do NOT enable "Function Security Rules / authentication required" on the whole function: the app needs `GET /health` public and the backend already returns 401 without a session.
 
 ### Task 5: Load the remaining sample data (only if Task 1 succeeded)
-Product items: import `data/sample-import/8-product-items.csv` (24 rows) through the app (Imports -> Product items -> keep "Update the existing record" -> upload -> Import valid rows) or, if you have Data Store bulk import (`catalyst ds:import`), map columns source_record_id, item_type, title, project_code (resolve to project_id by project_code), status, priority, due_date, completed_date, estimated_hours. Prefer the app import (it resolves project codes and sets dedupe keys). It costs about 4 function calls.
+Product items: import `data/sample-import/8-product-items.csv` (24 rows) through the app (Imports -> Product items -> keep "Update the existing record" -> upload -> Import valid rows) or, if you have Data Store bulk import (`catalyst ds:import`), map columns source_record_id, item_type, title, project_code (resolve to project_id by project_code), status, item_priority, due_date, completed_date, estimated_hours. Prefer the app import (it resolves project codes and sets dedupe keys). It costs about 4 function calls.
 
 ### Task 6: Verify with the minimum number of API calls
 Make AT MOST 4 calls to the live function, all as the signed-in admin in a browser session if you have one:

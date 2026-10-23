@@ -1,8 +1,10 @@
 # Access & Permissions: schema for you to create
 
-**Status: proposed. Nothing in this file has been created.** The application was written so that it works
-*before* these tables exist and keeps working after you create them. Create the three tables below in the
-Catalyst Console (Data Store), then reload the app. No code change, deploy or data migration is needed.
+**Status: created.** `roles`, `role_permissions`, `user_roles` and the optional `user_permissions` exist in the
+Development Data Store and their columns match this file (confirmed 2026-10-23). The application also works
+*without* them (built-in roles), which is what the next section describes; it is kept for a fresh environment
+(for example Production), where you create the tables in the Catalyst Console and reload the app. No code change,
+deploy or data migration is needed.
 
 ## What happens before the tables exist
 

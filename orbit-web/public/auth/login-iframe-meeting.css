@@ -1,7 +1,7 @@
 @import url("/__catalyst/auth/static-file?file_name=embedded_signin.css");
 
 /*
- * Sign-in form - theme: botanical. GENERATED from src/styles/themes.css and themes.extra.css by scripts/generate-login-css.js; do not edit.
+ * Sign-in form - theme: meeting. GENERATED from src/styles/themes.css and themes.extra.css by scripts/generate-login-css.js; do not edit.
  * Regenerate with `npm run gen:login-css` (src/tests/login.test.js fails if these drift).
  */
 
@@ -24,11 +24,11 @@
   border: 0 !important;
 }
 .signin_head, .titlename, .service_name { display: none !important; } /* our page has its own heading */
-.hellouser, .backup_desc, .pass_name, .textbox_label, .textbox_actions, .oneAuthLable, .option_details { color: #5d6b63 !important; }
+.hellouser, .backup_desc, .pass_name, .textbox_label, .textbox_actions, .oneAuthLable, .option_details { color: #6a7592 !important; }
 
 html, body {
-  background: #fcfcfb !important;
-  color: #1f2a24 !important;
+  background: #ffffff !important;
+  color: #172a5a !important;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   -webkit-font-smoothing: antialiased;
   overflow: hidden !important; /* the card is sized to this content (useIframeHeight): no inner scrollbar */
@@ -38,45 +38,47 @@ html, body {
 .textbox_div { margin-bottom: 18px !important; }
 .textbox {
   background: #ffffff !important;
-  color: #1f2a24 !important;
-  border: 1px solid #7c8a82 !important;
-  border-radius: 999px !important;
-  height: 44px !important;
+  color: #172a5a !important;
+  border: 1px solid #dbe2f3 !important;
+  border-radius: 4px !important;
+  height: 48px !important;
   text-indent: 0 !important;
-  padding: 0 18px !important;
+  padding: 0 16px !important;
   font-size: 14px !important;
   transition: border-color .15s ease, box-shadow .15s ease !important;
 }
-.textbox:hover { border-color: #5d6b63 !important; }
+.textbox:hover { border-color: #6a7592 !important; }
 .textbox:focus {
-  border-color: #44594b !important;
-  box-shadow: 0 0 0 1px #44594b !important;
+  border-color: #5b7cfa !important;
+  box-shadow: 0 0 0 1px #5b7cfa !important;
 }
-.textbox::placeholder { color: #5d6b63 !important; opacity: 1 !important; }
+.textbox::placeholder { color: #6a7592 !important; opacity: 1 !important; }
 .textbox:-webkit-autofill, .textbox:-webkit-autofill:hover, .textbox:-webkit-autofill:focus {
-  -webkit-text-fill-color: #1f2a24 !important;
+  -webkit-text-fill-color: #172a5a !important;
   -webkit-box-shadow: 0 0 0 100px #ffffff inset !important;
   background-color: #ffffff !important;
 }
-.errorborder, .textbox.errorborder { border-color: #b3261e !important; }
+.errorborder, .textbox.errorborder { border-color: #d6284a !important; }
 .btn.blue, .blue {
-  background: #44594b !important;
+  background: #5b7cfa !important;
   color: #ffffff !important;
   box-shadow: none !important;
-  height: 44px !important;
-  border-radius: 999px !important;
+  height: 48px !important;
+  border-radius: 4px !important;
   text-transform: none !important;
   letter-spacing: 0 !important;
   font-size: 14px !important;
   margin-bottom: 14px !important;
   transition: background-color .15s ease, transform .1s ease !important;
 }
-.btn.blue:hover, .blue:hover { background: #34473b !important; box-shadow: none !important; }
+.btn.blue:hover, .blue:hover { background: #4966e6 !important; box-shadow: none !important; }
 .btn.blue:active { transform: translateY(1px); }
-.btn:focus-visible { outline: 2px solid #44594b !important; outline-offset: 2px !important; }
+.btn.blue { position: relative !important; overflow: hidden !important; padding-right: 56px !important; letter-spacing: .04em !important; box-shadow: 0 10px 22px -10px #5b7cfa !important; }
+.btn.blue::after { content: "\2192"; position: absolute; right: 0; top: 0; bottom: 0; width: 48px; display: grid; place-items: center; background: rgba(255,255,255,.18); font-size: 18px; line-height: 1; }
+.btn:focus-visible { outline: 2px solid #5b7cfa !important; outline-offset: 2px !important; }
 .loadwithbtn { border-color: #ffffff !important; border-left-color: transparent !important; }
-a, a:visited, .bluetext_action, .bluetext_action a, .change_user, .fielderror a { color: #44594b !important; text-decoration: none !important; }
+a, a:visited, .bluetext_action, .bluetext_action a, .change_user, .fielderror a { color: #5b7cfa !important; text-decoration: none !important; }
 a:hover, .bluetext_action:hover { text-decoration: underline !important; }
-.fielderror, .error_icon, .error_message { color: #b3261e !important; }
-.backoption { color: #5d6b63 !important; }
-.backoption:hover { background: #eef2ef !important; }
+.fielderror, .error_icon, .error_message { color: #d6284a !important; }
+.backoption { color: #6a7592 !important; }
+.backoption:hover { background: #f3f6fd !important; }

@@ -79,7 +79,9 @@ html, body {
 }
 .btn.blue:hover, .blue:hover { background: ${t['accent-hover']} !important; box-shadow: none !important; }
 .btn.blue:active { transform: translateY(1px); }
-.btn:focus-visible { outline: 2px solid ${t.focus} !important; outline-offset: 2px !important; }
+${t.arrow ? `.btn.blue { position: relative !important; overflow: hidden !important; padding-right: 56px !important; letter-spacing: .04em !important; box-shadow: 0 10px 22px -10px ${t.accent} !important; }
+.btn.blue::after { content: "\\2192"; position: absolute; right: 0; top: 0; bottom: 0; width: 48px; display: grid; place-items: center; background: rgba(255,255,255,.18); font-size: 18px; line-height: 1; }
+` : ''}.btn:focus-visible { outline: 2px solid ${t.focus} !important; outline-offset: 2px !important; }
 .loadwithbtn { border-color: ${t['accent-contrast']} !important; border-left-color: transparent !important; }
 a, a:visited, .bluetext_action, .bluetext_action a, .change_user, .fielderror a { color: ${t.accent} !important; text-decoration: none !important; }
 a:hover, .bluetext_action:hover { text-decoration: underline !important; }
@@ -158,13 +160,13 @@ const forgot = (t) => `
 .tryanother, .extra_options { color: ${t.accent} !important; }
 `;
 
-// The sign-in page is a fixed light, botanical design (UI_Design/b4492ab0...jpg), so the hosted forms get one matching
-// sheet of their own instead of following the app theme: pill fields and a dark green pill button.
-const BOTANICAL = { surface: '#fcfcfb', bg: '#ffffff', 'surface-2': '#eef2ef', text: '#1f2a24', 'text-muted': '#5d6b63', border: '#d9dedb', 'border-strong': '#7c8a82', focus: '#44594b', accent: '#44594b', 'accent-hover': '#34473b', 'accent-contrast': '#ffffff', danger: '#b3261e', radius: '999px', height: '44px', pad: '18px' };
+// The sign-in page is a fixed design (UI_Design/869a5d3c...jpg), so the hosted forms get one matching sheet of their
+// own instead of following the app theme: rectangular fields with a blue focus ring and a blue button with an arrow end.
+const MEETING = { surface: '#ffffff', bg: '#ffffff', 'surface-2': '#f3f6fd', text: '#172a5a', 'text-muted': '#6a7592', border: '#e3e8f5', 'border-strong': '#dbe2f3', focus: '#5b7cfa', accent: '#5b7cfa', 'accent-hover': '#4966e6', 'accent-contrast': '#ffffff', danger: '#d6284a', radius: '4px', height: '48px', pad: '16px', arrow: true };
 
 fs.mkdirSync(path.join(ROOT, 'public/auth'), { recursive: true });
-for (const id of [...ids, 'botanical']) {
-	const t = id === 'botanical' ? BOTANICAL : tokens(id);
+for (const id of [...ids, 'meeting']) {
+	const t = id === 'meeting' ? MEETING : tokens(id);
 	fs.writeFileSync(path.join(ROOT, `public/auth/login-iframe-${id}.css`), header(id, 'embedded_signin.css', 'Sign-in form') + signin(t) + controls(t));
 	fs.writeFileSync(path.join(ROOT, `public/auth/forgot-iframe-${id}.css`), header(id, 'embedded_password_reset.css', 'Forgot-password flow') + forgot(t) + controls(t));
 	console.log('wrote', id);

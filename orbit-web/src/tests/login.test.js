@@ -34,9 +34,9 @@ describe('sign-in page', () => {
 		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalled());
 	});
 
-	test('both hosted pages (sign-in and forgot password) get the fixed botanical stylesheet', async () => {
+	test('both hosted pages (sign-in and forgot password) get the fixed meeting stylesheet', async () => {
 		renderLogin();
-		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledWith('login-container', options('botanical')));
+		await waitFor(() => expect(authService.renderLogin).toHaveBeenCalledWith('login-container', options('meeting')));
 		expect(document.getElementById('login-container')).toBeInTheDocument();
 	});
 
@@ -77,7 +77,7 @@ describe('sign-in page', () => {
 	test('the artwork is decorative: hidden from assistive technology', () => {
 		renderLogin();
 		expect(document.querySelector('.login__art')).toHaveAttribute('aria-hidden', 'true');
-		expect(document.querySelector('.login-botanical')).toHaveAttribute('aria-hidden', 'true');
+		expect(document.querySelector('.login-illu')).toHaveAttribute('aria-hidden', 'true');
 		expect(document.querySelector('.login-backdrop')).toHaveAttribute('aria-hidden', 'true');
 		expect(document.querySelectorAll('.reveal').length).toBeGreaterThanOrEqual(5);
 	});
@@ -168,12 +168,12 @@ describe('generated iframe stylesheets', () => {
 	});
 });
 
-describe('botanical hosted-form stylesheets', () => {
-	test.each(['login', 'forgot'])('%s sheet keeps the platform base and gives pill fields and a dark green pill button', (kind) => {
-		const css = fs.readFileSync(path.join(__dirname, `../../public/auth/${kind}-iframe-botanical.css`), 'utf8');
+describe('meeting hosted-form stylesheets', () => {
+	test.each(['login', 'forgot'])('%s sheet keeps the platform base and gives rectangular fields and a blue button with an arrow end', (kind) => {
+		const css = fs.readFileSync(path.join(__dirname, `../../public/auth/${kind}-iframe-meeting.css`), 'utf8');
 		expect(css.startsWith(`@import url("/__catalyst/auth/static-file?file_name=${kind === 'login' ? 'embedded_signin.css' : 'embedded_password_reset.css'}");`)).toBe(true);
-		expect(css).toContain('border-radius: 999px');
-		expect(css.toLowerCase()).toContain('#44594b');
+		expect(css).toContain('border-radius: 4px');
+		expect(css.toLowerCase()).toContain('#5b7cfa');
 		expect(css).toContain('.textbox');
 	});
 });

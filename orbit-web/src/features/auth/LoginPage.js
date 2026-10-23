@@ -4,12 +4,12 @@ import Icon from '../../components/common/Icon';
 import Logo from '../../components/common/Logo';
 import LoadingState from '../../components/feedback/LoadingState';
 import { authService } from '../../services/authService';
-import LoginBotanical, { LoginBackdrop } from './LoginBotanical';
+import LoginIllustration, { LoginBackdrop } from './LoginIllustration';
 import useIframeHeight from './useIframeHeight';
 import './login.css';
 
-/** The hosted sign-in and forgot-password pages are styled with one fixed light, botanical sheet (see scripts/generate-login-css.js). */
-export const LOGIN_SKIN = 'botanical';
+/** The hosted sign-in and forgot-password pages are styled with one fixed light "meeting" sheet (see scripts/generate-login-css.js). */
+export const LOGIN_SKIN = 'meeting';
 
 /** Same-origin stylesheets for the hosted pages (the iframe cannot read our CSS variables). */
 export const loginCssPath = (skin = LOGIN_SKIN) => new URL(`auth/login-iframe-${skin}.css`, window.location.href).pathname;
@@ -18,8 +18,8 @@ export const forgotCssPath = (skin = LOGIN_SKIN) => new URL(`auth/forgot-iframe-
 const delay = (ms) => ({ '--d': `${ms}ms` });
 
 /**
- * Sign-in, after UI_Design/b4492ab0...jpg: one white card, the form on the left, paper-cut foliage on the right (a frosted
- * panel over the foliage on phones). The form and the forgot-password flow are Catalyst's hosted pages (we never handle
+ * Sign-in, after UI_Design/869a5d3c...jpg: one white card with a flat meeting illustration on the left and the form on the
+ * right, on a deep blue page of video-call tiles (the product is Meeting 360). The form and the forgot-password flow are Catalyst's hosted pages (we never handle
  * credentials). The card grows/shrinks with the hosted content, so the page never needs an inner scrollbar. The login page
  * keeps its own light colours whatever theme the app uses.
  */
@@ -45,15 +45,15 @@ export default function LoginPage() {
 	return (
 		<div className="login">
 			<LoginBackdrop />
+			<header className="login__top reveal" style={delay(0)}>
+				<Logo link={false} />
+			</header>
 			<main className="login__stage">
 				<section className="login__card" aria-labelledby="signin-title">
 					<div className="login__art" aria-hidden="true">
-						<LoginBotanical />
+						<LoginIllustration />
 					</div>
 					<div className="login__panel">
-						<div className="login__brand reveal" style={delay(60)}>
-							<Logo link={false} />
-						</div>
 						<h1 id="signin-title" className="reveal" style={delay(120)}>
 							Sign in
 						</h1>

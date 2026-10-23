@@ -33,7 +33,7 @@ describe('authentication', () => {
 		render(<App />);
 		expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
 		expect(global.fetch).not.toHaveBeenCalled();
-		expect(authService.renderLogin).toHaveBeenCalledWith('login-container', expect.objectContaining({ cssUrl: expect.stringMatching(/login-iframe-botanical\.css$/) }));
+		expect(authService.renderLogin).toHaveBeenCalledWith('login-container', expect.objectContaining({ cssUrl: expect.stringMatching(/login-iframe-meeting\.css$/) }));
 	});
 	test('an unprovisioned user is told so and gets no data', async () => {
 		authService.isSignedIn.mockResolvedValue(true);

@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { IconStyleContext } from '../../components/common/iconStyle';
 import { DEFAULT_ICON_STYLE, ICON_STYLE_IDS } from '../../config/icons';
 import { APPEARANCE_KEY, DEFAULT_THEME, DENSITIES, LEGACY_THEMES, FONTS, MOTIONS, PALETTES, RADII, SYSTEM_MAP, TEXT_SIZES, THEME_IDS, WIDTHS } from '../../config/themes';
@@ -56,8 +56,16 @@ export function ThemeProvider({ children }) {
 
 	const resolved = resolveTheme(prefs.theme, prefersDark);
 
+	const applied = useRef(false);
 	useEffect(() => {
 		const root = document.documentElement;
+		// after the first paint, a change of theme/accent/sidebar cross-fades (motion.css) instead of flashing
+		let fade = 0;
+		if (applied.current) {
+			root.classList.add('is-restyling');
+			fade = window.setTimeout(() => root.classList.remove('is-restyling'), 450);
+		}
+		applied.current = true;
 		root.dataset.theme = resolved;
 		root.dataset.themePref = prefs.theme;
 		root.dataset.density = prefs.density;
@@ -104,6 +112,7 @@ export function ThemeProvider({ children }) {
 		} catch {
 			/* storage unavailable: applies for this session only */
 		}
+		return () => window.clearTimeout(fade);
 	}, [prefs, resolved]);
 
 	// Ease colors briefly when the user changes theme (skipped for reduced motion).

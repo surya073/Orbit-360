@@ -35,6 +35,7 @@ import './styles/presentationBackdrop.css';
 import './styles/presentationCenter.css';
 import './styles/studio.css';
 import './styles/cards.css'; // the card system overrides every older card look
+import './styles/motion.css'; // global transitions and entrances (after the component sheets)
 import './styles/utilities.css'; // last: spacing helpers and the classes that replaced inline styles
 import App from './app/App';
 

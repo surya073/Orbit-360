@@ -1,0 +1,425 @@
+/*
+ * Global motion layer: one set of curves and durations so every switch (page, tab, toggle, menu, sidebar item, theme)
+ * moves the same way instead of snapping. Loaded after the component sheets on purpose: it only adds transitions and
+ * entrances, never layout. "Reduce motion" (Settings) and the device setting switch all of it off at the bottom.
+ * Entrances use `backwards` fill so a held transform never becomes the containing block of a fixed child.
+ */
+:root {
+	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--dur-pop: 360ms;
+}
+
+@keyframes m-fade {
+	from {
+		opacity: 0;
+	}
+}
+@keyframes m-rise {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+}
+@keyframes m-slide-x {
+	from {
+		opacity: 0;
+		transform: translateX(14px);
+	}
+}
+@keyframes m-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.9);
+	}
+	60% {
+		opacity: 1;
+		transform: scale(1.04);
+	}
+}
+@keyframes m-grow-y {
+	from {
+		opacity: 0;
+		transform: scaleY(0.6);
+	}
+}
+@keyframes m-sweep {
+	from {
+		opacity: 0;
+		transform: translateX(-12px);
+	}
+}
+
+/* ---------- sidebar: the chosen page slides into place, its neck and circle appear with it ---------- */
+.rail-item {
+	transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), translate var(--dur) var(--ease-out);
+}
+.rail-item:not(.active):hover {
+	translate: 3px 0;
+}
+.rail-item.active {
+	animation: m-sweep var(--dur-slow) var(--ease-out) backwards;
+}
+.rail-item.active::before,
+.rail-item.active::after {
+	animation: m-fade var(--dur-slow) var(--ease-out) backwards;
+}
+.rail-item.active .rail-item__icon {
+	animation: m-pop var(--dur-pop) var(--ease-spring) backwards;
+}
+.rail-item__icon .icon {
+	transition: transform var(--dur) var(--ease-spring);
+}
+.rail-item:hover .rail-item__icon .icon {
+	transform: scale(1.1);
+}
+.rail-item__label {
+	transition: opacity var(--dur) var(--ease-out);
+}
+.rail.is-expanded .rail-item__label {
+	animation: m-fade var(--dur) var(--ease-out) backwards;
+}
+
+/* ---------- toggles: the thumb springs across, the track colour follows, a press stretches the thumb ---------- */
+.choice--switch .choice__mark {
+	transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+.choice--switch .choice__mark::after {
+	transition: transform var(--dur-pop) var(--ease-spring), width var(--dur-fast) var(--ease-out), background-color var(--dur) var(--ease-out);
+}
+.choice--switch > input:active:not(:disabled) + .choice__mark::after {
+	width: 18px;
+}
+.choice--switch > input:checked:active:not(:disabled) + .choice__mark::after {
+	transform: translateX(10px);
+}
+.choice--checkbox .choice__mark::after,
+.choice--radio .choice__mark::after {
+	transition: transform var(--dur) var(--ease-spring);
+}
+.choice > input:checked + .choice__mark {
+	animation: m-pop-soft var(--dur) var(--ease-out);
+}
+@keyframes m-pop-soft {
+	40% {
+		transform: scale(1.12);
+	}
+}
+
+/* ---------- tabs, chips, segmented buttons and swatches: selection eases instead of snapping ---------- */
+.tab,
+.atabs__tab,
+.achip,
+.look__chip,
+.look__theme,
+.optgroup__btn,
+.oseg__btn,
+.view-toggle button,
+.swatch,
+.tswatch,
+.pthemecard,
+.ptpl,
+.play {
+	transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-spring), opacity var(--dur) var(--ease-out);
+}
+.achip:hover,
+.look__chip:hover,
+.optgroup__btn:hover,
+.oseg__btn:hover,
+.look__theme:hover,
+.tswatch:hover,
+.swatch:hover {
+	transform: translateY(-1px);
+}
+.achip[aria-checked='true'],
+.look__chip.is-selected,
+.optgroup__btn[aria-checked='true'],
+.swatch[aria-checked='true'],
+.tswatch[aria-checked='true'] {
+	animation: m-pop-soft var(--dur) var(--ease-out);
+}
+
+/* a tab's panel eases in each time another tab is chosen */
+[role='tabpanel'],
+.atabs__panel {
+	animation: m-rise var(--dur-slow) var(--ease-out) backwards;
+}
+
+/* ---------- menus, dropdowns, popovers: grow from the control that opened them ---------- */
+.select__list,
+.popover,
+.rail-menu {
+	animation-timing-function: var(--ease-out);
+}
+.popover {
+	transform-origin: top left;
+	animation: m-grow-y var(--dur) var(--ease-out) backwards;
+}
+.popover--up {
+	transform-origin: bottom left;
+}
+.popover--right {
+	transform-origin: top right;
+}
+.menu-item {
+	transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), padding-left var(--dur) var(--ease-out);
+}
+.menu-item:hover {
+	padding-left: calc(var(--space-3) + 3px);
+}
+.combo__opt {
+	transition: background-color var(--dur-fast) var(--ease-out), padding-left var(--dur) var(--ease-out);
+}
+.modal {
+	animation: m-pop var(--dur-pop) var(--ease-out) both;
+}
+.toast {
+	animation-timing-function: var(--ease-spring);
+}
+
+/* ---------- pages and content ---------- */
+.page {
+	animation: m-rise var(--dur-slow) var(--ease-out) backwards;
+}
+.page-header {
+	animation: m-slide-x var(--dur-slow) var(--ease-out) backwards;
+}
+.state {
+	animation: m-fade var(--dur-slow) var(--ease-out) backwards;
+}
+details > summary {
+	cursor: pointer;
+	transition: color var(--dur) var(--ease-out);
+}
+details[open] > :not(summary) {
+	animation: m-rise var(--dur) var(--ease-out) backwards;
+}
+.banner,
+.empty-state {
+	animation: m-rise var(--dur-slow) var(--ease-out) backwards;
+}
+
+/* rows and links settle smoothly (cards keep their own transitions in cards.css) */
+tbody tr {
+	transition: background-color var(--dur-fast) var(--ease-out);
+}
+a {
+	transition: color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+.btn {
+	transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), transform var(--dur-fast) var(--ease-spring);
+}
+.btn:hover:not(:disabled) {
+	transform: translateY(-1px);
+}
+.btn:active:not(:disabled) {
+	transform: scale(0.97);
+}
+input,
+textarea,
+.select {
+	transition: border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), background-color var(--dur) var(--ease-out);
+}
+
+/* ---------- buttons: every kind lifts on hover, sinks on press, and its icon reacts ---------- */
+.btn,
+.icon-btn,
+.sig-pill,
+.pager__nav button,
+.kpi__go,
+.sig-link,
+.chart-switch button {
+	transition: background-color var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out), transform var(--dur-fast) var(--ease-spring), opacity var(--dur) var(--ease-out);
+}
+.icon-btn:hover:not(:disabled),
+.sig-pill:hover,
+.pager__nav button:hover:not(:disabled),
+.chart-switch button:hover {
+	transform: translateY(-1px);
+}
+.icon-btn:active:not(:disabled),
+.sig-pill:active,
+.pager__nav button:active:not(:disabled),
+.chart-switch button:active {
+	transform: scale(0.94);
+}
+.btn .icon,
+.icon-btn .icon {
+	transition: transform var(--dur) var(--ease-spring);
+}
+.btn:hover:not(:disabled) .icon {
+	transform: scale(1.12);
+}
+.icon-btn:hover:not(:disabled) .icon {
+	transform: scale(1.15) rotate(-4deg);
+}
+.btn:active:not(:disabled) .icon {
+	transform: scale(0.92);
+}
+.btn--primary,
+.btn--danger {
+	position: relative;
+	overflow: hidden;
+	isolation: isolate;
+}
+.btn--primary::after,
+.btn--danger::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%);
+	transform: translateX(-120%);
+	transition: transform 700ms var(--ease-out);
+	pointer-events: none;
+}
+.btn--primary:hover:not(:disabled)::after,
+.btn--danger:hover:not(:disabled)::after {
+	transform: translateX(120%);
+}
+.btn--ghost:hover:not(:disabled) {
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+:focus-visible {
+	transition: outline-offset var(--dur-fast) var(--ease-out);
+}
+
+/* ---------- charts: they draw themselves in, answer the pointer, and settle when the data changes ---------- */
+@keyframes m-grow-x {
+	from {
+		transform: scaleX(0);
+	}
+}
+@keyframes m-grow-up {
+	from {
+		transform: scaleY(0);
+	}
+}
+@keyframes m-tip {
+	from {
+		opacity: 0;
+		transform: translateY(4px) scale(0.97);
+	}
+}
+.chart,
+.barchart,
+.glow-chart,
+.donut,
+.ring,
+.spark {
+	animation: m-fade var(--dur-slow) var(--ease-out) backwards;
+}
+/* donut segments (the dashboard already drew its own; this covers every other donut, presentations included) */
+.donut circle:nth-of-type(n + 2) {
+	animation: bento-seg 1000ms var(--ease-out) both;
+	transition: stroke-width var(--dur) var(--ease-out), opacity var(--dur) var(--ease-out);
+}
+.donut circle:nth-of-type(3) {
+	animation-delay: 160ms;
+}
+.donut circle:nth-of-type(4) {
+	animation-delay: 320ms;
+}
+.donut circle:nth-of-type(n + 5) {
+	animation-delay: 480ms;
+}
+.donut circle:nth-of-type(n + 2):hover {
+	stroke-width: 17;
+}
+.donut__list li {
+	transition: background-color var(--dur-fast) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+.donut__list li:hover {
+	transform: translateX(3px);
+}
+/* horizontal bars and stacked segments grow from the left, one after another */
+.stackbar span,
+.sig-timeline__seg i,
+.projlist__bar > span,
+.sig-row__bar i,
+.barlist__fill,
+.progress__fill {
+	transform-origin: left center;
+	animation: m-grow-x 700ms var(--ease-out) backwards;
+	transition: width var(--dur-slow) var(--ease-out), flex-basis var(--dur-slow) var(--ease-out), filter var(--dur) var(--ease-out);
+}
+.stackbar span:nth-child(2),
+.barlist__row:nth-child(2) .barlist__fill {
+	animation-delay: 70ms;
+}
+.stackbar span:nth-child(3),
+.barlist__row:nth-child(3) .barlist__fill {
+	animation-delay: 140ms;
+}
+.stackbar span:nth-child(n + 4),
+.barlist__row:nth-child(n + 4) .barlist__fill {
+	animation-delay: 210ms;
+}
+.stackbar span:hover,
+.barlist__row:hover .barlist__fill,
+.sig-row:hover .sig-row__bar i {
+	filter: brightness(1.12) saturate(1.1);
+}
+/* columns grow from the baseline */
+.sig-col__bar,
+.barchart__bar {
+	transform-origin: bottom center;
+	transition: filter var(--dur) var(--ease-out), opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-spring), height var(--dur-slow) var(--ease-out);
+}
+.sig-col__bar {
+	animation: m-grow-up 700ms var(--ease-out) backwards;
+}
+.sig-col:nth-child(2) .sig-col__bar {
+	animation-delay: 60ms;
+}
+.sig-col:nth-child(3) .sig-col__bar {
+	animation-delay: 120ms;
+}
+.sig-col:nth-child(4) .sig-col__bar {
+	animation-delay: 180ms;
+}
+.sig-col:nth-child(n + 5) .sig-col__bar {
+	animation-delay: 240ms;
+}
+.sig-col:hover .sig-col__bar,
+.barchart__col:hover .barchart__bar {
+	filter: brightness(1.15);
+	transform: scaleY(1.03);
+}
+/* line charts: the line draws, the area fades up behind it, the hover dot and tooltip pop */
+.chart__dot,
+.glow-chart__dot {
+	animation: m-pop var(--dur) var(--ease-spring) backwards;
+}
+.chart-tip,
+.barchart__tip,
+.glow-chart__tip {
+	animation: m-tip 160ms var(--ease-out) backwards;
+}
+.legend > *,
+.sig-legend > * {
+	transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out);
+}
+.legend > *:hover,
+.sig-legend > *:hover {
+	transform: translateY(-1px);
+}
+
+/* ---------- theme, accent and sidebar changes cross-fade instead of flashing (ThemeProvider adds the class briefly) ---------- */
+html.is-restyling *,
+html.is-restyling *::before,
+html.is-restyling *::after {
+	transition: background-color 380ms var(--ease-in-out), border-color 380ms var(--ease-in-out), color 380ms var(--ease-in-out), fill 380ms var(--ease-in-out), stroke 380ms var(--ease-in-out), box-shadow 380ms var(--ease-in-out) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-delay: 0s !important;
+		transition-duration: 0.001ms !important;
+		transition-delay: 0s !important;
+	}
+}

@@ -16,7 +16,7 @@ import { ROUTES } from '../../../config/routes';
 import useApiResource from '../../../hooks/useApiResource';
 import useUnsavedGuard from '../../../hooks/useUnsavedGuard';
 import { presentationsService } from '../../../services/presentationsService';
-import { readStoredTheme, themeById, themeStyle } from '../presentationThemes';
+import { readStoredTheme, readStoredTransition, themeById, themeStyle } from '../presentationThemes';
 import { ObjectPanel, PaletteContext, SlidePanel } from './Inspector';
 import SlideCanvas from './SlideCanvas';
 import Stage from './Stage';
@@ -65,10 +65,13 @@ export default function StudioEditor() {
 
 	const initialSlides = useMemo(() => {
 		if (editing) return [];
+		// the look picked on the start page (stored per device) is stamped on every new slide, so it travels with the deck
+		const look = { theme: readStoredTheme(), transition: readStoredTransition() };
+		const stamp = (list) => list.map((s) => (s.type === 'custom' ? { ...look, ...s } : s));
 		const imported = location.state && location.state.slides;
-		if (Array.isArray(imported) && imported.length) return imported;
+		if (Array.isArray(imported) && imported.length) return stamp(imported);
 		const tpl = sp.get('tpl');
-		return tpl === 'blank' || !tpl ? BLANK_DECK() : deckFromTemplate(tpl);
+		return stamp(tpl === 'blank' || !tpl ? BLANK_DECK() : deckFromTemplate(tpl));
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
 	const hist = useDeckHistory(initialSlides);
 	const { slides, commit } = hist;
@@ -102,10 +105,6 @@ export default function StudioEditor() {
 		setSlideIdx(0);
 	}, [existing.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	const theme = useMemo(() => {
-		const t = themeById(readStoredTheme());
-		return { id: t.id, dark: t.dark, style: themeStyle(t) };
-	}, []);
 	const dirty = hist.changes !== lastSaved;
 	useUnsavedGuard(dirty);
 
@@ -113,6 +112,11 @@ export default function StudioEditor() {
 	const slide = slides[idx];
 	const custom = slide && slide.type === 'custom' ? slide : null;
 	const obj = custom ? custom.objects.find((o) => o.id === selId) || null : null;
+	const themeOf = (s) => {
+		const t = themeById((s && s.theme) || readStoredTheme());
+		return { id: t.id, dark: t.dark, style: themeStyle(t) };
+	};
+	const theme = useMemo(() => themeOf(custom), [custom && custom.theme]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	// ---- edits ------------------------------------------------------------------------------------------
 	const setSlide = useCallback((n, next, key) => commit(slides.map((s, i) => (i === n ? next : s)), key), [slides, commit]);
@@ -161,7 +165,7 @@ export default function StudioEditor() {
 	);
 
 	const addSlide = (after = idx) => {
-		const s = makeSlide({ name: '', bg: custom ? { ...custom.bg } : { kind: 'theme' } });
+		const s = makeSlide({ name: '', bg: custom ? { ...custom.bg } : { kind: 'theme' }, ...(custom ? { theme: custom.theme, transition: custom.transition } : {}) });
 		commit([...slides.slice(0, after + 1), s, ...slides.slice(after + 1)]);
 		setSlideIdx(after + 1);
 		setSelId(null);
@@ -368,7 +372,7 @@ export default function StudioEditor() {
 								<li key={s.id || `${s.section}-${i}`} className={i === idx ? 'is-current' : ''}>
 									<button type="button" className="studio__slide" onClick={() => { setSlideIdx(i); setSelId(null); setEditingId(null); }} aria-current={i === idx ? 'true' : undefined} aria-label={`Slide ${i + 1}: ${s.type === 'custom' ? slideTitle(s, i) : LABEL[s.section] || 'Live slide'}`}>
 										<span className="studio__num">{i + 1}</span>
-										<Thumb slide={s} theme={theme} />
+										<Thumb slide={s} theme={s.type === 'custom' ? themeOf(s) : theme} />
 									</button>
 									{i === idx ? (
 										<span className="studio__slide-tools">
@@ -443,7 +447,7 @@ export default function StudioEditor() {
 							) : null}
 							{tab === 'slide' ? (
 								custom ? (
-									<SlidePanel slide={custom} onPatch={patchSlide} onApplyAll={() => commit(slides.map((s) => (s.type === 'custom' ? { ...s, bg: { ...custom.bg } } : s)))} />
+									<SlidePanel slide={custom} theme={theme.id} transition={custom.transition || readStoredTransition()} onPatch={patchSlide} onApplyLook={() => commit(slides.map((s) => (s.type === 'custom' ? { ...s, theme: theme.id, transition: custom.transition || readStoredTransition() } : s)))} onAnimateAll={() => patchSlide({ objects: custom.objects.map((o, n) => ({ ...o, anim: { in: 'rise', delay: n * 150, dur: 600, step: 0 } })) })} onApplyAll={() => commit(slides.map((s) => (s.type === 'custom' ? { ...s, bg: { ...custom.bg } } : s)))} />
 								) : (
 									<p className="studio__empty">Live report slides follow the theme chosen when presenting.</p>
 								)

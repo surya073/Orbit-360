@@ -119,3 +119,12 @@ test('a deck whose saved slides cannot be decoded says why instead of failing qu
 	const list = (await w.api(w.ids.admin, 'GET', '/presentations')).body.data.find((p) => p.title === 'Broken');
 	assert.equal(list.unreadable, true);
 });
+
+test('a slide keeps its theme and transition only when they are well formed', () => {
+	const ok = cleanCustomSlide({ type: 'custom', id: 's1', theme: 'obsidian', transition: 'flip', objects: [] }, 0);
+	assert.equal(ok.theme, 'obsidian');
+	assert.equal(ok.transition, 'flip');
+	const bad = cleanCustomSlide({ type: 'custom', id: 's2', theme: 'x"><script>', transition: 'spin', objects: [] }, 1);
+	assert.equal(bad.theme, undefined);
+	assert.equal(bad.transition, undefined);
+});

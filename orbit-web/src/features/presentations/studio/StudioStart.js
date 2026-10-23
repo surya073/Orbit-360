@@ -10,6 +10,8 @@ import { ROUTES } from '../../../config/routes';
 import SlideCanvas from './SlideCanvas';
 import { CANVAS_H, CANVAS_W } from './slideModel';
 import { TEMPLATE_LIST, deckFromTemplate } from './templates';
+import LookPicker from './LookPicker';
+import { readStoredTheme, readStoredTransition, storeTheme, storeTransition } from '../presentationThemes';
 import { importPptx } from './pptxImport';
 import { listUserTemplates, removeUserTemplate, saveUserTemplate, slidesOfUserTemplate } from './userTemplates';
 
@@ -105,7 +107,16 @@ export default function StudioStart() {
 	const fileRef = useRef(null);
 	const [busy, setBusy] = useState(false);
 	const [mine, setMine] = useState(listUserTemplates);
+	const [look, setLook] = useState(() => ({ theme: readStoredTheme(), transition: readStoredTransition() }));
 	const [summary, setSummary] = useState(null); // what was found in an imported PowerPoint, shown before the editor opens
+	const pickTheme = (id) => {
+		storeTheme(id);
+		setLook((l) => ({ ...l, theme: id }));
+	};
+	const pickTransition = (id) => {
+		storeTransition(id);
+		setLook((l) => ({ ...l, transition: id }));
+	};
 	const go = (tpl) => navigate(`${ROUTES.presentationStudio}?tpl=${tpl}`);
 
 	const onFile = async (e) => {
@@ -128,6 +139,11 @@ export default function StudioStart() {
 	return (
 		<div className="start">
 			<PageHeader title="New presentation" description="Pick a design to start from. Everything on it can be edited, moved or replaced, and you can add live data anywhere." />
+			<section aria-label="Theme and animation" className="start__look">
+				<h2 className="start__h">Theme and animation</h2>
+				<p className="small muted">Applies to every slide of the new presentation (you can change it per slide, or for all slides, in the editor).</p>
+				<LookPicker theme={look.theme} transition={look.transition} onTheme={pickTheme} onTransition={pickTransition} />
+			</section>
 			<section aria-label="Designs">
 				<h2 className="start__h">Designs</h2>
 				<div className="start__grid" role="list">

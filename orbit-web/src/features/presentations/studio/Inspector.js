@@ -4,6 +4,7 @@ import Button from '../../../components/common/Button';
 import Select from '../../../components/forms/Select';
 import { ANIMATIONS, FONT_STACKS, HOVERS, SHAPES, THEME_COLORS, WIDGET_TYPES, colorCss, metricsFor, defaultMetric } from './slideModel';
 import { shrinkImage } from './images';
+import LookPicker from './LookPicker';
 
 /** The right-hand panels of the studio: what is selected (object), the slide, and the deck. Every control applies at once. */
 
@@ -382,7 +383,7 @@ export function ObjectPanel({ o, slideCount, onPatch, onStyle, onDuplicate, onDe
 
 // ---- slide ----------------------------------------------------------------------------------------------
 
-export function SlidePanel({ slide, onPatch, onApplyAll }) {
+export function SlidePanel({ slide, theme, transition, onPatch, onApplyAll, onApplyLook, onAnimateAll }) {
 	const bg = slide.bg || { kind: 'theme' };
 	const set = (patch) => onPatch(patch, `slide-${slide.id}`);
 	const setBg = (patch) => set({ bg: { ...bg, ...patch } });
@@ -413,6 +414,19 @@ export function SlidePanel({ slide, onPatch, onApplyAll }) {
 				{onApplyAll ? (
 					<Button size="sm" onClick={onApplyAll}>
 						Use this background on every slide
+					</Button>
+				) : null}
+			</Section>
+			<Section title="Theme and animation">
+				<LookPicker theme={theme} transition={transition} onTheme={(id) => onPatch({ theme: id })} onTransition={(id) => onPatch({ transition: id })} />
+				{onApplyLook ? (
+					<Button size="sm" onClick={onApplyLook}>
+						Use this theme and transition on every slide
+					</Button>
+				) : null}
+				{onAnimateAll ? (
+					<Button size="sm" onClick={onAnimateAll}>
+						Animate everything on this slide, one after another
 					</Button>
 				) : null}
 			</Section>

@@ -125,6 +125,7 @@ export default function PresentationPlayer() {
 	const marked = useRef(false);
 	const [fullscreen, setFullscreen] = useState(false);
 	const [layout, setLayout] = useState(() => (LAYOUT_IDS.includes(sp.get('layout')) ? sp.get('layout') : readStoredLayout()));
+	const [picked, setPicked] = useState({ theme: false, transition: false }); // a slide's own theme/transition applies until the viewer picks one here
 	const [transition, setTransition] = useState(readStoredTransition); // 'auto' = the template's own
 	const [scene, setScene] = useState(readStoredScene); // how a slide's content enters; 'auto' = a different one per slide
 	const [auto, setAuto] = useState(false); // auto-play: advance every AUTO_MS
@@ -206,6 +207,7 @@ export default function PresentationPlayer() {
 	}, [steps, step, index, goTo]);
 	const pickTransition = useCallback((id) => {
 		setTransition(id);
+		setPicked((p) => ({ ...p, transition: true }));
 		storeTransition(id);
 	}, []);
 
@@ -308,9 +310,12 @@ const { index: i, last: l, goTo: go, advance: next, toggleNotes, exit: leave, to
 		el.style.setProperty('--px', String(((e.clientX - r.left) / r.width - 0.5) * 2));
 		el.style.setProperty('--py', String(((e.clientY - r.top) / r.height - 0.5) * 2));
 	}, []);
-	const t = themeById(theme);
+	const slideLook = entry && entry.kind === 'custom' ? entry.slide : null;
+	const t = themeById(!picked.theme && slideLook && slideLook.theme ? slideLook.theme : theme);
+	const transitionNow = !picked.transition && slideLook && slideLook.transition ? slideLook.transition : transition;
 	const pickTheme = (tid) => {
 		setTheme(tid);
+		setPicked((p) => ({ ...p, theme: true }));
 		storeTheme(tid);
 	};
 
@@ -430,7 +435,7 @@ const { index: i, last: l, goTo: go, advance: next, toggleNotes, exit: leave, to
 							<p className="muted">This presentation has no slides.</p>
 						</div>
 					) : (
-						<section className={`pslide pslide--${entry.kind} is-${nav.dir}`} data-ptrans={transition === 'auto' ? t.motion : transition} data-pscene={sceneFor(scene, index)} key={`${index}-${entry.kind}`} aria-label={`Slide ${index + 1}`}>
+						<section className={`pslide pslide--${entry.kind} is-${nav.dir}`} data-ptrans={transitionNow === 'auto' ? t.motion : transitionNow} data-pscene={sceneFor(scene, index)} key={`${index}-${entry.kind}`} aria-label={`Slide ${index + 1}`}>
 {deckIsStudio ? null : (
 <div className="pdecor" aria-hidden="true">
 <i />

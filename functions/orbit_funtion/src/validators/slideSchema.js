@@ -18,6 +18,8 @@ const VALIGN = ['top', 'middle', 'bottom'];
 const FONTS = ['default', 'serif', 'mono', 'rounded'];
 const FITS = ['cover', 'contain'];
 const BG_KINDS = ['theme', 'solid', 'gradient'];
+const TRANSITIONS = ['auto', 'slide', 'zoom', 'blur', 'flip', 'wipe', 'rise']; // slide transitions the player knows
+const THEME_ID = /^[a-z0-9-]{1,30}$/; // a presentation theme id; the player falls back when it does not know it
 const WEIGHTS = [300, 400, 500, 600, 700, 800];
 
 const COLOR = /^(#[0-9a-fA-F]{3,8}|theme:[a-z0-9]{2,12}|transparent)$/;
@@ -106,6 +108,8 @@ function cleanCustomSlide(s, i) {
 		bg: { kind, ...(kind !== 'theme' ? { color: color(bg.color, '#111111') } : {}), ...(kind === 'gradient' ? { color2: color(bg.color2, '#333333'), angle: num(bg.angle, 0, 360, 135) } : {}) },
 		objects,
 		notes: str(s.notes, 1000) || undefined,
+		theme: typeof s.theme === 'string' && THEME_ID.test(s.theme) ? s.theme : undefined,
+		transition: TRANSITIONS.includes(s.transition) ? s.transition : undefined,
 	};
 }
 

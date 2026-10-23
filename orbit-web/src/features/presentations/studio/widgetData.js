@@ -83,7 +83,8 @@ export function widgetModel(widget, data, prev) {
 
 	if (type === 'trend') {
 		const trends = d('trends');
-		const rows = metric === 'late_rate' ? (trends && trends.attendance) || [] : (trends && trends.time) || [];
+		const pickRows = (v) => (Array.isArray(v) ? v : []); // not-applicable answers (project filter) are objects
+		const rows = metric === 'late_rate' ? pickRows(trends && trends.attendance) : pickRows(trends && trends.time);
 		const pick = metric === 'late_rate' ? (r) => num(r.lateRatePercent) : metric === 'non_billable_hours' ? (r) => hours(num(r.nonBillableMinutes)) : (r) => hours(num(r.billableMinutes));
 		const unit = metric === 'late_rate' ? '%' : 'h';
 		return { status: 'ready', kind: 'trend', unit, series: rows.map((r) => ({ label: r.start, value: pick(r) })).filter((p) => p.value !== null) };

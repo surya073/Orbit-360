@@ -30,8 +30,8 @@ const hours = (min) => (Number.isFinite(min) ? minutesToHours(min) : null);
 export function chartRows(metric, trends) {
 	if (!trends) return [];
 	const per = (trends.filters && trends.filters.granularity) || 'week';
-	const late = new Map((trends.attendance || []).map((a) => [a.start, a]));
-	return (trends.time || []).map((b) => {
+	const late = new Map((Array.isArray(trends.attendance) ? trends.attendance : []).map((a) => [a.start, a]));
+	return (Array.isArray(trends.time) ? trends.time : []).map((b) => {
 		const billable = hours(b.billableMinutes);
 		const non = hours(b.nonBillableMinutes);
 		const values = {

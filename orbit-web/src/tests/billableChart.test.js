@@ -43,3 +43,16 @@ describe('dashboard chart choices', () => {
 		expect(hasAnyValue(chartRows(metricById('billable'), trends), metricById('billable'))).toBe(true);
 	});
 });
+
+describe('project filter answers', () => {
+	test('attendance that is "not applicable" (an object, not a list) does not break the chart rows', () => {
+		const trends = {
+			filters: { granularity: 'week' },
+			time: [{ start: '2026-10-05', billableMinutes: 600, nonBillableMinutes: 120 }],
+			attendance: { completeness: 'not_applicable', reason: 'Not recorded per project.' },
+		};
+		expect(() => chartRows(metricById('split'), trends)).not.toThrow();
+		expect(chartRows(metricById('split'), trends)).toHaveLength(1);
+		expect(chartRows(metricById('split'), { ...trends, time: { completeness: 'not_applicable' } })).toEqual([]);
+	});
+});

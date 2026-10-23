@@ -60,6 +60,7 @@ const tools = [
 	{ tool: 'Cursor', category: 'ai', records: 4, avgReportedPercent: 44 },
 	{ tool: 'GitHub Copilot', category: 'github', records: 4, avgReportedPercent: null },
 ];
+const NA = { completeness: 'not_applicable', reason: 'Not available for a single project: this data is not recorded per project.' };
 const overview = {
 	filters: { from: '2026-10-01', to: '2026-10-31', teamId: null, timezone: 'Asia/Kolkata' },
 	time: { completeness: 'complete', billableMinutes: 6000, nonBillableMinutes: 2000, totalMinutes: 8000, billablePercent: 75, approvedEntries: 30, excluded: { pending: 0, rejected: 0 } },
@@ -308,8 +309,9 @@ function route(method, p, url, body) {
 			const part = (path) => ({ ok: true, data: route(method, path, url).body.data });
 			return { body: ok({ overview: part('/dashboard/overview'), trends: part('/dashboard/trends'), projects: part('/dashboard/projects'), product: part('/dashboard/product'), ai: part('/dashboard/ai-usage'), freshness: part('/dashboard/freshness'), highlights: part('/dashboard/highlights') }) };
 		}
-		case p === '/dashboard/overview': return { body: ok(overview) };
-		case p === '/dashboard/trends': return { body: ok({ filters: { granularity: 'week' }, truncated: false, time: trendTime, attendance: trendAttendance }) };
+		// like the real backend: with a project filter, attendance, leave and headcount cannot be attributed to a project
+		case p === '/dashboard/overview': return { body: ok(sp.get('project_id') ? { ...overview, attendance: NA, leave: NA, headcount: NA } : overview) };
+		case p === '/dashboard/trends': return { body: ok({ filters: { granularity: 'week' }, truncated: false, time: trendTime, attendance: sp.get('project_id') ? NA : trendAttendance }) };
 		case p === '/dashboard/projects': return { body: ok({ filters: {}, status: { completeness: 'complete', total: 7, byStatus: { active: 5, on_hold: 1, completed: 1 } }, workload: { completeness: 'complete', projectsWithTime: workload.length, truncated: false, projects: workload } }) };
 		case p === '/dashboard/product': return { body: ok({ asOf: '2026-10-13', product: { completeness: 'complete', total: 9, byStatus: { open: 4, done: 5 }, byType: { bug: { open: 2, done: 1 }, feature: { open: 2, done: 4 } }, overdue: 2 } }) };
 		case p === '/dashboard/ai-usage': return { body: ok({ usage: { completeness: 'complete', totalRecords: 20, toolCount: 5, byCategory: { ai: 12, other: 4, github: 4 }, missingPeriod: 0, tools } }) };

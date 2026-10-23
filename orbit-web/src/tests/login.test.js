@@ -74,11 +74,12 @@ describe('sign-in page', () => {
 		expect(forgotCssPath('sunset')).toMatch(/\/auth\/forgot-iframe-sunset\.css$/);
 	});
 
-	test('the artwork is decorative: hidden from assistive technology', () => {
+	test('the illustration is decorative: hidden from assistive technology, with an empty alt', () => {
 		renderLogin();
 		expect(document.querySelector('.login__art')).toHaveAttribute('aria-hidden', 'true');
-		expect(document.querySelector('.login-illu')).toHaveAttribute('aria-hidden', 'true');
-		expect(document.querySelector('.login-backdrop')).toHaveAttribute('aria-hidden', 'true');
+		const img = document.querySelector('.login__art img');
+		expect(img).toHaveAttribute('alt', '');
+		expect(img.getAttribute('src')).toMatch(/login-meeting/);
 		expect(document.querySelectorAll('.reveal').length).toBeGreaterThanOrEqual(5);
 	});
 });
@@ -120,7 +121,7 @@ describe('auto-sizing the hosted card', () => {
 		set(500);
 		await waitFor(() => expect(screen.getByTestId('h')).toHaveTextContent('520'));
 		set(5000);
-		await waitFor(() => expect(screen.getByTestId('h')).toHaveTextContent('640')); // max
+		await waitFor(() => expect(screen.getByTestId('h')).toHaveTextContent('760')); // max
 		set(30);
 		await waitFor(() => expect(screen.getByTestId('h')).toHaveTextContent('140')); // min
 	});
@@ -134,7 +135,7 @@ describe('auto-sizing the hosted card', () => {
 		document.getElementById('probe-container').style.height = '300px';
 		await waitFor(() => expect(screen.getByTestId('h')).toHaveTextContent('210'));
 		await new Promise((r) => setTimeout(r, 200)); // ~10 more measurement ticks
-		expect(screen.getByTestId('h')).toHaveTextContent('210'); // stable, not 230, 250, ... 640
+		expect(screen.getByTestId('h')).toHaveTextContent('210'); // stable, not 230, 250, ... 760
 		set(190);
 	});
 
@@ -175,5 +176,8 @@ describe('meeting hosted-form stylesheets', () => {
 		expect(css).toContain('border-radius: 4px');
 		expect(css.toLowerCase()).toContain('#5b7cfa');
 		expect(css).toContain('.textbox');
+		// long e-mail addresses and messages in the forgot-password steps wrap instead of overflowing
+		expect(css).toContain('overflow-wrap: anywhere');
+		expect(css).toContain('box-sizing: border-box');
 	});
 });

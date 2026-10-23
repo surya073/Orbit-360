@@ -122,7 +122,7 @@ function createDb(adminApp, { budget = 30, logger } = {}) {
 		},
 		/** Aggregate / GROUP BY queries; returns flat rows keyed by alias or column. */
 		async aggregate(sql) {
-			const from = /sFROMs+(w+)/i.exec(sql);
+			const from = /\sFROM\s+(\w+)/i.exec(sql);
 			const result = await run('aggregate', () => zcql.executeZCQLQuery(sql), from && from[1]);
 			return normalizeAggregates(sql, result.map(flattenRow), logger);
 		},

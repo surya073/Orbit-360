@@ -91,7 +91,7 @@ describe('import flow', () => {
 		await userEvent.upload(screen.getByLabelText('CSV file'), upload());
 		expect(await screen.findByRole('heading', { name: 'Rows with problems' })).toBeInTheDocument();
 		expect(screen.getByText('attendance_date: Must be a valid YYYY-MM-DD date')).toBeInTheDocument();
-		expect(screen.getByText(/Ignored columns \(no matching field\): extra/)).toBeInTheDocument();
+		expect(screen.getByText(/Not imported \(left out\): extra/)).toBeInTheDocument();
 		const previews = global.fetch.calls.filter((c) => /preview/.test(c.line));
 		expect(previews).toHaveLength(2); // 3 rows, batch size 2
 		expect(JSON.parse(previews[0].init.body).rows).toHaveLength(2);
@@ -166,7 +166,7 @@ describe('import flow', () => {
 		await userEvent.click(screen.getByRole('button', { name: 'Check the rows' }));
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(true));
 		// the confirmed mapping is remembered: the same file shape goes straight to checking next time
-		expect(window.localStorage.getItem('company360.importMaps')).toContain('attendance_records');
+		expect(window.localStorage.getItem('company360.importMaps.v2')).toContain('attendance_records');
 	});
 
 	test('headers that differ from the template are matched by the user before anything is sent; required fields must be covered', async () => {
@@ -184,6 +184,27 @@ describe('import flow', () => {
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(true));
 		const preview = global.fetch.calls.find((c) => /preview/.test(c.line));
 		expect(JSON.parse(preview.init.body).rows[0].data).toEqual({ employee_id: '1', attendance_date: '2026-10-01', late_status: 'no' });
+	});
+
+	test('columns with no field are kept in More details, dates and values are tidied, and nothing is sent until the user confirms', async () => {
+		const withDetails = [{ ...templates[0], columns: [...templates[0].columns, { field: 'more_details', type: 'json', required: false }] }, templates[1]];
+		const routes = happyRoutes();
+		routes[0] = [/^GET \/imports\/templates/, okBody(withDetails)];
+		mockFetch(routes);
+		await choose();
+		const file = 'employee_id,attendance_date,late_status,Notes,Region,Checks\n1,05-10-2026,No,hello there,north,#REF!\n2,6 Oct 2026,Yes,,south,#N/A\n';
+		await userEvent.upload(screen.getByLabelText('CSV file'), upload('extras.csv', file));
+		expect(await screen.findByRole('region', { name: 'Match the columns' })).toBeInTheDocument();
+		expect(screen.getByLabelText('Field for column Notes')).toHaveTextContent('Keep in More details');
+		expect(screen.getByLabelText('Field for column Checks')).toHaveTextContent('Don’t import'); // only error cells: nothing to keep
+		expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(false);
+		await userEvent.click(screen.getByRole('button', { name: 'Check the rows' }));
+		await waitFor(() => expect(global.fetch.calls.some((c) => /preview/.test(c.line))).toBe(true));
+		const rows = JSON.parse(global.fetch.calls.find((c) => /preview/.test(c.line)).init.body).rows;
+		expect(rows[0].data).toEqual({ employee_id: '1', attendance_date: '2026-10-05', late_status: 'no', more_details: JSON.stringify({ Notes: 'hello there', Region: 'north' }) });
+		expect(rows[1].data).toEqual({ employee_id: '2', attendance_date: '2026-10-06', late_status: 'yes', more_details: JSON.stringify({ Region: 'south' }) });
+		expect(await screen.findByText(/Kept in More details \(no matching field\): Notes, Region/)).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Change how columns are matched' })).toBeEnabled();
 	});
 
 	test('two columns cannot be matched to the same field', async () => {

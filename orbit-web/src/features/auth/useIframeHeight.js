@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 
 const MIN = 140;
-const MAX = 640;
+const MAX = 760;
 const SLACK = 20; // breathing room so the hosted page never needs its own scrollbar
 
 /**
  * Height of the hosted page's REAL content: the lowest edge of any visible leaf element.
  * Deliberately not body/html height: hosted pages stretch those to fill the iframe, so measuring
  * them just returns the iframe's own height and (with slack added) makes the card grow forever.
- * Hidden, fixed-position (backgrounds) and empty elements are ignored.
+ * Form controls (buttons, inputs) count with their whole box, not just their label. Hidden, fixed-position
+ * (backgrounds) and empty elements are ignored.
  */
 export function contentBottom(frame) {
 	const doc = frame && frame.contentDocument;
@@ -16,7 +17,7 @@ export function contentBottom(frame) {
 	if (!doc || !doc.body || !win) return null;
 	let bottom = 0;
 	for (const el of doc.body.querySelectorAll('*')) {
-		if (el.children.length > 0) continue; // containers may be stretched; their leaves are the truth
+		if (el.children.length > 0 && !el.matches('button, input, select, textarea, .btn')) continue; // containers may be stretched; their leaves (and controls) are the truth
 		const cs = win.getComputedStyle(el);
 		if (cs.display === 'none' || cs.visibility === 'hidden' || cs.position === 'fixed') continue;
 		const r = el.getBoundingClientRect();

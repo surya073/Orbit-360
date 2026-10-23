@@ -15,7 +15,8 @@ import features from '../../config/features';
 import DataEntryModes from '../spreadsheet/DataEntryModes';
 import useTemplates from '../../hooks/useTemplates';
 import { importsService } from '../../services/importsService';
-import { duplicateTargets, readCsv, recordsFromMapping, toCsv } from '../../utils/csv';
+import { duplicateTargets, readCsv, toCsv } from '../../utils/csv';
+import { buildRecords, emptyColumns, EXTRA } from '../../utils/importPrep';
 import { matchHeaders, rememberMapping, rememberedMapping } from '../../utils/headerMatch';
 import { humanize } from '../../utils/format';
 import Select from '../../components/forms/Select';
@@ -36,6 +37,9 @@ async function sha256Hex(buffer) {
 
 const columnsOf = (template) => [...template.columns.map((c) => c.field), ...(template.importColumns || ['source_record_id'])];
 /** The same fields with their types, for the matcher (it reads the values to tell a date column from a name column). */
+/** Every target a remembered mapping may name: the matchable fields plus more_details (where unmatched columns go). */
+const knownOf = (template) => [...specsOf(template), { field: EXTRA, type: 'json', required: false }];
+const hasDetails = (template) => template.columns.some((c) => c.field === EXTRA);
 const specsOf = (template) => [...template.columns, ...(template.importColumns || ['source_record_id']).map((field) => ({ field, type: 'str', required: false }))].filter((c) => c.field !== 'more_details'); // raw JSON: never a guess for a notes column
 
 function downloadTemplate(template) {
@@ -68,13 +72,15 @@ const missingRequired = (template, mapping) => template.columns.filter((c) => c.
 function MappingPanel({ template, pending, onChange, onReset, onContinue, onCancel, busy }) {
 	const [dragField, setDragField] = useState(null);
 	const [overRow, setOverRow] = useState(-1);
-	const fields = columnsOf(template);
+	const fields = columnsOf(template).filter((f) => f !== EXTRA); // more_details is offered separately: any number of columns can go there
+	const withDetails = hasDetails(template);
 	const { headers, cells, mapping } = pending;
 	const missing = missingRequired(template, mapping);
 	const dupes = duplicateTargets(mapping);
 	const blocked = missing.length > 0 || dupes.length > 0 || mapping.every((m) => !m);
-	const sample = recordsFromMapping(cells.slice(0, 3), mapping);
-	const used = mapping.filter(Boolean);
+	const sample = buildRecords(cells.slice(0, 3), mapping, headers, template).records;
+	const used = [...new Set(mapping.filter(Boolean))];
+	const keptAsExtra = headers.filter((_, i) => mapping[i] === EXTRA);
 	const confidence = pending.confidence || [];
 	const leftOver = fields.filter((f) => !used.includes(f));
 	const isRequired = (f) => template.columns.some((c) => c.field === f && c.required);
@@ -97,7 +103,7 @@ function MappingPanel({ template, pending, onChange, onReset, onContinue, onCanc
 				</span>{' '}
 				Match your columns
 			</h2>
-			<p className="small muted">Some column names in {pending.file.name} do not match the {humanize(template.module)} template. Check the suggested matches, then drag a field from the tray onto a column or use the list. {cells.length} data rows.</p>
+<p className="small muted">Some column names in {pending.file.name} do not match the {humanize(template.module)} template. Check the suggested matches, then drag a field from the tray onto a column or use the list. {withDetails ? 'Columns that match no field are kept in More details, so nothing in your file is lost; choose “Don’t import” to leave one out.' : ''} {cells.length} data rows.</p>
 			{leftOver.length ? (
 				<div className="imap__tray" aria-label="Fields not matched yet">
 					<span className="small muted">Not matched yet:</span>
@@ -137,10 +143,11 @@ function MappingPanel({ template, pending, onChange, onReset, onContinue, onCanc
 							{[0, 1, 2].map((r) => (cells[r] && cells[r][i]) || '').filter(Boolean).join(' · ') || '—'}
 						</span>
 						<span role="cell" className="imap__target">
-							{mapping[i] ? <span className={`imap__badge imap__badge--${confidence[i] || 'manual'}`}>{confidence[i] === 'high' ? 'Matched' : confidence[i] === 'medium' ? 'Check' : 'Chosen'}</span> : <span className="imap__badge imap__badge--none">Not imported</span>}
+{mapping[i] === EXTRA ? <span className="imap__badge imap__badge--medium">More details</span> : mapping[i] ? <span className={`imap__badge imap__badge--${confidence[i] || 'manual'}`}>{confidence[i] === 'high' ? 'Matched' : confidence[i] === 'medium' ? 'Check' : 'Chosen'}</span> : <span className="imap__badge imap__badge--none">Not imported</span>}
 							<Select aria-label={`Field for column ${h || i + 1}`} value={mapping[i] || ''} onChange={(e) => onChange(i, e.target.value || null)}>
-								<option value="">Don’t import</option>
-								{fields.map((f) => (
+									<option value="">Don’t import</option>
+									{withDetails ? <option value={EXTRA}>Keep in More details</option> : null}
+									{fields.map((f) => (
 									<option key={f} value={f}>
 										{f}
 										{template.columns.some((c) => c.field === f && c.required) ? ' (required)' : ''}
@@ -162,7 +169,8 @@ function MappingPanel({ template, pending, onChange, onReset, onContinue, onCanc
 					More than one column is set to {dupes.join(', ')}. Each field can take one column.
 				</p>
 			) : null}
-			{!blocked && sample.length ? (
+				{keptAsExtra.length ? <p className="small muted">Kept in More details: {keptAsExtra.map((h) => h || '(blank)').join(', ')}. Each is saved on the record as “column name: value”.</p> : null}
+				{!blocked && sample.length ? (
 				<div className="imap__preview">
 					<h3 className="cc-preview__title">What will be sent for checking (first {sample.length} rows)</h3>
 					<div className="cc-preview">
@@ -180,7 +188,7 @@ function MappingPanel({ template, pending, onChange, onReset, onContinue, onCanc
 								{sample.map((r, i) => (
 									<tr key={i}>
 										{used.map((f) => (
-											<td key={f}>{r[f] || <span className="muted">—</span>}</td>
+								<td key={f}>{r[f] ? (String(r[f]).length > 70 ? `${String(r[f]).slice(0, 70)}…` : r[f]) : <span className="muted">—</span>}</td>
 										))}
 									</tr>
 								))}
@@ -220,11 +228,16 @@ export default function ImportPage() {
 	const [results, setResults] = useState({}); // rowNumber -> latest server result
 	const [choices, setChoices] = useState({}); // rowNumber -> resolution
 	const [unmapped, setUnmapped] = useState([]);
+	const [extras, setExtras] = useState([]); // headers kept in more_details
+	const [lastMap, setLastMap] = useState(null); // the file and mapping of the check that is on screen, so the matching can be changed
+	const [trimmedRows, setTrimmedRows] = useState(0);
+	const [ragged, setRagged] = useState({ rows: [], expected: 0 }); // rows whose number of values differs from the header
 	const [pending, setPending] = useState(null); // a chosen file whose headers still need matching: { file, headers, cells, mapping }
 	const [final, setFinal] = useState(null);
 	const [fileName, setFileName] = useState('');
 	const [fileOver, setFileOver] = useState(false);
 	const running = useRef(false);
+	const pendingAuto = useRef({}); // the suggested mapping of the file being checked (for "Reset to suggested")
 	const hasPreview = useRef(false);
 
 	// Only record types this user may create (an import adds records; the backend checks again).
@@ -298,31 +311,42 @@ export default function ImportPage() {
 		guard(async () => {
 			if (!/\.csv$/i.test(file.name)) throw new Error('Only .csv files are supported. Excel (.xlsx) import is not available yet.');
 			if (file.size > MAX_FILE_BYTES) throw new Error('File is larger than 2 MB.');
-			const { headers, cells } = readCsv(await file.text());
+				const { headers, cells, ragged: odd, expected } = readCsv(await file.text());
+				setRagged({ rows: odd, expected });
 			if (cells.length > MAX_ROWS) throw new Error(`The file has ${cells.length} rows; at most ${MAX_ROWS} can be imported at once.`);
 			// A mapping the user confirmed before for this exact header row is reused; otherwise the headers are matched by
 			// name, aliases, spelling and what the values look like.
-			const remembered = rememberedMapping(module, headers, specsOf(template));
-			const matches = remembered ? remembered.map((f) => (f ? { field: f, confidence: 'high' } : null)) : matchHeaders(headers, cells, specsOf(template));
-			const mapping = matches.map((m) => (m ? m.field : null));
+				const remembered = rememberedMapping(module, headers, knownOf(template));
+				const matches = remembered ? remembered.map((f) => (f ? { field: f, confidence: 'high' } : null)) : matchHeaders(headers, cells, specsOf(template));
+				const mapping = matches.map((m) => (m ? m.field : null));
+				// A column with no field of its own is kept in more_details (when the record type has one) unless it is empty:
+				// an upload in any layout imports, and nothing the user uploaded is lost. The panel shows where each column goes.
+				const blank = emptyColumns(headers, cells);
+				if (!remembered && hasDetails(template)) mapping.forEach((m, i) => { if (!m && !blank[i]) mapping[i] = EXTRA; });
 			// Straight to validation when nothing needs a second look: every required field is matched with confidence, and any
 			// column left out is a harmless extra (no template field is left uncovered because of it).
-			const sure = matches.every((m) => !m || m.confidence === 'high');
-			const uncovered = template.columns.filter((c) => !mapping.includes(c.field));
-			if (sure && missingRequired(template, mapping).length === 0 && (uncovered.length === 0 || mapping.every(Boolean) || remembered)) {
+				const sure = matches.every((m) => !m || m.confidence === 'high');
+				const anyExtra = mapping.includes(EXTRA);
+				if (sure && missingRequired(template, mapping).length === 0 && (!anyExtra || remembered)) {
+					pendingAuto.current = { auto: mapping, confidence: matches.map((m) => (m ? m.confidence : null)) };
 				setPhase('idle');
 				return validate(file, headers, cells, mapping);
 			}
-			const confidence = matches.map((m) => (m ? m.confidence : null));
-			setPending({ file, headers, cells, mapping, auto: mapping, confidence, autoConfidence: confidence });
+				const confidence = matches.map((m, i) => (m ? m.confidence : mapping[i] === EXTRA ? 'extra' : null));
+				pendingAuto.current = { auto: mapping, confidence };
+				setPending({ file, headers, cells, mapping, auto: mapping, confidence, autoConfidence: confidence });
 			setPhase('idle');
 		});
 	};
 
 	const validate = async (file, headers, cells, mapping) => {
-		const rows = recordsFromMapping(cells, mapping).map((data, i) => ({ rowNumber: i + 1, data }));
+		const built = buildRecords(cells, mapping, headers, template);
+		const rows = built.records.map((data, i) => ({ rowNumber: i + 1, data }));
 		setRecords(rows);
-		setUnmapped(headers.filter((_, i) => !mapping[i]));
+		setUnmapped(headers.filter((h, i) => !mapping[i] && h));
+		setExtras(headers.filter((h, i) => mapping[i] === EXTRA).map((h) => h || '(blank)'));
+		setTrimmedRows(built.trimmed);
+		setLastMap({ file, headers, cells, mapping, auto: pendingAuto.current.auto || mapping, confidence: pendingAuto.current.confidence || [] });
 		setResults({});
 		setChoices({});
 		setFinal(null);
@@ -344,6 +368,17 @@ export default function ImportPage() {
 			await validate(file, headers, cells, mapping);
 			rememberMapping(module, headers, mapping);
 			setPending(null);
+		});
+	const rematch = () =>
+		guard(async () => {
+			if (!lastMap || !job) return;
+			await importsService.cancel(job.id);
+			const m = lastMap;
+			reset();
+			setFileName(m.file.name);
+			setPending({ file: m.file, headers: m.headers, cells: m.cells, mapping: m.mapping, auto: m.auto, confidence: m.confidence, autoConfidence: m.confidence });
+			setMessage(null);
+			setPhase('idle');
 		});
 	const cancelMapping = () => {
 		setPending(null);
@@ -480,7 +515,14 @@ export default function ImportPage() {
 						{counts.failed ? <StatusBadge tone="danger" status="failed" label={`${counts.failed} failed (safe to retry)`} /> : null}
 						{counts.skipped ? <StatusBadge status="skipped" label={`${counts.skipped} skipped`} /> : null}
 					</div>
-					{unmapped.length ? <p className="banner banner--warning">Ignored columns (no matching field): {unmapped.join(', ')}</p> : null}
+						{ragged.rows.length ? (
+							<p role="alert" className="banner banner--warning">
+								{ragged.rows.length === 1 ? 'Row' : 'Rows'} {ragged.rows.slice(0, 12).map((r) => r.rowNumber).join(', ')}
+								{ragged.rows.length > 12 ? ` and ${ragged.rows.length - 12} more` : ''} in your file {ragged.rows.length === 1 ? 'has' : 'have'} a different number of values than the header ({ragged.expected}), for example {ragged.rows[0].got} in row {ragged.rows[0].rowNumber}. A comma is probably missing or extra, which shifts the values after it into the wrong columns. Fix {ragged.rows.length === 1 ? 'that row' : 'those rows'} in the file and upload it again.
+							</p>
+						) : null}
+						{extras.length ? <p className="banner banner--info">Kept in More details (no matching field): {extras.join(', ')}.{trimmedRows ? ` Long values were shortened on ${trimmedRows} ${trimmedRows === 1 ? 'row' : 'rows'}.` : ''}</p> : null}
+						{unmapped.length ? <p className="banner banner--warning">Not imported (left out): {unmapped.join(', ')}</p> : null}
 					<p className="small muted">Checked: types, required fields, allowed values, team access, duplicates and existing records. Rows are matched by a stable key, so importing the same file twice never creates duplicates.</p>
 
 					{conflicts.length ? (
@@ -535,8 +577,13 @@ export default function ImportPage() {
 								Import valid rows
 							</Button>
 						) : null}
-						{job && phase !== 'committed' ? (
-							<Button disabled={busy} onClick={cancel}>
+							{job && lastMap && phase === 'previewed' ? (
+								<Button disabled={busy} onClick={rematch}>
+									Change how columns are matched
+								</Button>
+							) : null}
+							{job && phase !== 'committed' ? (
+								<Button disabled={busy} onClick={cancel}>
 								Cancel import
 							</Button>
 						) : null}

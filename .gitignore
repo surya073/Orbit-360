@@ -21,3 +21,6 @@ Thumbs.db
 
 # local browser-test artifacts
 .playwright-mcp/
+
+# real data used for manual live testing: never committed
+live test/

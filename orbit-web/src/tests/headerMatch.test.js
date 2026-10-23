@@ -21,8 +21,19 @@ describe('header matching', () => {
 
 	test('abbreviations and different words for the same thing', () => {
 		const headers = ['Emp ID', 'Employee Name', 'E-mail', 'Designation', 'DOJ', 'Manager', 'Status'];
-		const cells = [['E1', 'Asha Rao', 'asha@x.io', 'QA', '12/03/2024', 'E9', 'active']];
+		const cells = [['E1', 'Asha Rao', 'asha@x.io', 'QA', '12/03/2024', '9', 'active']];
 		expect(fields(matchHeaders(headers, cells, employees))).toEqual(['employee_code', 'full_name', 'email_normalized', 'job_role', 'joining_date', 'reports_to_employee_id', 'employment_status']);
+	});
+
+	test('a column of names is not matched to a row-id field (it is kept as extra information instead)', () => {
+		const m = matchHeaders(['Full Name', 'Reports To'], [['Asha Rao', 'Raja Lakshmi'], ['Bala Kumar', 'Shatish']], employees);
+		expect(m[0].field).toBe('full_name');
+		expect(m[1]).toBeNull();
+	});
+
+	test('dates written with month names or day-first are recognised as a date column', () => {
+		const m = matchHeaders(['Joining Date'], [['5 Jan 2026'], ['4 August 2025'], ['05-01-2026']], employees);
+		expect(m[0].field).toBe('joining_date');
 	});
 
 	test('exact names are high confidence; guesses are medium', () => {

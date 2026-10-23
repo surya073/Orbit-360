@@ -66,7 +66,11 @@ const normHeader = (h) => String(h).trim().toLowerCase().replace(/[\s-]+/g, '_')
 export function readCsv(text) {
 	const rows = parseCsv(text);
 	if (rows.length < 2) throw new Error('The file needs a header row and at least one data row');
-	return { headers: rows[0].map((h) => h.trim()), cells: rows.slice(1) };
+	const headers = rows[0].map((h) => h.trim());
+	const cells = rows.slice(1);
+	// A row with more or fewer values than the header usually has a missing or extra comma, which shifts every value after it.
+	const ragged = cells.map((r, i) => ({ rowNumber: i + 1, got: r.length })).filter((r) => r.got !== headers.length);
+	return { headers, cells, ragged, expected: headers.length };
 }
 
 /**
@@ -85,7 +89,7 @@ export function autoMapHeaders(headers, fieldNames) {
 }
 
 /** Fields that more than one header is mapped to (the file could not be read unambiguously). */
-export const duplicateTargets = (mapping) => [...new Set(mapping.filter((f, i) => f && mapping.indexOf(f) !== i))];
+export const duplicateTargets = (mapping) => [...new Set(mapping.filter((f, i) => f && f !== 'more_details' && mapping.indexOf(f) !== i))]; // any number of columns can go to more_details
 
 /** Records from the data rows through a header -> field mapping; blank cells are omitted, never turned into 0 or ''. */
 export function recordsFromMapping(cells, mapping) {

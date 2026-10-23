@@ -7,6 +7,8 @@
  *   columns = template.columns plus any extra import columns, as [{ field, type, required, values? }].
  */
 
+import { looksLikeDate } from './importPrep';
+
 export const HIGH = 0.85; // matched without asking
 export const MEDIUM = 0.62; // pre-filled, but shown for the user to check
 
@@ -108,7 +110,6 @@ export function nameScore(header, field) {
 
 // ---- what the values look like ------------------------------------------------------------------
 
-const DATE = /^(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})([ T].*)?$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const NUMBER = /^-?\d+([.,]\d+)?$/;
 
@@ -119,7 +120,9 @@ export function fit(values, column) {
 	const share = (test) => v.filter(test).length / v.length;
 	switch (column.type) {
 		case 'date':
-			return share((x) => DATE.test(x));
+			return share((x) => looksLikeDate(x)); // 05-01-2026, 5 Jan 2026, 2026-01-05 ...
+		case 'id':
+			return share((x) => /^\d+$/.test(x)); // a column of names is not a row id
 		case 'num':
 		case 'int':
 		case 'number':
@@ -174,7 +177,7 @@ export const headerSignature = (headers) => headers.map((h) => flat(h)).join('|'
 
 // ---- remembered mappings (this device) ---------------------------------------------------------
 
-const STORE_KEY = 'company360.importMaps';
+const STORE_KEY = 'company360.importMaps.v2'; // v1 entries predate "unmatched columns go to More details" and are ignored
 const MAX_SAVED = 30;
 
 function readStore() {

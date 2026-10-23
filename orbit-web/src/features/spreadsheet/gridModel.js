@@ -2,6 +2,7 @@ import { LOOKUPS } from '../../hooks/useLookup';
 import { safeCell } from '../../utils/columnConfig';
 import { toCsv } from '../../utils/csv';
 import { humanize } from '../../utils/format';
+import { isErrorCell, normalizeDate } from '../../utils/importPrep';
 
 /**
  * Pure helpers behind the spreadsheet editor: column definitions from the backend field contract,
@@ -134,7 +135,7 @@ function validDate(s) {
  */
 export function normalizeCell(col, raw) {
 	const text = String(raw ?? '').trim();
-	if (text === '') return { value: '' };
+	if (text === '' || isErrorCell(text)) return { value: '' }; // a #REF! pasted from another sheet is an empty cell, not text
 	switch (col.type) {
 		case 'enum': {
 			const key = text.toLowerCase().replace(/\s+/g, '_');
@@ -149,15 +150,23 @@ export function normalizeCell(col, raw) {
 		}
 		case 'int':
 		case 'num': {
-			const n = Number(text);
+			const n = Number(text.replace(/,/g, '').replace(/%$/, ''));
 			if (!Number.isFinite(n)) return { error: 'Must be a number' };
 			if (col.type === 'int' && !Number.isInteger(n)) return { error: 'Must be a whole number' };
 			return { value: String(n) };
 		}
 		case 'date':
-			return validDate(text) ? { value: text } : { error: 'Use YYYY-MM-DD' };
+		{
+				// 2026-01-05 as is; 05-01-2026, 5 Jan 2026 and the like are read day-first and written as YYYY-MM-DD
+				const iso = validDate(text) ? text : normalizeDate(text);
+				return iso ? { value: iso } : { error: 'Use YYYY-MM-DD (05-01-2026 and 5 Jan 2026 also work)' };
+			}
 		case 'datetime':
-			return DATETIME_RE.test(text) ? { value: text } : { error: 'Use YYYY-MM-DD HH:mm:ss' };
+		{
+				if (DATETIME_RE.test(text)) return { value: text };
+				const day = normalizeDate(text);
+				return day ? { value: `${day} 00:00:00` } : { error: 'Use YYYY-MM-DD HH:mm:ss' };
+			}
 		case 'id':
 			return ID_RE.test(text) ? { value: text } : { error: 'Must be a numeric record id (use the picker)' };
 		default:

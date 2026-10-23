@@ -30,6 +30,32 @@ const header = (id, file, kind) => `@import url("/__catalyst/auth/static-file?fi
  */
 `;
 
+/** Rules that keep every hosted step inside the card: long e-mail addresses and messages wrap, controls never exceed the width. */
+const FIT = (t) => `
+/* ---- fit: nothing wider than the card, nothing clipped ---- */
+html, body { overflow: hidden !important; } /* the card is sized to the content (useIframeHeight), so there is never an inner scrollbar */
+*, *::before, *::after { box-sizing: border-box !important; }
+.signin_box, .recovery_box, .fieldcontainer, .textbox_div, .user_info, .Alert, .Errormsg, .info_head, .head_info, .hellouser, .menutext, .optionstry, .tryanother, .extra_options, .pass_policy, .fielderror, .error_message, .bluetext_action, p, label, span, h1, h2, h3, a {
+  max-width: 100% !important;
+  overflow-wrap: anywhere !important;
+  white-space: normal !important;
+}
+.textbox, input, select, textarea { width: 100% !important; max-width: 100% !important; }
+  .btn.blue, .blue { height: auto !important; min-height: ${t.height || '42px'} !important; padding-top: 12px !important; padding-bottom: 12px !important; line-height: 1.3 !important; white-space: normal !important; }
+.user_info { height: auto !important; display: flex !important; flex-wrap: wrap !important; align-items: center !important; gap: 8px !important; padding: 10px 12px !important; }
+.user_info .menutext { min-width: 0 !important; flex: 1 1 140px !important; }
+.fielderror, .error_message { display: block !important; margin-top: 6px !important; line-height: 1.4 !important; font-size: 13px !important; }
+/* text blocks flow in order (Catalyst positions some of them absolutely, which put them on top of the button) */
+.fielderror, .errorlabel, .error_message, .hellouser, .backup_desc, .pass_policy, .head_info, .info_head, .menutext, .nopassword, .extra_options, .optionstry, .tryanother, .bluetext_action, .bluetext_action_right, .blueforgotpassword, #forgotpassword, #enableforgot, #enablemore, #enableotpoption, .change_user, .oneAuthLable, .option_details { position: static !important; float: none !important; clear: both !important; transform: none !important; }
+.bluetext_action_right, #forgotpassword { display: block !important; margin: 14px 0 0 !important; text-align: center !important; }
+.user_info { border: 0 !important; box-shadow: none !important; background: ${t["surface-2"]} !important; border-radius: ${t.radius || "8px"} !important; }
+.user_info:not(:has(.menutext:not(:empty))) { display: none !important; }
+.btn.blue, .blue, .btn { box-shadow: none !important; }
+.info_head { line-height: 1.3 !important; }
+.head_info, .pass_policy { line-height: 1.5 !important; }
+img, svg, table { max-width: 100% !important; }
+`;
+
 /** Controls shared by both hosted pages. */
 const controls = (t) => `
 html, body {
@@ -79,7 +105,7 @@ html, body {
 }
 .btn.blue:hover, .blue:hover { background: ${t['accent-hover']} !important; box-shadow: none !important; }
 .btn.blue:active { transform: translateY(1px); }
-${t.arrow ? `.btn.blue { position: relative !important; overflow: hidden !important; padding-right: 56px !important; letter-spacing: .04em !important; box-shadow: 0 10px 22px -10px ${t.accent} !important; }
+${t.arrow ? `.btn.blue { position: relative !important; overflow: hidden !important; padding-right: 56px !important; letter-spacing: .04em !important; }
 .btn.blue::after { content: "\\2192"; position: absolute; right: 0; top: 0; bottom: 0; width: 48px; display: grid; place-items: center; background: rgba(255,255,255,.18); font-size: 18px; line-height: 1; }
 ` : ''}.btn:focus-visible { outline: 2px solid ${t.focus} !important; outline-offset: 2px !important; }
 .loadwithbtn { border-color: ${t['accent-contrast']} !important; border-left-color: transparent !important; }
@@ -88,7 +114,7 @@ a:hover, .bluetext_action:hover { text-decoration: underline !important; }
 .fielderror, .error_icon, .error_message { color: ${t.danger} !important; }
 .backoption { color: ${t['text-muted']} !important; }
 .backoption:hover { background: ${t['surface-2']} !important; }
-`;
+${t.fit ? FIT(t) : ''}`;
 
 const signin = (t) => `
 /* ---- fit the hosted form into our card (Catalyst defaults to a 520px floating card) ---- */
@@ -162,7 +188,7 @@ const forgot = (t) => `
 
 // The sign-in page is a fixed design (UI_Design/869a5d3c...jpg), so the hosted forms get one matching sheet of their
 // own instead of following the app theme: rectangular fields with a blue focus ring and a blue button with an arrow end.
-const MEETING = { surface: '#ffffff', bg: '#ffffff', 'surface-2': '#f3f6fd', text: '#172a5a', 'text-muted': '#6a7592', border: '#e3e8f5', 'border-strong': '#dbe2f3', focus: '#5b7cfa', accent: '#5b7cfa', 'accent-hover': '#4966e6', 'accent-contrast': '#ffffff', danger: '#d6284a', radius: '4px', height: '48px', pad: '16px', arrow: true };
+const MEETING = { surface: '#ffffff', bg: '#ffffff', 'surface-2': '#f3f6fd', text: '#172a5a', 'text-muted': '#6a7592', border: '#e3e8f5', 'border-strong': '#dbe2f3', focus: '#5b7cfa', accent: '#5b7cfa', 'accent-hover': '#4966e6', 'accent-contrast': '#ffffff', danger: '#d6284a', radius: '4px', height: '48px', pad: '16px', arrow: true, fit: true };
 
 fs.mkdirSync(path.join(ROOT, 'public/auth'), { recursive: true });
 for (const id of [...ids, 'meeting']) {

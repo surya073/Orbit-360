@@ -211,3 +211,28 @@ test('re-uploading an identical file is flagged, not blocked', async () => {
 	assert.equal(second.status, 201);
 	assert.equal(second.body.data.possibleDuplicateOfJobs.length, 1);
 });
+
+test('imports keep unmatched columns in more_details, and an update merges them with what the record already holds', async () => {
+	const w = buildWorld();
+	const first = await newJob(w, w.ids.mgr1, 'employees', { conflictPolicy: 'update' });
+	const details = JSON.stringify({ AI: 'Chat GPT', GitHub: 'No', 'Reports To': 'Shatish' });
+	const a = await w.api(w.ids.mgr1, 'POST', `/imports/jobs/${first}/commit`, { rows: [{ rowNumber: 1, data: { full_name: 'Meena', email_normalized: 'meena@example.com', joining_date: '2026-01-05', more_details: details } }] });
+	assert.equal(a.body.data.rows[0].status, 'committed', JSON.stringify(a.body.data.rows[0].errors));
+	const stored = w.store.rows('employees').find((e) => e.email_normalized === 'meena@example.com');
+	assert.deepEqual(JSON.parse(stored.more_details), { AI: 'Chat GPT', GitHub: 'No', 'Reports To': 'Shatish' });
+
+	const second = await newJob(w, w.ids.mgr1, 'employees', { conflictPolicy: 'update' });
+	const b = await w.api(w.ids.mgr1, 'POST', `/imports/jobs/${second}/commit`, { rows: [{ rowNumber: 1, data: { full_name: 'Meena', email_normalized: 'meena@example.com', more_details: JSON.stringify({ GitHub: 'Yes', 'AI Usage': '60%' }) } }] });
+	assert.equal(b.body.data.rows[0].outcome, 'updated');
+	const merged = JSON.parse(w.store.rows('employees').find((e) => e.email_normalized === 'meena@example.com').more_details);
+	assert.deepEqual(merged, { AI: 'Chat GPT', GitHub: 'Yes', 'Reports To': 'Shatish', 'AI Usage': '60%' }); // old keys kept, same key overwritten, new key added
+});
+
+test('a more_details that is not a JSON object is reported on the row, not as a server error', async () => {
+	const w = buildWorld();
+	const job = await newJob(w, w.ids.mgr1, 'employees');
+	const r = await w.api(w.ids.mgr1, 'POST', `/imports/jobs/${job}/preview`, { rows: [{ rowNumber: 1, data: { full_name: 'X', email_normalized: 'x@example.com', more_details: 'AI: Chat GPT; GitHub: No' } }] });
+	assert.equal(r.status, 200);
+	assert.equal(r.body.data.rows[0].status, 'invalid');
+	assert.equal(r.body.data.rows[0].errors[0].code, 'INVALID_JSON');
+});

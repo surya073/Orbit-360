@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import illustration from '../../assets/images/login-meeting.png';
 import Button from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
 import Logo from '../../components/common/Logo';
 import LoadingState from '../../components/feedback/LoadingState';
 import { authService } from '../../services/authService';
-import LoginIllustration, { LoginBackdrop } from './LoginIllustration';
 import useIframeHeight from './useIframeHeight';
 import './login.css';
 
@@ -18,10 +18,11 @@ export const forgotCssPath = (skin = LOGIN_SKIN) => new URL(`auth/forgot-iframe-
 const delay = (ms) => ({ '--d': `${ms}ms` });
 
 /**
- * Sign-in, after UI_Design/869a5d3c...jpg: one white card with a flat meeting illustration on the left and the form on the
- * right, on a deep blue page of video-call tiles (the product is Meeting 360). The form and the forgot-password flow are Catalyst's hosted pages (we never handle
- * credentials). The card grows/shrinks with the hosted content, so the page never needs an inner scrollbar. The login page
- * keeps its own light colours whatever theme the app uses.
+ * Sign-in: a white page with one card. The left panel shows the meeting illustration (src/assets/images/login-meeting.png,
+ * from UI_Design/login page.png) and a short line about the product; the right holds the form. The form and the
+ * forgot-password flow are Catalyst's hosted pages (we never handle credentials). The card grows/shrinks with the hosted
+ * content, so the page never needs an inner scrollbar. The login page keeps its own light colours whatever theme the app
+ * uses, and stacks (illustration above the form) on narrow screens.
  */
 export default function LoginPage() {
 	const [state, setState] = useState({ status: 'loading', error: null });
@@ -44,20 +45,23 @@ export default function LoginPage() {
 
 	return (
 		<div className="login">
-			<LoginBackdrop />
-			<header className="login__top reveal" style={delay(0)}>
-				<Logo link={false} />
-			</header>
 			<main className="login__stage">
 				<section className="login__card" aria-labelledby="signin-title">
 					<div className="login__art" aria-hidden="true">
-						<LoginIllustration />
+						<img className="login__img" src={illustration} alt="" width="360" height="360" draggable="false" />
+						<div className="login__pitch">
+							<b>Every meeting, one clear view.</b>
+							<span>Hours, attendance, leave and delivery for your team, from approved data.</span>
+						</div>
 					</div>
 					<div className="login__panel">
-						<h1 id="signin-title" className="reveal" style={delay(120)}>
+						<div className="login__brand reveal" style={delay(40)}>
+							<Logo link={false} />
+						</div>
+						<h1 id="signin-title" className="reveal" style={delay(100)}>
 							Sign in
 						</h1>
-						<p className="sub reveal" style={delay(180)}>
+						<p className="sub reveal" style={delay(160)}>
 							Use your company account to continue.
 						</p>
 
@@ -72,7 +76,7 @@ export default function LoginPage() {
 							</div>
 						) : null}
 
-						<div className="login__form reveal" style={{ ...delay(240), height: state.status === 'ready' ? formHeight : undefined }} aria-busy={state.status === 'loading'}>
+						<div className="login__form reveal" style={{ ...delay(220), height: state.status === 'ready' ? formHeight : undefined }} aria-busy={state.status === 'loading'}>
 							{state.status === 'loading' ? (
 								<div className="login__skeleton">
 									<LoadingState height={14} label="Loading sign-in" />
@@ -83,13 +87,13 @@ export default function LoginPage() {
 							<div id="login-container" className="login-frame" />
 						</div>
 
-						<p className="login__help reveal" style={delay(320)}>
+						<p className="login__help reveal" style={delay(300)}>
 							<Icon name="lock" size={13} />
 							<span>Access is by invitation. If you can sign in but see “Access not available”, ask an administrator to add you to Meeting 360.</span>
 						</p>
 					</div>
 				</section>
-				<p className="login__foot reveal" style={delay(400)}>
+				<p className="login__foot reveal" style={delay(380)}>
 					© Meeting 360 · Internal use only
 				</p>
 			</main>

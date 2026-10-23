@@ -33,9 +33,27 @@ const { matchKeyFor, prepareRow, loadReferences, applyReferences, immutableField
 
 const TERMINAL = new Set([S.COMPLETED, S.COMPLETED_WITH_ERRORS, S.FAILED, S.CANCELLED]);
 const TEXT_MAX = 2000;
+const DETAILS_MAX = 9000; // same cap as the more_details field itself
 
 const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const rowHash = (data) => sha(JSON.stringify(Object.keys(data).sort().map((k) => [k, data[k]])));
+
+/**
+ * Updating an existing record from an import keeps the extra information it already holds: the stored `more_details`
+ * object and the incoming one are merged (incoming values win for the same key). If either cannot be read, or the
+ * merge would not fit, the incoming object is used as it is.
+ */
+function mergeDetails(storedJson, incomingJson) {
+	try {
+		const a = storedJson ? JSON.parse(storedJson) : {};
+		const b = JSON.parse(incomingJson);
+		if (!a || typeof a !== 'object' || Array.isArray(a) || !b || typeof b !== 'object' || Array.isArray(b)) return incomingJson;
+		const merged = JSON.stringify({ ...a, ...b });
+		return merged.length <= DETAILS_MAX ? merged : incomingJson;
+	} catch {
+		return incomingJson;
+	}
+}
 
 /** An import writes into the target module, so the actor needs that module's own permission too (not just Imports). */
 function requireTarget(ctx, resourceName, action) {
@@ -181,7 +199,7 @@ async function evaluateRows(ctx, job, resource, rows) {
 	const byColumn = new Map();
 	for (const item of ok()) (byColumn.get(item.match.column) || byColumn.set(item.match.column, []).get(item.match.column)).push(item);
 	for (const [column, group] of byColumn) {
-		const found = await repos.table(resource.name).findByKeys(scope, column, group.map((i) => i.match.key), ['import_job_id']);
+		const found = await repos.table(resource.name).findByKeys(scope, column, group.map((i) => i.match.key), resource.importFields.more_details ? ['import_job_id', 'more_details'] : ['import_job_id']);
 		const index = new Map(found.map((r) => [String(r[column]), r]));
 		for (const item of group) {
 			const ex = index.get(item.match.key);
@@ -363,6 +381,7 @@ async function commitBatch(ctx, jobId, rows) {
 	if (plan.update.length) {
 		const patches = plan.update.map(({ item }) => {
 			const row = stamp(ctx, resource, prepareRow(resource, item.value, { source: 'import', jobId: job.ROWID }));
+			if (row.more_details && item.existing.more_details) row.more_details = mergeDetails(item.existing.more_details, row.more_details);
 			return { ...row, ROWID: item.existing.ROWID };
 		});
 		try {

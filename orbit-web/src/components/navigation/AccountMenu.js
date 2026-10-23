@@ -33,8 +33,8 @@ export default function AccountMenu() {
 		if (!open || !trigger.current) return;
 		const r = trigger.current.getBoundingClientRect();
 		const bottom = Math.max(window.innerHeight - r.bottom - 4, 12);
-		// beside the rail, on whichever side it is docked
-		setPos(trigger.current.closest('.shell--rail-right') ? { right: window.innerWidth - r.left + 14, bottom } : { left: r.right + 14, bottom });
+		// beside the rail
+		setPos({ left: r.right + 14, bottom });
 	}, [open]);
 
 	useEffect(() => {
@@ -77,7 +77,7 @@ export default function AccountMenu() {
 								<br />
 								{role} · {user.teamId ? 'assigned team' : 'all teams'}
 							</div>
-							<Link className="menu-item" to={`${ROUTES.settings}?tab=profile`} onClick={close}>
+							<Link className="menu-item" to={`${ROUTES.settings}?tab=account`} onClick={close}>
 								<Icon name="user" size={15} />
 								Profile
 							</Link>
@@ -85,7 +85,7 @@ export default function AccountMenu() {
 								<Icon name="palette" size={15} />
 								Themes
 							</Link>
-							<Link className="menu-item" to={`${ROUTES.settings}?tab=layout`} onClick={close}>
+							<Link className="menu-item" to={`${ROUTES.settings}?tab=dashboard`} onClick={close}>
 								<Icon name="dashboard" size={15} />
 								Layout
 							</Link>
@@ -96,7 +96,7 @@ export default function AccountMenu() {
 							{can('access.view') ? (
 								<Link className="menu-item" to={ROUTES.access} onClick={close}>
 									<Icon name="lock" size={15} />
-									Access &amp; Permissions
+User management
 								</Link>
 							) : null}
 							<button

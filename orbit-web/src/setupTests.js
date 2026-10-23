@@ -4,6 +4,8 @@ import { clearApiCache, readPolicy } from './services/apiClient';
 
 // Full-suite runs share CPU across parallel workers; the 1s default makes slow-but-correct renders flaky.
 configure({ asyncUtilTimeout: 4000 });
+// ...and the same goes for a whole test: the 5 s default is too tight for the heaviest pages (themes gallery, launcher, editor) in a full run.
+jest.setTimeout(20000);
 
 // jsdom has no matchMedia; tests default to a light, motion-allowed device. Individual tests
 // override window.matchMedia (see tests/themes.test.js) to simulate dark mode.

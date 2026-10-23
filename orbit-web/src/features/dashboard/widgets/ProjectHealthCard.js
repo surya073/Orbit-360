@@ -78,7 +78,7 @@ export default function ProjectHealthCard({ res, drill = false }) {
 							) : (
 								<p className="muted small">No approved time logged against projects in this period.</p>
 							)}
-							{wl.projectsWithTime > wl.projects.length ? <p className="small muted" style={{ marginTop: 8 }}>Showing the top {wl.projects.length} of {wl.projectsWithTime} projects with time.</p> : null}
+							{wl.projectsWithTime > wl.projects.length ? <p className="small muted u-mt-2">Showing the top {wl.projects.length} of {wl.projectsWithTime} projects with time.</p> : null}
 						</div>
 					</div>
 				) : null}

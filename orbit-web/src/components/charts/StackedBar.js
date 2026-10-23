@@ -12,7 +12,7 @@ export default function StackedBar({ segments, ariaLabel }) {
 				{segments.map((s) => (
 					<span key={s.label}>
 						<i style={{ background: s.color }} />
-						{s.label} <b className="num" style={{ color: 'var(--text)' }}>{s.display ?? s.value}</b>
+						{s.label} <b className="num stackbar__value">{s.display ?? s.value}</b>
 					</span>
 				))}
 			</div>

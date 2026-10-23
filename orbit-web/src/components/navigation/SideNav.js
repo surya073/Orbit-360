@@ -52,7 +52,7 @@ function RailGroup({ group, active }) {
  * into the content. Which entries appear follows the user's permissions. UX only: the backend
  * authorizes every request.
  */
-export default function SideNav({ side = 'left', onSide }) {
+export default function SideNav() {
 	const { can } = useAuth();
 	const { pathname } = useLocation();
 	const [expanded, setExpanded] = useState(readExpanded);
@@ -89,22 +89,15 @@ export default function SideNav({ side = 'left', onSide }) {
 						<RailGroup key={item.label} group={item} active={isGroupActive(item, pathname)} />
 					)
 				)}
-			</nav>
-			<div className="rail__bottom">
-				{/* themes and layout live in Settings, and Access & Permissions sits inside it */}
+{/* Settings is the last page link */}
 				{settings ? (
 					<Link to={settings.items[0].to} data-tour="appearance" data-label="Settings" aria-label="Settings" aria-current={isGroupActive(settings, pathname) ? 'true' : undefined} className={`rail-item ${isGroupActive(settings, pathname) ? 'active' : ''}`.trim()}>
 						<Inner item={settings} />
 					</Link>
 				) : null}
-				{onSide ? (
-					<button type="button" data-label="Move sidebar" aria-label={`Move sidebar to the ${side === 'left' ? 'right' : 'left'}`} className="rail-item rail-side" onClick={() => onSide(side === 'left' ? 'right' : 'left')}>
-						<span className="rail-item__icon" data-tip={`Move to the ${side === 'left' ? 'right' : 'left'}`}>
-							<Icon name={side === 'left' ? 'chevronRight' : 'chevronLeft'} size={20} />
-						</span>
-						<span className="rail-item__label">Move to the {side === 'left' ? 'right' : 'left'}</span>
-					</button>
-				) : null}
+			</nav>
+			{/* only the profile sits at the foot of the rail */}
+			<div className="rail__bottom">
 				<AccountMenu />
 			</div>
 		</aside>

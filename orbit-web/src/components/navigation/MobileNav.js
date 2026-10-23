@@ -147,7 +147,6 @@ export default function MobileNav({ onClose }) {
 				</nav>
 				<footer className="offcanvas__foot">
 					<Item to={ROUTES.settings} label="Settings" icon="settings" i={n++} />
-					{can('access.view') ? <Item to={ROUTES.access} label="Access & Permissions" icon="lock" i={n++} /> : null}
 					<button
 						type="button"
 						className="oc-item"

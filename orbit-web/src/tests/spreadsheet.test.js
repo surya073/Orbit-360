@@ -1,6 +1,6 @@
 import { pickOption } from './pickOption';
 import React from 'react';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { __clearLookupCache } from '../hooks/useLookup';
 import { __resetTemplateCache } from '../hooks/useTemplates';
@@ -161,6 +161,59 @@ describe('Spreadsheet editor page', () => {
 		expect(call.line).toBe('PATCH /employees/1');
 		expect(JSON.parse(call.init.body)).toEqual({ job_role: 'Principal' });
 		await waitFor(() => expect(screen.getByText(/^Saved \d/)).toBeInTheDocument());
+	});
+
+	describe('autosave and the unsaved-edits draft', () => {
+		beforeEach(() => {
+			window.localStorage.removeItem('company360.sheetAutosave');
+			window.sessionStorage.clear();
+		});
+		afterEach(() => {
+			window.localStorage.removeItem('company360.sheetAutosave');
+			window.sessionStorage.clear();
+		});
+
+		test('autosave is off by default: an edit waits for Save', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await editCell(0, 1, 'Principal');
+			await new Promise((r) => setTimeout(r, 3600));
+			expect(writes('PATCH')).toHaveLength(0);
+			expect(screen.getByText('1 unsaved change')).toBeInTheDocument();
+		});
+
+		test('with autosave on, an edit to an existing record is saved by itself after a pause', async () => {
+			window.localStorage.setItem('company360.sheetAutosave', '1');
+			setup();
+			await screen.findByText('Asha Rao');
+			await editCell(0, 1, 'Principal');
+			expect(writes('PATCH')).toHaveLength(0); // not while typing
+			await waitFor(() => expect(writes('PATCH')).toHaveLength(1), { timeout: 6000 });
+			expect(JSON.parse(writes('PATCH')[0].init.body)).toEqual({ job_role: 'Principal' });
+		}, 15000);
+
+		test('unsaved edits are kept as a draft for this tab and offered back after a reload', async () => {
+			setup();
+			await screen.findByText('Asha Rao');
+			await editCell(0, 1, 'Principal');
+			await waitFor(() => expect(window.sessionStorage.getItem('company360.sheetDraft.employees')).toContain('Principal'));
+			cleanup();
+			setup();
+			await screen.findByText('Asha Rao');
+			expect(await screen.findByText(/Unsaved edits from earlier in this tab/)).toBeInTheDocument();
+			await userEvent.click(screen.getByRole('button', { name: 'Restore' }));
+			expect(await screen.findByText('1 unsaved change')).toBeInTheDocument();
+			expect(gridcell(0, 1)).toHaveClass('is-dirty');
+		});
+
+		test('discarding the draft removes it', async () => {
+			window.sessionStorage.setItem('company360.sheetDraft.employees', JSON.stringify({ edits: { 1: { job_role: 'Principal' } }, newRows: [], base: {} }));
+			setup();
+			await screen.findByText(/Unsaved edits from earlier in this tab/);
+			await userEvent.click(screen.getByRole('button', { name: 'Discard' }));
+			expect(screen.queryByText(/Unsaved edits from earlier in this tab/)).not.toBeInTheDocument();
+			expect(window.sessionStorage.getItem('company360.sheetDraft.employees')).toBeNull();
+		});
 	});
 
 	test('extra columns: values come from more_details and a save merges them into it, other keys kept', async () => {

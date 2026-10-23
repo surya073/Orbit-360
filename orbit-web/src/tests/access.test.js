@@ -91,7 +91,7 @@ describe('what the user sees follows their permissions', () => {
 		expect(visibleNav(canForUser({ permissions: ['projects.view'] })).map((n) => n.label)).toEqual(['Delivery', 'Settings']);
 		expect(firstDestination(can)).toBe('/employees');
 		expect(firstDestination(canForUser({ permissions: [] }))).toBeNull();
-		expect(visibleNav(canForUser({ permissions: ['access.view'] })).map((n) => n.label)).toEqual(['Settings']); // Access & Permissions is a page inside Settings
+		expect(visibleNav(canForUser({ permissions: ['access.view'] })).map((n) => n.label)).toEqual(['User management', 'Settings']); // its own module, one click away
 	});
 
 	test('a page behind a permission shows a notice instead of the page (the API refuses the calls too)', async () => {
@@ -178,7 +178,7 @@ describe('record pages: every control follows its own permission', () => {
 	});
 });
 
-describe('Access & Permissions page', () => {
+describe('User management page', () => {
 	const roles = (over = {}) => ({
 		tablesReady: true,
 		you: { roleKey: 'admin', canManageRoles: true, canManageUsers: true },
@@ -207,7 +207,7 @@ describe('Access & Permissions page', () => {
 	test('the overview shows roles, modules and who can do what', async () => {
 		mockFetch(api());
 		renderWithProviders(<AccessPage />, { user: adminUser });
-		expect(await screen.findByRole('heading', { name: 'Access & Permissions' })).toBeInTheDocument();
+		expect(await screen.findByRole('heading', { name: 'User management' })).toBeInTheDocument();
 		const grid = await screen.findByRole('region', { name: 'Role and module overview' });
 		expect(within(grid).getByText('Administrator')).toBeInTheDocument();
 		expect(within(grid).getAllByText('Full').length).toBeGreaterThan(0);
@@ -305,22 +305,24 @@ describe('Access & Permissions page', () => {
 		expect(body.permissions.sort()).toEqual(['employees.edit', 'employees.view', 'time_entries.view']); // copied from the Manager (the creator holds all of them)
 	});
 
-	test('users: search, see each role, change access in two steps; you cannot edit yourself', async () => {
+	test('users: search, see each role, change it in the row with Undo; you cannot edit yourself', async () => {
 		mockFetch(api(roles(), [[/^PATCH \/access\/users\/2/, okBody({ id: '2' })]]));
 		renderWithProviders(<AccessPage />, { user: { ...adminUser, userId: '1' }, route: '/access?tab=users' });
 		const table = await screen.findByRole('table', { name: 'Users and their roles' });
 		expect(within(table).getByText('Maya Rao')).toBeInTheDocument();
 		expect(within(table).getByText('You')).toBeInTheDocument(); // Ari Admin: own row has no edit button
 		expect(within(table).getByText('Delivery')).toBeInTheDocument(); // team name, not an id
-		await userEvent.click(within(table).getByRole('button', { name: 'Edit access for Maya Rao' }));
-		const dialog = await screen.findByRole('dialog');
-		await pickOption(within(dialog).getByLabelText('Role'), 'admin');
-		await userEvent.click(within(dialog).getByRole('button', { name: 'Review' }));
-		expect(dialog).toHaveTextContent('Role: Manager → Administrator');
-		await userEvent.click(within(dialog).getByRole('button', { name: 'Confirm change' }));
+		// the role is changed right in the row: one pick, applied at once, with Undo
+		await pickOption(within(table).getByLabelText('Role of Maya Rao'), 'admin');
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'PATCH /access/users/2')).toBe(true));
 		expect(JSON.parse(global.fetch.calls.find((c) => c.line === 'PATCH /access/users/2').init.body)).toEqual({ roleId: '11' });
-		expect(await screen.findByText('Access updated for Maya Rao')).toBeInTheDocument();
+		expect(await screen.findByText('Maya Rao is now Administrator')).toBeInTheDocument();
+		await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+		await waitFor(() => expect(global.fetch.calls.filter((c) => c.line === 'PATCH /access/users/2')).toHaveLength(2));
+		// the full dialog is still there for team and sign-in changes, and saving is one step
+		await userEvent.click(within(table).getByRole('button', { name: 'Edit access for Maya Rao' }));
+		const dialog = await screen.findByRole('dialog');
+		expect(within(dialog).getByRole('button', { name: 'Save' })).toBeDisabled(); // nothing changed yet
 	});
 
 	test('invite: first and last name, email and a role chosen before sending; a team role needs a team', async () => {
@@ -335,9 +337,8 @@ describe('Access & Permissions page', () => {
 		await userEvent.type(within(dialog).getByLabelText(/First name/), 'Nila');
 		await userEvent.type(within(dialog).getByLabelText(/Last name/), 'Sen');
 		await userEvent.type(within(dialog).getByLabelText(/^Email/), 'nila@example.com');
-		// the roles come from the server, so the choice is exactly what Access & Permissions holds
-		const roleSelect = within(dialog).getByLabelText(/^Role/);
-		await pickOption(roleSelect, 'manager');
+		// the roles come from the server, so the choice is exactly what User management holds
+		await userEvent.click(within(dialog).getByRole('radio', { name: /Manager/ }));
 		await userEvent.click(within(dialog).getByRole('button', { name: 'Send invitation' }));
 		expect(await within(dialog).findByText('Choose a team: this role works with one team')).toBeInTheDocument(); // Manager covers one team
 		await pickOption(within(dialog).getByLabelText(/^Team/), '7');
@@ -345,6 +346,27 @@ describe('Access & Permissions page', () => {
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'POST /access/invitations')).toBe(true));
 		expect(JSON.parse(global.fetch.calls.find((c) => c.line === 'POST /access/invitations').init.body)).toEqual({ firstName: 'Nila', lastName: 'Sen', email: 'nila@example.com', roleId: 'manager', teamId: '7' });
 		expect(await screen.findByText('Invitation sent to nila@example.com')).toBeInTheDocument();
+	});
+
+	test('invite: "Send and add another" keeps the dialog open for the next person; "fine-tune" opens their permissions', async () => {
+		mockFetch(api(roles(), [[/^POST \/access\/invitations/, { status: 201, body: okBody({ id: '9', displayName: 'Nila Sen', status: 'invited' }) }], [/^GET \/access\/users\/9\/permissions/, okBody({ role: { name: 'Administrator' }, locked: true, canEdit: false, allow: [], deny: [], rolePermissions: [] })]]));
+		renderWithProviders(<AccessPage />, { user: { ...adminUser, userId: '1' }, route: '/access?tab=users' });
+		await userEvent.click(await screen.findByRole('button', { name: 'Invite user' }));
+		const dialog = await screen.findByRole('dialog');
+		await userEvent.click(within(dialog).getByRole('radio', { name: /Administrator/ }));
+		await userEvent.type(within(dialog).getByLabelText(/First name/), 'Nila');
+		await userEvent.type(within(dialog).getByLabelText(/Last name/), 'Sen');
+		await userEvent.type(within(dialog).getByLabelText(/^Email/), 'nila@example.com');
+		await userEvent.click(within(dialog).getByRole('button', { name: 'Send and add another' }));
+		await waitFor(() => expect(within(dialog).getByLabelText(/First name/)).toHaveValue(''));
+		expect(screen.getByRole('dialog')).toBe(dialog); // still open; the role choice is kept for the next person
+		expect(within(dialog).getByRole('radio', { name: /Administrator/ })).toBeChecked();
+		await userEvent.type(within(dialog).getByLabelText(/First name/), 'Ravi');
+		await userEvent.type(within(dialog).getByLabelText(/Last name/), 'Das');
+		await userEvent.type(within(dialog).getByLabelText(/^Email/), 'ravi@example.com');
+		await userEvent.click(within(dialog).getByRole('checkbox', { name: /fine-tune/ }));
+		await userEvent.click(within(dialog).getByRole('button', { name: 'Send invitation' }));
+		expect(await screen.findByRole('heading', { name: /Individual permissions: Nila Sen/ })).toBeInTheDocument();
 	});
 
 	test('individual permissions: click cycles follows-role, allow, deny; Save sends both lists; admins are locked', async () => {

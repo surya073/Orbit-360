@@ -28,18 +28,18 @@ const ui = () => (
 );
 
 describe('tour steps', () => {
-	test('a step for every part of the app the user can open, then search, appearance and account', () => {
+	test('a step for every part of the app the user can open, then appearance and account', () => {
 		const all = buildSteps(canForUser(admin)).map((s) => s.id);
-		expect(all).toEqual(['nav-dashboard', 'nav-people', 'nav-delivery', 'nav-imports', 'nav-presentations', 'search', 'appearance', 'account']);
+		expect(all).toEqual(['nav-dashboard', 'nav-people', 'nav-delivery', 'nav-imports', 'nav-presentations', 'nav-user-management', 'appearance', 'account']);
 		const mgr = buildSteps(canForUser(manager)).map((s) => s.id);
 				expect(mgr).toContain('nav-people');
 	});
 
 	test('steps follow permissions exactly, and groups list only the pages inside them the user can open', () => {
 		const steps = buildSteps(canForUser(withPerms(manager, ['employees.view', 'presentations.view'])));
-		expect(steps.map((s) => s.id)).toEqual(['nav-people', 'nav-presentations', 'search', 'appearance', 'account']);
+		expect(steps.map((s) => s.id)).toEqual(['nav-people', 'nav-presentations', 'appearance', 'account']);
 		expect(steps[0].chips).toEqual(['Employees']);
-		expect(buildSteps(canForUser(withPerms(manager, []))).map((s) => s.id)).toEqual(['search', 'appearance', 'account']);
+		expect(buildSteps(canForUser(withPerms(manager, []))).map((s) => s.id)).toEqual(['appearance', 'account']);
 		for (const s of steps) {
 			expect(s.title).toBeTruthy();
 			expect(s.body).toBeTruthy();
@@ -87,16 +87,16 @@ describe('the guided tour', () => {
 		await userEvent.click(await screen.findByRole('button', { name: 'Take the tour' }));
 		await userEvent.click(await screen.findByRole('button', { name: 'Start the tour' }));
 		let card = await screen.findByRole('dialog');
-		expect(card).toHaveTextContent('Step 1 of 5');
+		expect(card).toHaveTextContent('Step 1 of 4');
 		expect(within(card).getByRole('heading', { name: 'People' })).toBeInTheDocument();
 		expect(within(card).getByRole('button', { name: 'Back' })).toBeDisabled();
 		await userEvent.click(within(card).getByRole('button', { name: 'Next' }));
 		card = await screen.findByRole('dialog');
 		expect(within(card).getByRole('heading', { name: 'Present with confidence' })).toBeInTheDocument();
-		expect(card).toHaveTextContent('Step 2 of 5');
+		expect(card).toHaveTextContent('Step 2 of 4');
 		await userEvent.click(within(card).getByRole('button', { name: 'Back' }));
 		expect(await screen.findByRole('heading', { name: 'People' })).toBeInTheDocument();
-		for (let i = 0; i < 4; i += 1) await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next' }));
+		for (let i = 0; i < 3; i += 1) await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Next' }));
 		expect(within(screen.getByRole('dialog')).getByRole('heading', { name: 'Your account' })).toBeInTheDocument();
 		await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Finish' }));
 		expect(await screen.findByRole('heading', { name: 'You are all set' })).toBeInTheDocument();

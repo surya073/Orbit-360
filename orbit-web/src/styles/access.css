@@ -672,3 +672,97 @@ button.up-cell:focus-visible {
 .up-cell--none {
 	opacity: 0.55;
 }
+
+/* role cards in the invite dialog: the choice shows what each role is without opening anything */
+.role-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+	gap: var(--space-2);
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+.role-cards legend {
+	padding: 0 0 var(--space-1);
+	font-size: var(--fs-sm);
+	font-weight: 600;
+}
+.role-card {
+	position: relative;
+	display: grid;
+	gap: 2px;
+	padding: var(--space-2) var(--space-3);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	cursor: pointer;
+	transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+.role-card:hover {
+	border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+.role-card input {
+	position: absolute;
+	opacity: 0;
+	inset: 0;
+	cursor: pointer;
+}
+.role-card:focus-within {
+	outline: 2px solid var(--accent);
+	outline-offset: 1px;
+}
+.role-card.is-selected {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.role-card small {
+	color: var(--text-muted);
+}
+.role-card__desc {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.up-summary {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-2);
+	font-size: var(--fs-sm);
+	font-weight: 600;
+}
+.pm__row-tools {
+	display: inline-flex;
+	gap: 4px;
+	margin-left: var(--space-2);
+	opacity: 0;
+	transition: opacity var(--dur-fast) var(--ease);
+}
+.pm tr:hover .pm__row-tools,
+.pm__row-tools:focus-within {
+	opacity: 1;
+}
+.pm__tool {
+	width: 22px;
+	height: 22px;
+	border: 1px solid var(--border);
+	border-radius: 50%;
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	font-size: var(--fs-xs);
+	line-height: 1;
+	cursor: pointer;
+}
+.pm__tool:hover {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+@media (hover: none) {
+	.pm__row-tools {
+		opacity: 1;
+	}
+}

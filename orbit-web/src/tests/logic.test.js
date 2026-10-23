@@ -68,8 +68,8 @@ describe('status tones and navigation', () => {
 			expect(labels(role)).toEqual(expect.arrayContaining(['Dashboard', 'Employees', 'Teams', 'Projects', 'Time entries', 'Attendance', 'Leave', 'Performance', 'Product development', 'AI & GitHub usage', 'Imports', 'Presentations']));
 		}
 		expect(visibleNav(canForRole('manager')).filter((n) => n.type === 'group' && n.label !== 'Settings').map((n) => n.label)).toEqual(['People', 'Delivery']);
-		expect(labels('manager')).not.toContain('Access & Permissions'); // only people who may view access settings see it
-		expect(labels('admin')).toContain('Access & Permissions');
+		expect(labels('manager')).not.toContain('User management'); // only people who may view access settings see it
+		expect(labels('admin')).toContain('User management');
 		expect(visibleNav(canForRole('stranger')).map((n) => n.label)).toEqual(['Settings']); // preferences are for everyone
 	});
 });

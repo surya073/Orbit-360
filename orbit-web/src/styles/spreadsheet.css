@@ -506,9 +506,6 @@
 		min-width: 0;
 		flex: 1;
 	}
-	.sheet-foot__hint {
-		display: none;
-	}
 }
 
 /* ---------- Full-height workspace ---------- */
@@ -601,12 +598,6 @@
 .sheet-foot .pager {
 	margin: 0 0 0 auto;
 	padding: 0;
-}
-.sheet-foot__hint {
-	margin-left: auto;
-}
-.sheet-foot__hint + .pager {
-	margin-left: 0;
 }
 
 /* ---------- Context menu ---------- */
@@ -777,9 +768,8 @@
 }
 .sheet-tabs__list {
 	display: flex;
+	flex: none;
 	gap: 2px;
-	min-width: 0;
-	overflow-x: auto;
 }
 .sheet-tab {
 	display: flex;
@@ -865,10 +855,6 @@
 }
 .sheet-tabs__add:hover {
 	background: var(--accent-soft);
-}
-.sheet-tabs .popover {
-	top: auto;
-	bottom: calc(100% + 6px);
 }
 .sheet-tabs__menu {
 	display: grid;
@@ -1122,10 +1108,35 @@
 }
 
 
-/* Status line */
+/* Status line: one compact row (selection / search info on the left, pager on the right) */
 .sheet-foot {
-	padding: 4px var(--space-3);
+	min-height: 30px;
+	padding: 2px var(--space-3);
+	gap: 2px var(--space-4);
 	color: var(--text-muted);
+}
+.sheet-foot__sel {
+	min-width: 0;
+}
+.sheet-foot .pager {
+	gap: 2px var(--space-3);
+}
+.sheet-foot .pager__range {
+	margin-right: 0;
+}
+/* a single page needs no First / Previous / Next / Last */
+.sheet-foot .pager--single .pager__nav {
+	display: none;
+}
+/* phones: the toolbar already takes much of the screen, so the grid may shrink instead of pushing the footer over the tabs */
+@media (max-width: 640px) {
+	.sheet {
+		min-height: 120px;
+	}
+	/* if toolbar + grid + status still do not fit (a very small phone), the pane scrolls rather than the status line covering the tabs */
+	.sheet-panes {
+		overflow-y: auto;
+	}
 }
 
 /* Bottom sheet-tab bar */
@@ -1133,7 +1144,7 @@
 	gap: var(--space-1);
 	margin-top: 0;
 	padding: 0 var(--space-2);
-	min-height: 40px;
+	min-height: 32px;
 	border-top: 1px solid var(--sheet-line);
 	background: var(--sheet-bar-bg);
 }
@@ -1566,4 +1577,68 @@
 	.cc-row__moves {
 		grid-column: 3;
 	}
+}
+
+/* ---------- One bar: the sheet tabs and the status line share a single row ---------- */
+/* Tabs on the left, the sheet's status (selection, search info, pager) on the right. When they do not fit, the whole bar
+   scrolls sideways (scrollbars are hidden app-wide; touch, trackpad and the mouse wheel all work). */
+.sheet-tabs {
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+.sheet-tabs__status {
+	display: flex;
+	flex: 1 0 auto;
+	align-items: center;
+	justify-content: flex-end;
+	min-width: 0;
+	margin-left: auto;
+	padding: 0 var(--space-3);
+}
+.sheet-tabs__status .sheet-foot {
+	flex-wrap: nowrap;
+	gap: 0 var(--space-4);
+	min-height: 0;
+	padding: 0;
+	white-space: nowrap;
+}
+.sheet-tabs__status .pager {
+	flex-wrap: nowrap;
+	margin: 0;
+}
+.sheet-tabs__panel {
+	background: var(--surface);
+	border: 1px solid var(--border-strong);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-lg);
+	animation: fade-in var(--dur-fast) var(--ease) both;
+}
+
+/* the "+ Add column" prompt in a blank, nameable header */
+.sheet__add {
+	color: var(--text-muted);
+	font-weight: 500;
+	white-space: nowrap;
+	cursor: pointer;
+}
+.sheet__col.is-blank:hover .sheet__add {
+	color: var(--accent);
+}
+
+/* offered when unsaved edits from this tab were found (after a reload or a crash) */
+.sheet-draft {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	margin-bottom: var(--space-2);
+	border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
+	border-radius: var(--radius-md);
+	background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+	font-size: var(--fs-sm);
+}
+.sheet-draft span {
+	margin-right: auto;
 }

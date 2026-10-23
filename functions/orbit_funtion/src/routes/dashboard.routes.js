@@ -14,6 +14,7 @@ module.exports = [
 	{ method: 'GET', path: '/dashboard/product', permission: 'dashboard.view', validate: { query: overviewQuery }, handler: c.product },
 	{ method: 'GET', path: '/dashboard/ai-usage', permission: 'dashboard.view', validate: { query: overviewQuery }, handler: c.aiUsage },
 	{ method: 'GET', path: '/dashboard/freshness', permission: 'dashboard.view', validate: { query: overviewQuery }, handler: c.freshness },
+	{ method: 'GET', path: '/dashboard/highlights', permission: 'dashboard.view', validate: { query: overviewQuery }, handler: c.highlights },
 	{ method: 'GET', path: '/dashboard/people-profiles', permission: ['dashboard.view', 'employees.view'], validate: { query: peopleProfilesQuery }, handler: c.peopleProfiles },
 	{ method: 'POST', path: '/dashboard/snapshots', permission: 'dashboard.export', validate: { body: snapshotBody }, handler: c.createSnapshot },
 	{ method: 'GET', path: '/dashboard/snapshots', permission: 'dashboard.view', validate: { query: (raw) => ({ paging: parsePaging(raw) }) }, handler: c.listSnapshots },

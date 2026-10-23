@@ -118,7 +118,7 @@ export default function LineChart({ data, series, height = 200, yFormat = (v) =>
 					{series.map((s) => (
 						<div key={s.key}>
 							<span>
-								<i style={{ background: s.color, display: 'inline-block', width: 8, height: 8, borderRadius: 2, marginRight: 5 }} />
+								<i className="chart-swatch" style={{ background: s.color }} />
 								{s.label}
 							</span>
 							<b>{Number.isFinite(tip[s.key]) ? yFormat(tip[s.key]) : 'No data'}</b>

@@ -19,14 +19,14 @@ export const productConfig = defineModule({
 		{ key: 'title', label: 'Title' },
 		{ key: 'project_id', label: 'Project', type: 'fk' },
 		{ key: 'status', label: 'Status', type: 'status' },
-		{ key: 'priority', label: 'Priority' },
+		{ key: 'item_priority', label: 'Priority' },
 		{ key: 'assignee_employee_id', label: 'Assignee', type: 'fk' },
 		{ key: 'due_date', label: 'Due', type: 'date' },
 		{ key: 'completed_date', label: 'Completed', type: 'date' },
 	],
 	filters: [
 		{ key: 'item_type', label: 'Type', options: ['task', 'feature', 'bug', 'release', 'milestone'] },
-		{ key: 'priority', label: 'Priority', options: ['low', 'medium', 'high', 'critical'] },
+		{ key: 'item_priority', label: 'Priority', options: ['low', 'medium', 'high', 'critical'] },
 	],
 });
 
@@ -34,7 +34,7 @@ function Summary() {
 	// Product status is a current-state snapshot; the backend ignores the period for it.
 	const res = useApiResource((signal) => dashboardService.product({}, { signal }), 'product-summary', { isEmpty: () => false });
 	return (
-		<div style={{ marginBottom: 'var(--space-4)' }}>
+		<div className="u-mb-4">
 			<ProductStatusCard res={res} />
 		</div>
 	);

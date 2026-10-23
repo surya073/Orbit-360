@@ -30,6 +30,10 @@ import { Brand, ClosingSlide, DetailStateSlide, OpeningSlide, PeopleSlide, Profi
 import { ReportingSlide, ReportingStateSlide } from './ReportingSlide';
 import { buildReportingModel } from './reportingSlides';
 import { SECTION_RENDERERS, sectionsNeeded } from './sections';
+import SlideCanvas from './studio/SlideCanvas';
+import { slideSteps } from './studio/slideModel';
+import WidgetView from './studio/WidgetView';
+import { needsPrevious, previousRange } from './studio/widgetData';
 
 const CANVAS_W = 1920;
 const CANVAS_H = 1080;
@@ -85,7 +89,9 @@ function useFitScale(ref) {
 			window.removeEventListener('resize', measure);
 		};
 	}, [ref]);
-	return Math.max(Math.min(box.w / CANVAS_W, box.h / CANVAS_H), 0.1);
+	const scale = Math.max(Math.min(box.w / CANVAS_W, box.h / CANVAS_H), 0.1);
+	// Whole-pixel offsets (a half-pixel translate softens every glyph).
+	return { scale, x: Math.round((box.w - CANVAS_W * scale) / 2), y: Math.round((box.h - CANVAS_H * scale) / 2) };
 }
 
 const queryFlag = (sp, key, fallback) => (sp.has(key) ? sp.get(key) === '1' : fallback);
@@ -111,7 +117,8 @@ export default function PresentationPlayer() {
 	const [theme, setTheme] = useState(() => (THEME_IDS.includes(sp.get('theme')) ? sp.get('theme') : readStoredTheme()));
 	const stored = useMemo(() => readStoredOptions(), []);
 	// A story template (?story=) decides which sections play and in what order; theme, layout and transition stay the viewer's own choices.
-	const story = storyById(sp.get('story'));
+	const deckIsStudio = Boolean(deck.data && deck.data.config && deck.data.config.slides.some((s) => s.type === 'custom'));
+	const story = deckIsStudio ? null : storyById(sp.get('story')); // a studio deck is never swapped for a story template
 	const wantPeople = story ? story.detail.people : queryFlag(sp, 'people', stored.people);
 	const wantRecords = story ? story.detail.records : queryFlag(sp, 'records', stored.records);
 	const wantReportingExtra = story ? false : queryFlag(sp, 'reporting', stored.reporting); // a story lists the reporting slide itself
@@ -121,6 +128,7 @@ export default function PresentationPlayer() {
 	const [transition, setTransition] = useState(readStoredTransition); // 'auto' = the template's own
 	const [scene, setScene] = useState(readStoredScene); // how a slide's content enters; 'auto' = a different one per slide
 	const [auto, setAuto] = useState(false); // auto-play: advance every AUTO_MS
+	const [notesOn, setNotesOn] = useState(false); // speaker notes of a studio slide (press N)
 	const [chrome, setChrome] = useState(true);
 	const hideTimer = useRef(null);
 
@@ -155,7 +163,8 @@ export default function PresentationPlayer() {
 
 	// Saved reporting tree: fetched once, only when the deck has the Team reporting structure section.
 	const hasReportingSection = useMemo(() => slides.some((s) => s.type === 'section' && s.section === 'reporting_structure'), [slides]);
-	const addReporting = Boolean(config) && wantReportingExtra && !hasReportingSection && allowed('reporting.view') && allowed('employees.view');
+	const studioDeck = useMemo(() => slides.some((s) => s.type === 'custom'), [slides]); // a studio deck is exactly what its author built: nothing is added to it
+	const addReporting = Boolean(config) && wantReportingExtra && !studioDeck && !hasReportingSection && allowed('reporting.view') && allowed('employees.view');
 	const wantReporting = hasReportingSection || addReporting;
 	const reportingRes = useApiResource((signal) => reportingService.get(filters.teamId || '', { signal }), `rp|${filters.teamId || ''}`, { enabled: Boolean(config) && wantReporting, isEmpty: () => false });
 	const reporting = useMemo(() => (wantReporting ? { status: reportingRes.status, error: reportingRes.error, model: buildReportingModel(reportingRes.data) } : null), [wantReporting, reportingRes.status, reportingRes.error, reportingRes.data]);
@@ -169,6 +178,19 @@ export default function PresentationPlayer() {
 	const index = Math.min(nav.index, last);
 	const entry = hasSlides ? list[index] : null;
 
+	// "On click" reveals on a studio slide: Next shows the next group of objects before it moves to the next slide.
+	const [stepState, setStepState] = useState({ index: 0, step: 0 });
+	const steps = entry && entry.kind === 'custom' ? slideSteps(entry.slide) : 0;
+	const step = stepState.index === index ? stepState.step : 0;
+
+	// Widgets that compare with the previous period fetch that one overview (cached), only when the deck has such a widget.
+	const prevParams = useMemo(() => {
+		if (!period) return null;
+		const r = previousRange(period);
+		return { ...r, ...(filters.teamId ? { team_id: filters.teamId } : {}), ...(filters.projectId ? { project_id: filters.projectId } : {}) };
+	}, [period && period.from, period && period.to, filters.teamId, filters.projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+	const prevOverview = useApiResource((signal) => dashboardService.overview(prevParams, { signal }), `prev|${prevParams && prevParams.from}|${prevParams && prevParams.to}|${filters.teamId || ''}|${filters.projectId || ''}`, { enabled: Boolean(config) && Boolean(prevParams) && needsPrevious(slides), isEmpty: () => false });
+
 	const goTo = useCallback(
 		(n) =>
 			setNav((s) => {
@@ -178,6 +200,10 @@ export default function PresentationPlayer() {
 		[last]
 	);
 	const exit = useCallback(() => navigate(ROUTES.presentations), [navigate]);
+	const advance = useCallback(() => {
+		if (steps > step) setStepState({ index, step: step + 1 });
+		else goTo(index + 1);
+	}, [steps, step, index, goTo]);
 	const pickTransition = useCallback((id) => {
 		setTransition(id);
 		storeTransition(id);
@@ -218,19 +244,22 @@ export default function PresentationPlayer() {
 	// One keyboard listener for the whole viewer. It reads the latest state through a ref so it is
 	// registered once (no duplicate handlers) and ignores keys meant for inputs and focused buttons.
 	const live = useRef({});
-	live.current = { index, last, goTo, exit, toggleFullscreen, toggleAuto: () => setAuto((a) => !a), cycleTransition: () => setTransition((cur) => { const ids = TRANSITIONS.map((x) => x.id); const next = ids[(ids.indexOf(cur) + 1) % ids.length]; storeTransition(next); return next; }) };
+live.current = { index, last, goTo, advance, toggleNotes: () => setNotesOn((v) => !v), exit, toggleFullscreen, toggleAuto: () => setAuto((a) => !a), cycleTransition: () => setTransition((cur) => { const ids = TRANSITIONS.map((x) => x.id); const next = ids[(ids.indexOf(cur) + 1) % ids.length]; storeTransition(next); return next; }) };
 	useEffect(() => {
 		const onKey = (e) => {
 			if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
 			const t = e.target;
 			if (t && t.closest && t.closest('input, select, textarea, [contenteditable="true"]')) return;
 			if (t && t.closest && t.closest('button, a') && (e.key === ' ' || e.key === 'Enter')) return;
-			const { index: i, last: l, goTo: go, exit: leave, toggleFullscreen: fs, toggleAuto, cycleTransition } = live.current;
+const { index: i, last: l, goTo: go, advance: next, toggleNotes, exit: leave, toggleFullscreen: fs, toggleAuto, cycleTransition } = live.current;
 			const move = (n) => {
 				e.preventDefault();
 				go(n);
 			};
-			if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') move(i + 1);
+			if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+				e.preventDefault();
+				next();
+			}
 			else if (e.key === 'ArrowLeft' || e.key === 'PageUp') move(i - 1);
 			else if (e.key === 'Home') move(0);
 			else if (e.key === 'End') move(l);
@@ -240,6 +269,9 @@ export default function PresentationPlayer() {
 			} else if (e.key === 't' || e.key === 'T') {
 				e.preventDefault();
 				cycleTransition();
+			} else if (e.key === 'n' || e.key === 'N') {
+				e.preventDefault();
+				toggleNotes();
 			} else if (e.key === 'f' || e.key === 'F') {
 				e.preventDefault();
 				fs();
@@ -267,7 +299,7 @@ export default function PresentationPlayer() {
 		return () => clearTimeout(hideTimer.current);
 	}, [wake]);
 
-	const scale = useFitScale(viewportRef);
+	const fit = useFitScale(viewportRef);
 	// The ambient glow leans a little toward the pointer (a CSS variable, so no re-render per mouse move).
 	const lean = useCallback((e) => {
 		const el = rootRef.current;
@@ -299,6 +331,14 @@ export default function PresentationPlayer() {
 		if (e.kind === 'reporting') return <ReportingSlide slide={e} title={reportingTitle} />;
 		if (e.kind === 'reporting-state') return <ReportingStateSlide slide={e} title={reportingTitle} onRetry={reportingRes.reload} />;
 		if (e.kind === 'detail-state') return <DetailStateSlide slide={e} onRetry={e.topic === 'people' ? people.reload : records.reload} />;
+		if (e.kind === 'custom') {
+			return (
+				// a click on the slide (not on a link) shows the next group of objects, like a click in a slide show
+				<div className="pcustom" onClick={(ev) => { if (steps > step && !ev.target.closest('a')) advance(); }}>
+					<SlideCanvas slide={e.slide} step={step} onJump={goTo} renderWidget={(o) => <WidgetView o={o} data={data} prev={prevOverview} />} />
+				</div>
+			);
+		}
 		const s = e.slide;
 		const renderer = s.type === 'section' ? SECTION_RENDERERS[s.section] : null;
 		if (renderer) {
@@ -318,7 +358,7 @@ export default function PresentationPlayer() {
 		return <TextSlide title={s.title} body={s.body} />;
 	}
 
-	const cover = entry && (entry.kind === 'opening' || entry.kind === 'closing');
+	const cover = entry && (entry.kind === 'opening' || entry.kind === 'closing' || entry.kind === 'custom'); // no generated footer on covers or on slides that carry their own design
 	const total = list.length;
 
 	return (
@@ -346,23 +386,44 @@ export default function PresentationPlayer() {
 			{auto ? <span className="pres__auto" key={index} style={{ animationDuration: `${AUTO_MS}ms` }} aria-hidden="true" /> : null}
 
 			<div className="pres__viewport" ref={viewportRef}>
-				<div className="pres__canvas" style={{ width: CANVAS_W, height: CANVAS_H, transform: `translate(-50%, -50%) scale(${scale})` }}>
-					<div className="pres__ambient" aria-hidden="true">
-						<i />
-						<i />
-						<i />
-					</div>
-					{deck.status === 'loading' && !deck.data ? (
+				<div className="pres__canvas" style={{ width: CANVAS_W, height: CANVAS_H, transform: `translate(${fit.x}px, ${fit.y}px) scale(${fit.scale})` }}>
+{deckIsStudio ? null : (
+<div className="pres__ambient" aria-hidden="true">
+<i />
+<i />
+<i />
+</div>
+)}
+{deck.status === 'loading' && !deck.data ? (
 						<div className="pres__state">
 							<LoadingState lines={5} />
+						</div>
+					) : deck.status === 'error' && deck.error && deck.error.status === 404 ? (
+						<div className="pres__state pres__state--bad" role="alert">
+							<h2>This presentation does not exist</h2>
+							<p>It may have been deleted, or the link is wrong. Presentations you are not allowed to open are not shown either.</p>
+							<div className="pres__state-actions">
+								<Button variant="primary" size="sm" onClick={exit}>
+									Back to presentations
+								</Button>
+							</div>
 						</div>
 					) : deck.status === 'error' ? (
 						<div className="pres__state">
 							<ErrorState error={deck.error} onRetry={deck.reload} />
 						</div>
 					) : !deck.data.slidesAvailable ? (
-						<div className="pres__state">
-							<p className="banner banner--warning">This presentation could not be read.</p>
+						<div className="pres__state pres__state--bad" role="alert">
+							<h2>This presentation cannot be played</h2>
+							<p>{deck.data.slidesProblem || 'Its saved slides could not be read.'} Nothing was changed. You can open it in the editor to check it, or delete it and make a new one.</p>
+							<div className="pres__state-actions">
+								<Button variant="primary" size="sm" to={ROUTES.presentationEdit(id)}>
+									Open in the editor
+								</Button>
+								<Button size="sm" onClick={exit}>
+									Back to presentations
+								</Button>
+							</div>
 						</div>
 					) : !hasSlides ? (
 						<div className="pres__state">
@@ -370,13 +431,15 @@ export default function PresentationPlayer() {
 						</div>
 					) : (
 						<section className={`pslide pslide--${entry.kind} is-${nav.dir}`} data-ptrans={transition === 'auto' ? t.motion : transition} data-pscene={sceneFor(scene, index)} key={`${index}-${entry.kind}`} aria-label={`Slide ${index + 1}`}>
-							<div className="pdecor" aria-hidden="true">
-								<i />
-								<i />
-								<i />
-								<i />
-							</div>
-							<EntranceContext.Provider value={true}>{renderEntry(entry)}</EntranceContext.Provider>
+{deckIsStudio ? null : (
+<div className="pdecor" aria-hidden="true">
+<i />
+<i />
+<i />
+<i />
+</div>
+)}
+<EntranceContext.Provider value={true}>{renderEntry(entry)}</EntranceContext.Provider>
 							{cover ? null : (
 								<footer className="pslide__foot">
 									<Brand size={22} />
@@ -394,18 +457,32 @@ export default function PresentationPlayer() {
 				</div>
 			</div>
 
+			{notesOn && entry && entry.kind === 'custom' ? (
+				<aside className="pres__notes" aria-label="Speaker notes" aria-live="polite">
+					<b>Notes</b>
+					<p>{entry.slide.notes || 'No notes for this slide.'}</p>
+				</aside>
+			) : null}
 			<div className="pres__toolbar" role="toolbar" aria-label="Presentation controls">
 				<strong className="pres__title">{title}</strong>
 				<span className="pres__count" aria-live="polite">
 					{hasSlides ? `Slide ${index + 1} of ${total}` : ''}
+					{steps > step ? <em className="pres__clicks"> · click for the next ({steps - step} more on this slide)</em> : null}
 				</span>
 				<span className="pres__spacer" />
+				{deckIsStudio && slides.some((s) => s.notes) ? (
+					<Button size="sm" variant={notesOn ? 'primary' : 'secondary'} aria-pressed={notesOn} onClick={() => setNotesOn((v) => !v)} title="Speaker notes (N)">
+						Notes
+					</Button>
+				) : null}
 				<Button size="sm" icon="chevronLeft" disabled={index === 0} onClick={() => goTo(index - 1)} aria-label="Previous slide">
 					Previous
 				</Button>
-				<Button size="sm" disabled={index >= last} onClick={() => goTo(index + 1)} aria-label="Next slide">
+<Button size="sm" disabled={index >= last && steps <= step} onClick={advance} aria-label="Next slide">
 					Next
 				</Button>
+				{deckIsStudio ? null : (
+					<>
 				<Popover
 					label="Slide layout"
 					align="right"
@@ -504,9 +581,12 @@ export default function PresentationPlayer() {
 						</ul>
 					)}
 				</Popover>
+					</>
+				)}
 				<Button size="sm" icon="play" aria-pressed={auto} onClick={() => setAuto((a) => !a)} disabled={!hasSlides || index >= last} title="Advance by itself (A)">
 					{auto ? 'Pause' : 'Auto-play'}
 				</Button>
+				{deckIsStudio ? null : (
 				<Popover
 					label="Presentation theme"
 					align="right"
@@ -539,6 +619,7 @@ export default function PresentationPlayer() {
 						</ul>
 					)}
 				</Popover>
+				)}
 				{typeof document !== 'undefined' && document.fullscreenEnabled ? (
 					<Button size="sm" icon="present" onClick={toggleFullscreen} aria-pressed={fullscreen}>
 						{fullscreen ? 'Exit fullscreen' : 'Fullscreen'}

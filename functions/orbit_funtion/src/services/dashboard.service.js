@@ -132,6 +132,43 @@ async function product(ctx, f) {
 	return { filters: echoFilters(ctx, f), asOf: businessToday(), product: m.productMetrics(rows, overdue) };
 }
 
+const HIGHLIGHT_TOP = 10; // the dashboard card shows three; presentation leaderboards up to ten
+const NEW_JOINER_DAYS = 30;
+const NEW_JOINER_MAX = 5;
+
+/**
+ * People worth a mention for the selected period: who logged the most approved hours, who checked in on time most
+ * often, and who joined in the last 30 days. Two grouped queries and one new-joiner query, then ONE lookup of the
+ * few names shown, so the cost does not grow with the number of people. A list is simply empty when there is no data
+ * (never padded with zeros).
+ */
+async function highlights(ctx, f) {
+	const { scope, repos } = ctx;
+	const d = repos.dashboard;
+	const since = addDays(f.to, -NEW_JOINER_DAYS);
+	const [minutes, onTime, joiners] = await Promise.all([d.minutesByEmployee(scope, f), d.onTimeByEmployee(scope, f), d.newJoiners(scope, f, since, NEW_JOINER_MAX)]);
+	const top = (rows, key) =>
+		rows
+			.map((r) => ({ id: String(r.employee_id), value: m.toNum(r[key]) ?? 0 }))
+			.filter((r) => r.value > 0)
+			.sort((a, b) => b.value - a.value || (a.id < b.id ? -1 : 1))
+			.slice(0, HIGHLIGHT_TOP);
+	const hours = top(minutes, 'minutes');
+	const days = top(onTime, 'days');
+	const names = new Map((await d.employeeNames(scope, [...new Set([...hours, ...days].map((r) => r.id))])).map((r) => [String(r.ROWID), r]));
+	const person = (r, extra) => {
+		const e = names.get(r.id);
+		return e ? { id: r.id, name: e.full_name, role: e.job_role || null, ...extra(r) } : null; // out of scope or removed: not shown
+	};
+	return {
+		filters: echoFilters(ctx, f),
+		topPerformers: hours.map((r) => person(r, (x) => ({ hours: Math.round((x.value / 60) * 10) / 10 }))).filter(Boolean),
+		bestAttendance: days.map((r) => person(r, (x) => ({ days: x.value }))).filter(Boolean),
+		newJoiners: [...joiners].sort((a, b) => String(b.joining_date).localeCompare(String(a.joining_date))).map((e) => ({ id: String(e.ROWID), name: e.full_name, role: e.job_role || null, joinedOn: e.joining_date })),
+		newJoinerDays: NEW_JOINER_DAYS,
+	};
+}
+
 /** Reported AI/tool usage for the reporting months covered by the range. */
 async function aiUsage(ctx, f) {
 	const { scope, repos } = ctx;
@@ -216,4 +253,4 @@ async function freshness(ctx, f) {
 	};
 }
 
-module.exports = { overview, trends, createSnapshot, getSnapshot, listSnapshots, projects, product, aiUsage, freshness, peopleProfiles };
+module.exports = { highlights, overview, trends, createSnapshot, getSnapshot, listSnapshots, projects, product, aiUsage, freshness, peopleProfiles };

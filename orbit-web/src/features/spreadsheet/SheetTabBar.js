@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import Popover from '../../components/common/Popover';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import FloatingPanel from '../../components/common/FloatingPanel';
 import { MAX_NAME } from './tabStore';
 
 function TabName({ tab, onRename, onDone }) {
@@ -35,10 +35,31 @@ function TabName({ tab, onRename, onDone }) {
  * Sheet tabs along the bottom, like a spreadsheet. Every tab is its own sheet (a record type with
  * its own edits, search, sort and selection). Double-click or F2 renames, the x closes (never the
  * last one), and + adds "Sheet N" for a chosen record type.
+ *
+ * The same bar also carries the active sheet's status line (selection, search info, pager): the sheet renders it
+ * into `statusRef`'s element. Tabs and status are one row in one container; when they do not fit, the whole bar scrolls
+ * sideways (a mouse wheel scrolls it too).
  */
-export default function SheetTabBar({ tabs, activeId, dirty, modules, onSelect, onAdd, onRename, onClose }) {
+export default function SheetTabBar({ tabs, activeId, dirty, modules, onSelect, onAdd, onRename, onClose, statusRef }) {
 	const [renaming, setRenaming] = useState(null);
+	const [menuOpen, setMenuOpen] = useState(false);
 	const refs = useRef({});
+	const bar = useRef(null);
+	const addBtn = useRef(null);
+	const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+	// A mouse wheel has no sideways axis: let it scroll the bar when the bar overflows.
+	useEffect(() => {
+		const el = bar.current;
+		if (!el) return undefined;
+		const onWheel = (e) => {
+			if (el.scrollWidth <= el.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+			el.scrollLeft += e.deltaY;
+			e.preventDefault();
+		};
+		el.addEventListener('wheel', onWheel, { passive: false });
+		return () => el.removeEventListener('wheel', onWheel);
+	}, []);
 
 	useEffect(() => {
 		if (renaming && !tabs.some((t) => t.id === renaming)) setRenaming(null);
@@ -57,7 +78,7 @@ export default function SheetTabBar({ tabs, activeId, dirty, modules, onSelect, 
 	};
 
 	return (
-		<div className="sheet-tabs">
+		<div className="sheet-tabs" ref={bar}>
 			<div className="sheet-tabs__list" role="tablist" aria-label="Sheets">
 				{tabs.map((t, i) => {
 					const active = t.id === activeId;
@@ -96,34 +117,28 @@ export default function SheetTabBar({ tabs, activeId, dirty, modules, onSelect, 
 					);
 				})}
 			</div>
-			<Popover
-				label="Add a sheet"
-				align="left"
-				trigger={({ toggle, props }) => (
-					<button type="button" className="sheet-tabs__add" aria-label="Add sheet" title="Add a sheet" onClick={toggle} {...props}>
-						+
-					</button>
-				)}
-			>
-				{({ close }) => (
-					<div className="sheet-tabs__menu">
-						<span className="small muted sheet-tabs__menu-title">New sheet for…</span>
-						{modules.map((m) => (
-							<button
-								key={m.resource}
-								type="button"
-								className="menu-item"
-								onClick={() => {
-									close();
-									onAdd(m.resource);
-								}}
-							>
-								{m.title}
-							</button>
-						))}
-					</div>
-				)}
-			</Popover>
+			<button type="button" ref={addBtn} className="sheet-tabs__add" aria-label="Add sheet" aria-haspopup="true" aria-expanded={menuOpen} title="Add a sheet" onClick={() => setMenuOpen((o) => !o)}>
+				+
+			</button>
+			<FloatingPanel anchorRef={addBtn} open={menuOpen} onClose={closeMenu} align="left" width={240} gap={6} className="sheet-tabs__panel" role="group" aria-label="Add a sheet">
+				<div className="sheet-tabs__menu">
+					<span className="small muted sheet-tabs__menu-title">New sheet for…</span>
+					{modules.map((m) => (
+						<button
+							key={m.resource}
+							type="button"
+							className="menu-item"
+							onClick={() => {
+								closeMenu();
+								onAdd(m.resource);
+							}}
+						>
+							{m.title}
+						</button>
+					))}
+				</div>
+			</FloatingPanel>
+			<div className="sheet-tabs__status" ref={statusRef} />
 		</div>
 	);
 }

@@ -84,6 +84,13 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters,
 	const params = useMemo(() => ({ page, pageSize, q: dq, ...filters }), [page, pageSize, dq, filters]);
 	const res = useApiResource((signal) => resourceService.list(resource, params, { signal }), `${resource}|${JSON.stringify(params)}`, { isEmpty: () => false });
 	const labelOf = useLookupLabels(res.data, config.fkColumns);
+	// After a write the list reloads and so do the summary cards above it, so their numbers never lag behind the table (one extra request).
+	const [summaryVersion, setSummaryVersion] = useState(0);
+	const { reload: reloadList } = res;
+	const reloadAfterWrite = useCallback(() => {
+		reloadList();
+		setSummaryVersion((v) => v + 1);
+	}, [reloadList]);
 	useBentoReveal('.mod', [res.status === 'loading' ? 'l' : 'r', layout], '.mod .card, .mod .table-wrap, .mod .hgrid');
 
 	const template = templates.byModule[resource];
@@ -130,12 +137,12 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters,
 			try {
 				await fn();
 				notify(success);
-				res.reload();
+				reloadAfterWrite();
 			} catch (e) {
 				notify(e.message, 'error');
 			}
 		},
-		[notify, res]
+		[notify, reloadAfterWrite]
 	);
 
 	const actions = (row) => (
@@ -153,7 +160,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters,
 			) : null}
 			{ViewCard ? (
 				<Button size="sm" variant="ghost" icon="search" aria-label={`View ${row.full_name || row.name || `record ${row.ROWID}`}`} onClick={() => setDialog({ type: 'view', row })}>
-					View
+					{config.viewLabel || 'View'}
 				</Button>
 			) : null}
 			{canEdit ? (
@@ -191,7 +198,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters,
 							</Button>
 						) : null}
 						{config.importable && can('imports.view') && canCreate ? (
-							<Button icon="upload" to={ROUTES.imports}>
+							<Button icon="upload" to={`${ROUTES.imports}?module=${resource}`}>
 								Import
 							</Button>
 						) : null}
@@ -208,7 +215,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters,
 					The entry form is unavailable: {templates.error.message}
 				</p>
 			) : null}
-			{config.summary ? <ModuleSummary kind={config.summary} from={filters.from} to={filters.to} /> : null}
+			{config.summary ? <ModuleSummary kind={config.summary} from={filters.from} to={filters.to} version={summaryVersion} /> : null}
 			{topSlot}
 
 			<FilterBar label={`Filter ${config.title}`}>
@@ -273,7 +280,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters,
 					/>
 				) : (
 					<>
-						<div style={{ opacity: res.status === 'loading' ? 0.6 : 1, transition: 'opacity var(--dur) var(--ease)' }} aria-busy={res.status === 'loading'}>
+						<div className={`mod-body ${res.status === 'loading' ? 'is-loading' : ''}`.trim()} aria-busy={res.status === 'loading'}>
 							{GridCard && layout === 'cards' ? (
 								<div className="hgrid" role="list" aria-label={config.title}>
 									{rows.map((row) => (
@@ -301,7 +308,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters,
 						onSaved={(_, editing) => {
 							closeDialog();
 							notify(editing ? 'Changes saved' : 'Record created');
-							res.reload();
+							reloadAfterWrite();
 						}}
 					/>
 				</Modal>
@@ -318,7 +325,7 @@ export default function ResourcePage({ config, rowExtras, topSlot, extraFilters,
 						await resourceService.remove(resource, dialog.row.ROWID);
 						closeDialog();
 						notify('Record deleted');
-						res.reload();
+						reloadAfterWrite();
 					}}
 				/>
 			) : null}

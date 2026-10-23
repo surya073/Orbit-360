@@ -29,18 +29,17 @@ const NAV_COPY = {
 	Delivery: { icon: 'folder', title: 'Delivery', body: 'Projects and assignments, time entries with approvals, product work and the AI tools your teams report using.' },
 	Imports: { icon: 'upload', title: 'Bring your data in', body: 'Upload a CSV, review any conflicts, then commit in safe batches. Prefer typing? Open the spreadsheet editor from here to edit records in a full-screen grid with formatting, undo and redo.' },
 	Presentations: { icon: 'present', title: 'Present with confidence', body: 'Turn live data into an executive deck in five themes, with individual profiles and your reporting tree. Press play and you are on stage.' },
-	Access: { icon: 'lock', title: 'Control who sees what', body: 'Create roles, choose exactly what each one may view, create, edit, delete or approve, and assign them to people, team by team.' },
+	'User management': { icon: 'lock', title: 'People and permissions', body: 'Invite people, give each one a role right in the table, and choose exactly what each role may view, create, edit, delete or approve, team by team.' },
 };
 
 const FIXED = {
-	search: { target: 'search', icon: 'search', title: 'Find anything, fast', body: 'Search employees, projects, product items and pages from anywhere.', hint: 'Press Ctrl K (⌘K on Mac) to open it without the mouse.' },
-	appearance: { target: 'appearance', icon: 'palette', title: 'Make it yours', body: 'Settings sits at the foot of the sidebar. Pick one of 29 themes, your own accent colour, fonts and layout; they apply instantly and are remembered on this device. Access & Permissions lives inside Settings too.' },
+	appearance: { target: 'appearance', icon: 'palette', title: 'Make it yours', body: 'Settings is the last icon in the sidebar. Pick one of 29 themes, your own accent colour, fonts and layout; they apply instantly and are remembered on this device. People, roles and permissions are under User management.' },
 	account: { target: 'account', icon: 'user', title: 'Your account', body: 'Who you are signed in as, at the bottom of the sidebar. Your profile, settings and sign-out are in its menu, and you can replay this tour from there whenever you like.' },
 };
 
 /**
  * The tour for one user: a step for every part of the app they can actually open (the same permission
- * rules as the navigation), then search, appearance and account. `can(permissionKey)` decides.
+ * rules as the navigation), then appearance and account. `can(permissionKey)` decides.
  */
 export function buildSteps(can) {
 	const steps = visibleNav(can)
@@ -57,6 +56,6 @@ export function buildSteps(can) {
 			chips: n.type === 'group' ? n.items.map((i) => i.label) : [],
 		};
 	});
-	for (const key of ['search', 'appearance', 'account']) steps.push({ id: key, chips: [], ...FIXED[key] });
+	for (const key of ['appearance', 'account']) steps.push({ id: key, chips: [], ...FIXED[key] });
 	return steps;
 }

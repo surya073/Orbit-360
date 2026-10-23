@@ -133,10 +133,10 @@ export default function PresentationEditor() {
 							<TeamFilter value={team} onChange={setTeam} />
 							<ProjectFilter value={project} onChange={setProject} />
 						</div>
-						<div className="filter-bar" style={{ marginTop: 'var(--space-3)', marginBottom: 0 }}>
+						<div className="filter-bar u-mt-3 u-mb-0">
 							<DateRangeFilter label="Reporting period" value={period} onChange={setPeriod} />
 						</div>
-						<p className="small muted" style={{ marginTop: 8 }}>
+						<p className="small muted u-mt-2">
 							Presets are rolling: “This month” always means the month it is presented in. Managers present their own team; administrators can scope a deck to one team or all.
 							{fieldErrors.period ? <span className="field-error"> {fieldErrors.period}</span> : null}
 						</p>
@@ -154,12 +154,12 @@ export default function PresentationEditor() {
 							items={slideItems}
 							onReorder={(ids) => setSlides((list) => ids.map((id) => list[slideItems.findIndex((it) => it.id === id)]))}
 							renderItem={(it, { handle, index: i, isFirst, isLast, moveUp, moveDown }) => (
-								<div className="insight slide-row" style={{ alignItems: 'center' }}>
+								<div className="insight slide-row">
 									{handle}
-									<span className="num muted" style={{ width: 20 }}>
+									<span className="num muted slide-row__num">
 										{i + 1}
 									</span>
-									<span style={{ flex: '1 1 120px', minWidth: 0 }}>
+									<span className="slide-row__name">
 										<strong>{it.label}</strong>
 										{it.legacy ? <span className="small muted"> · legacy slide</span> : null}
 									</span>
@@ -177,10 +177,10 @@ export default function PresentationEditor() {
 						/>
 						{available.length ? (
 							<>
-								<h3 className="small muted" style={{ margin: 'var(--space-4) 0 var(--space-2)' }}>
+								<h3 className="small muted editor-subhead">
 									Add a section
 								</h3>
-								<div className="legend" style={{ gap: 8 }}>
+								<div className="legend legend--tight">
 									{available.map((s) => (
 										<Button key={s.key} size="sm" icon="plus" title={s.description} onClick={() => setSlides((l) => [...l, { type: 'section', section: s.key }])}>
 											{s.label}

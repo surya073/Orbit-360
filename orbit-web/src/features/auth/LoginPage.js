@@ -90,7 +90,7 @@ export default function LoginPage() {
 
 			<main className="login__main">
 				<div className="login__top reveal" style={delay(100)}>
-					<span style={{ flex: 1 }} />
+					<span className="u-grow" />
 					<ThemeQuickMenu showSettingsLink={false} />
 				</div>
 				<div className="login__center">
@@ -99,7 +99,7 @@ export default function LoginPage() {
 						<p className="sub">Use your company account to continue.</p>
 
 						{state.status === 'error' ? (
-							<div role="alert" className="banner banner--error" style={{ display: 'grid', gap: 8 }}>
+							<div role="alert" className="banner banner--error login-error">
 								<span>{state.error}</span>
 								<span>
 									<Button size="sm" icon="refresh" onClick={retry}>
@@ -113,11 +113,11 @@ export default function LoginPage() {
 							{state.status === 'loading' ? (
 								<div className="login__skeleton">
 									<LoadingState height={14} label="Loading sign-in" />
-									<div className="skeleton" style={{ height: 42 }} />
-									<div className="skeleton" style={{ height: 42, marginTop: 6 }} />
+									<div className="skeleton skeleton--field" />
+									<div className="skeleton skeleton--field" />
 								</div>
 							) : null}
-							<div id="login-container" style={{ height: '100%' }} />
+							<div id="login-container" className="login-frame" />
 						</div>
 
 						<p className="login__help">

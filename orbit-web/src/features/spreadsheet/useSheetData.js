@@ -9,6 +9,58 @@ import { buildColumns, columnLetter, customColumns, keyFromLabel, normalizeCell,
 export const SHEET_PAGE_SIZE = 50;
 export const SHEET_COLUMNS = 29; // A..AC: the blank columns after the last real one are named by typing in them
 const SAVE_CONCURRENCY = 3;
+export const AUTOSAVE_MS = 3000; // idle time before an opted-in autosave
+
+// ---- autosave switch (this device; off until the user turns it on) and the unsaved-edits draft ----------------
+const AUTOSAVE_KEY = 'company360.sheetAutosave';
+export function useAutosaveSetting() {
+	const [on, setOn] = useState(() => {
+		try {
+			return window.localStorage.getItem(AUTOSAVE_KEY) === '1';
+		} catch {
+			return false;
+		}
+	});
+	const set = useCallback((v) => {
+		setOn(v);
+		try {
+			window.localStorage.setItem(AUTOSAVE_KEY, v ? '1' : '0');
+		} catch {
+			/* the choice just lasts until the page is closed */
+		}
+	}, []);
+	return [on, set];
+}
+
+// The draft lives in sessionStorage: it survives a reload or a crashed tab, but is gone when the tab closes, so
+// edited record values are never left behind on a shared computer.
+const draftKeyOf = (resource) => `company360.sheetDraft.${resource}`;
+function readDraft(resource) {
+	try {
+		const d = JSON.parse(window.sessionStorage.getItem(draftKeyOf(resource)) || 'null');
+		if (!d || typeof d !== 'object') return null;
+		const edits = d.edits && typeof d.edits === 'object' ? d.edits : {};
+		const newRows = Array.isArray(d.newRows) ? d.newRows : [];
+		const count = Object.keys(edits).length + newRows.length;
+		return count ? { edits, newRows, base: d.base && typeof d.base === 'object' ? d.base : {}, count } : null;
+	} catch {
+		return null;
+	}
+}
+function writeDraft(resource, edits, newRows, baselineOf) {
+	try {
+		const key = draftKeyOf(resource);
+		if (!Object.keys(edits).length && !newRows.length) return window.sessionStorage.removeItem(key);
+		const base = {};
+		Object.keys(edits).forEach((id) => {
+			const row = baselineOf(id) || {};
+			base[id] = Object.fromEntries(Object.keys(edits[id]).map((f) => [f, toText(row[f])]));
+		});
+		window.sessionStorage.setItem(key, JSON.stringify({ edits, newRows, base }));
+	} catch {
+		/* a full or blocked store only means there is no draft to restore */
+	}
+}
 const HISTORY_LIMIT = 100;
 const chunk = (list, n) => Array.from({ length: Math.ceil(list.length / n) }, (_, i) => list.slice(i * n, (i + 1) * n));
 
@@ -95,6 +147,10 @@ function reducer(state, a) {
 			a.ids.forEach((id) => delete edits[id]);
 			return { ...state, edits, undo: keepFormatOps(state.undo), redo: [] };
 		}
+		case 'restore': {
+			const top = a.newRows.reduce((m, r) => Math.max(m, Number(String(r.key).slice(2)) || 0), 0);
+			return { ...state, edits: a.edits, newRows: a.newRows, counter: Math.max(state.counter, top), errors: {} };
+		}
 		case 'discard':
 			return { ...initial, counter: state.counter, undo: keepFormatOps(state.undo) };
 		default:
@@ -107,7 +163,7 @@ function reducer(state, a) {
  * (resourceService list/create/update/remove). Edits are tracked per cell and only changed
  * fields are sent. Nothing is reported as saved until the backend confirms it.
  */
-export default function useSheetData({ resource, template, canWrite, search = '', page = 1, pageSize = SHEET_PAGE_SIZE, applyFormat }) {
+export default function useSheetData({ resource, template, canWrite, search = '', page = 1, pageSize = SHEET_PAGE_SIZE, applyFormat, autosave = false }) {
 	// Extra columns: definitions come from one cached request; their values ride along with the list (extra=1), so no request per row.
 	const custom = useCustomFields(resource);
 	const params = useMemo(() => ({ page, pageSize, ...(search ? { q: search } : {}), ...(custom.enabled ? { extra: 1 } : {}) }), [page, pageSize, search, custom.enabled]);
@@ -283,9 +339,9 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 	const filledNew = state.newRows.filter((r) => !isBlankNew(r));
 	const dirtyCount = dirtyIds.length + filledNew.length;
 
-	/** Save every pending change. `overwrite` skips the "changed on the server" check. */
+/** Save every pending change. `overwrite` skips the "changed on the server" check. `auto` (autosave) writes only edits to existing records that have no problem flagged; new rows always wait for Save. */
 	const save = useCallback(
-		async ({ overwrite = false } = {}) => {
+	async ({ overwrite = false, auto = false } = {}) => {
 			if (!canWrite || saving.current) return null;
 			saving.current = true;
 			setSaveState((s) => ({ ...s, status: 'saving' }));
@@ -299,8 +355,8 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 			try {
 				// 1. validate new rows (required fields), skipping entirely blank rows
 				const toCreate = [];
-				for (const r of filledNew) {
-					let ok = true;
+for (const r of auto ? [] : filledNew) {
+let ok = true;
 					for (const c of columns) {
 						if (c.required && (r.values[c.field] ?? '') === '') {
 							ok = false;
@@ -312,8 +368,8 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 				}
 				// 2. conflict check: has anyone changed the fields we edited since we loaded them?
 				const toUpdate = [];
-				const ids = Object.keys(state.edits);
-				const current = new Map();
+const ids = Object.keys(state.edits).filter((id) => !auto || !Object.keys(state.errors[rowKeyOf(id)] || {}).length);
+const current = new Map();
 				if (ids.length) {
 					for (const part of chunk(ids, 100)) {
 						const out = await resourceService.list(resource, { ids: part.join(','), pageSize: 100, ...(custom.enabled ? { extra: 1 } : {}) }, { fresh: true });
@@ -405,6 +461,45 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 		[canWrite, columns, state.edits, state.newRows, resource, baseText, res.reload, custom.enabled, custom.fields]
 	);
 
+	// Autosave (opt-in): a few seconds after the last keystroke, edits to existing records are saved in one batch.
+	// It stops at anything that needs a person: a flagged conflict or error, or a failed attempt (Save retries).
+	const saveRef = useRef(save);
+	saveRef.current = save;
+	useEffect(() => {
+		if (!autosave || !canWrite || saveState.status === 'saving' || saveState.status === 'error') return undefined;
+		const eligible = Object.keys(state.edits).some((id) => !Object.keys(state.errors[rowKeyOf(id)] || {}).length);
+		if (!eligible) return undefined;
+		const t = setTimeout(() => saveRef.current({ auto: true }), AUTOSAVE_MS);
+		return () => clearTimeout(t);
+	}, [autosave, canWrite, state.edits, state.errors, saveState.status]);
+
+	// Unsaved edits are kept as a draft for this tab; a draft found on load waits for a decision and is never overwritten.
+	const [draft, setDraft] = useState(() => readDraft(resource));
+	useEffect(() => {
+		setDraft(readDraft(resource));
+	}, [resource]);
+	useEffect(() => {
+		if (draft) return undefined;
+		const t = setTimeout(() => writeDraft(resource, state.edits, state.newRows.filter((r) => !isBlankNew(r)), (id) => baseline.current.get(id)), 400);
+		return () => clearTimeout(t);
+	}, [draft, resource, state.edits, state.newRows, isBlankNew]);
+	const restoreDraft = useCallback(() => {
+		if (!draft) return;
+		Object.entries(draft.base).forEach(([id, vals]) => {
+			if (!baseline.current.has(id)) baseline.current.set(id, vals); // a record on another page: what it held when it was edited
+		});
+		dispatch({ type: 'restore', edits: draft.edits, newRows: draft.newRows });
+		setDraft(null);
+	}, [draft]);
+	const dropDraft = useCallback(() => {
+		try {
+			window.sessionStorage.removeItem(draftKeyOf(resource));
+		} catch {
+			/* nothing to remove */
+		}
+		setDraft(null);
+	}, [resource]);
+
 	const deleteRecords = useCallback(
 		async (ids) => {
 			const failed = [];
@@ -457,6 +552,9 @@ export default function useSheetData({ resource, template, canWrite, search = ''
 		},
 		save,
 		saveState,
+		draft,
+		restoreDraft,
+		dropDraft,
 		deleteRecords,
 		dirtyCount,
 		hasConflicts: Object.values(state.errors).some((e) => Object.values(e).some((m) => String(m).startsWith('Changed on the server'))),

@@ -10,7 +10,7 @@ import { motionReduced } from '../../utils/motion';
  * cosmetic preference, so it is kept in localStorage (no backend call); storage failures degrade to
  * session-only. index.html applies the stored theme before first paint to avoid a flash.
  */
-const DEFAULTS = { theme: DEFAULT_THEME, density: 'comfortable', iconStyle: DEFAULT_ICON_STYLE, accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme' };
+const DEFAULTS = { theme: DEFAULT_THEME, density: 'comfortable', iconStyle: DEFAULT_ICON_STYLE, accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme', sidebar: '', cards: 'raised' };
 const VALID_DENSITY = DENSITIES.map((d) => d.id);
 const oneOf = (list, v, fallback) => (list.some((x) => x.id === v) ? v : fallback);
 
@@ -29,6 +29,8 @@ export function readAppearance(storage = window.localStorage) {
 			width: oneOf(WIDTHS, raw.width, DEFAULTS.width),
 			font: oneOf(FONTS, raw.font, DEFAULTS.font),
 			palette: oneOf(PALETTES, raw.palette, DEFAULTS.palette),
+			sidebar: isHex(raw.sidebar) ? raw.sidebar.toLowerCase() : '',
+			cards: ['raised', 'flat', 'outlined'].includes(raw.cards) ? raw.cards : DEFAULTS.cards,
 		};
 	} catch {
 		return DEFAULTS;
@@ -65,6 +67,15 @@ export function ThemeProvider({ children }) {
 		root.dataset.motion = prefs.motion;
 		root.dataset.width = prefs.width;
 		root.dataset.font = prefs.font;
+		root.dataset.cards = prefs.cards;
+		// A chosen sidebar colour replaces the sidebar's gradient; its icons and text switch to dark or light to stay readable.
+		['--rail-custom', '--rail-on'].forEach((k) => root.style.removeProperty(k));
+		if (isHex(prefs.sidebar)) {
+			const [r, g, b] = [1, 3, 5].map((i) => parseInt(prefs.sidebar.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+			root.style.setProperty('--rail-custom', prefs.sidebar);
+			root.style.setProperty('--rail-on', 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.4 ? '#14161c' : '#ffffff');
+			root.dataset.rail = 'custom';
+		} else delete root.dataset.rail;
 		const font = FONTS.find((f) => f.id === prefs.font);
 		['--font-ui', '--font-display'].forEach((k) => root.style.removeProperty(k));
 		const fontVars = font && font.ui ? { '--font-ui': font.ui, '--font-display': font.display || font.ui } : null;

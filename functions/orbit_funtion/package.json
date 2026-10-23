@@ -7,6 +7,6 @@
 		"zcatalyst-sdk-node": "latest"
 	},
 	"scripts": {
-		"test": "node --test src/tests/"
+		"test": "node --test \"src/tests/*.test.js\""
 	}
 }

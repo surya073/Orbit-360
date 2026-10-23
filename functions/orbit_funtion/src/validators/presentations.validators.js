@@ -4,14 +4,15 @@ const { errors } = require('../utils/errors');
 const { f, isId, validateRecord } = require('./schema');
 const { isValidDate } = require('../utils/dateUtils');
 const { LIMITS } = require('../config/constants');
+const { cleanCustomSlide } = require('./slideSchema');
 
 // `section` slides render live data for the saved period/filters at presentation time.
 const SECTIONS = ['executive_summary', 'employee_overview', 'attendance_leave', 'project_performance', 'billable_hours', 'product_development', 'ai_usage', 'key_insights', 'reporting_structure'];
-const SLIDE_TYPES = ['section', 'title', 'snapshot', 'text'];
+const SLIDE_TYPES = ['section', 'title', 'snapshot', 'text', 'custom'];
 const PERIOD_PRESETS = ['this_month', 'last_month', 'last_30_days', 'this_quarter', 'custom'];
 const FIELDS = { title: f.str(200, { req: true }), team_id: f.id(), status: f.oneOf(['draft', 'ready']) };
 
-/** slides_config slides: array of { type, section?, title?, body?, snapshotId? }. */
+/** slides_config slides: array of { type, section?, title?, body?, snapshotId? } or free-form studio slides (type 'custom', see slideSchema). */
 function validateSlides(slides) {
 	const errs = [];
 	if (!Array.isArray(slides)) return { errors: [{ field: 'slides', code: 'INVALID_TYPE', message: 'Must be an array' }], slides: [] };
@@ -22,6 +23,7 @@ function validateSlides(slides) {
 			errs.push({ field, code: 'INVALID_VALUE', message: `type must be one of ${SLIDE_TYPES.join(', ')}` });
 			return null;
 		}
+		if (s.type === 'custom') return cleanCustomSlide(s, i);
 		if (s.type === 'snapshot' && !isId(String(s.snapshotId || ''))) errs.push({ field, code: 'INVALID_ID', message: 'snapshotId is required for snapshot slides' });
 		if (s.type === 'section' && !SECTIONS.includes(s.section)) errs.push({ field, code: 'INVALID_VALUE', message: `section must be one of ${SECTIONS.join(', ')}` });
 		return {

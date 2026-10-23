@@ -1,45 +1,71 @@
 'use strict';
 
+const zlib = require('zlib');
 const { errors } = require('../utils/errors');
 const { businessNow } = require('../utils/dateUtils');
 const { LIMITS } = require('../config/constants');
 const { audit } = require('./audit.service');
 
 /**
- * Storage format (saved_presentations.slides_config, JSON text):
- *   v2: { v: 2, period: { preset, from?, to? }, filters: { teamId, projectId }, slides: [...] }
+ * Storage format (saved_presentations.slides_config, text):
+ *   v2: { v: 2, period: { preset, from?, to? }, filters: { teamId, projectId }, slides: [...] } as JSON, or, when that is
+ *       too long for the column, as "z1:" + base64(deflate(JSON)). Free-form studio slides are text and shapes, so a
+ *       whole deck compresses to a fraction of its size; the 9,000-character limit applies to what is stored.
  *   v1 (legacy): a bare array of slides.
  * Section slides hold no data: they are rendered live for the saved period/filters, and every
  * data request is authorized by the backend for the viewer (a manager can never see another team).
  */
+const MAX_RAW = 200 * 1024; // before compression: a sanity cap, the real limit is the stored size
+const tooLarge = () => errors.validation([{ field: 'slides', code: 'TOO_LARGE', message: 'This presentation is too large to save. Remove some slides, images or text.' }]);
+
 const pack = (cfg) => {
 	const json = JSON.stringify({ v: 2, ...cfg });
-	if (json.length > LIMITS.maxTextConfig) throw errors.validation([{ field: 'slides', code: 'TOO_LARGE', message: 'Presentation is too large' }]);
-	return json;
+	if (json.length <= LIMITS.maxTextConfig) return json;
+	if (json.length > MAX_RAW) throw tooLarge();
+	const packed = `z1:${zlib.deflateRawSync(Buffer.from(json, 'utf8'), { level: 9 }).toString('base64')}`;
+	if (packed.length > LIMITS.maxTextConfig) throw tooLarge();
+	return packed;
 };
 
 function unpack(text) {
 	if (!text) return { v: 2, period: { preset: 'this_month' }, filters: {}, slides: [] };
-	const parsed = JSON.parse(text);
+	const raw = text.startsWith('z1:') ? zlib.inflateRawSync(Buffer.from(text.slice(3), 'base64'), { maxOutputLength: MAX_RAW * 2 }).toString('utf8') : text;
+	const parsed = JSON.parse(raw);
 	if (Array.isArray(parsed)) return { v: 1, period: { preset: 'this_month' }, filters: {}, slides: parsed };
 	return parsed;
 }
 
+const COVER_OBJECTS = 10;
+
+/** What a card in the list needs to look like the deck: how many slides, whether it is a studio deck, and a trimmed first slide. */
+function summarize(row) {
+	const { slides_config, ...rest } = row;
+	try {
+		const slides = unpack(slides_config).slides || [];
+		const first = slides.find((s) => s && s.type === 'custom');
+		return { ...rest, slideCount: slides.length, studio: Boolean(first), cover: first ? { type: 'custom', bg: first.bg, objects: (first.objects || []).slice(0, COVER_OBJECTS) } : null };
+	} catch {
+		return { ...rest, slideCount: null, studio: false, cover: null, unreadable: true };
+	}
+}
+
 async function list(ctx, paging) {
-	return ctx.repos.presentations.list(ctx.scope, paging);
+	const r = await ctx.repos.presentations.list(ctx.scope, paging);
+	return { ...r, rows: r.rows.map(summarize) };
 }
 
 async function get(ctx, id) {
 	const row = await ctx.repos.presentations.findById(ctx.scope, id, { withSlides: true });
 	if (!row) throw errors.notFound();
 	let config = null;
+	let slidesProblem = null;
 	try {
 		config = unpack(row.slides_config);
-	} catch {
-		/* reported as unavailable */
+	} catch (err) {
+		slidesProblem = err && err.code === 'Z_DATA_ERROR' ? 'The saved slides are damaged.' : 'The saved slides could not be decoded.'; // reported as unavailable, never with the content
 	}
 	const { slides_config, is_deleted, ...rest } = row;
-	return { ...rest, config, slides: config ? config.slides : null, slidesAvailable: config !== null };
+	return { ...rest, config, slides: config ? config.slides : null, slidesAvailable: config !== null, ...(slidesProblem ? { slidesProblem } : {}) };
 }
 
 /** A project filter must exist and, for managers, belong to their team. */

@@ -243,19 +243,19 @@ const resources = {
 		sidDedupe: true,
 		randomDedupe: true, // no natural key: imports require source_record_id
 		teamColumn: 'team_id',
-		list: ['ROWID', 'item_type', 'title', 'project_id', 'team_id', 'status', 'priority', 'assignee_employee_id', 'release_item_id', 'created_on', 'due_date', 'completed_date', 'estimated_hours', 'actual_hours', ...TS],
+		list: ['ROWID', 'item_type', 'title', 'project_id', 'team_id', 'status', 'item_priority', 'assignee_employee_id', 'release_item_id', 'created_on', 'due_date', 'completed_date', 'estimated_hours', 'actual_hours', ...TS],
 		bools: [],
 		sortable: ['due_date', 'created_on', 'title', 'CREATEDTIME'],
 		defaultSort: ['CREATEDTIME', 'desc'],
 		search: 'title',
-		filters: { item_type: 'str', status: 'str', priority: 'str', project_id: 'id', assignee_employee_id: 'id' },
+		filters: { item_type: 'str', status: 'str', item_priority: 'str', project_id: 'id', assignee_employee_id: 'id' },
 		fields: {
 			item_type: f.oneOf(['task', 'feature', 'bug', 'release', 'milestone'], { req: true }),
 			title: f.str(255, { req: true }),
 			description: f.text(),
 			project_id: f.id(),
 			status: f.str(40),
-			priority: f.str(20),
+			item_priority: f.str(20), // not `priority`: that is a reserved word in Catalyst's Data Store
 			assignee_employee_id: f.id(),
 			reporter_employee_id: f.id(),
 			parent_item_id: f.id(),

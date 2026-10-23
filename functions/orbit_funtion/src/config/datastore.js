@@ -12,7 +12,7 @@
  * flattened, boolean columns arrive as the strings "true"/"false".
  */
 
-const { errors, classifyDbError } = require('../utils/errors');
+const { ApiError, errors, classifyDbError } = require('../utils/errors');
 
 const MAX_BULK = 200;
 
@@ -68,12 +68,43 @@ function createDb(adminApp, { budget = 30, logger } = {}) {
 	const datastore = adminApp.datastore();
 	let used = 0;
 
-	const run = async (kind, fn) => {
+	/**
+	 * When a call fails for a reason the platform does not explain, the usual culprit on hand-made tables is a column the
+	 * code uses that the table lacks. One extra request compares the live columns with the expected ones (names only) so
+	 * the error can say which, instead of a bare "unexpected error". Skipped when the budget is spent.
+	 */
+	const missingColumns = async (table) => {
+		if (!table || used >= budget) return null;
+		try {
+			const { expectedByTable } = require('../services/schema.service'); // lazy: that module needs the resources registry
+			const expected = expectedByTable().get(table);
+			if (!expected) return null;
+			used += 1;
+			const live = await datastore.table(table).getAllColumns();
+			const have = new Set((live || []).map((c) => c && (c.column_name || c.columnName || c.name)).filter(Boolean));
+			const missing = [...expected].filter((c) => !have.has(c));
+			return missing.length ? missing : null;
+		} catch {
+			return null;
+		}
+	};
+
+	const run = async (kind, fn, table) => {
 		if (++used > budget) throw errors.budget();
 		try {
 			return await fn();
 		} catch (err) {
-			const { error, kind: cls } = classifyDbError(err);
+			let { error, kind: cls } = classifyDbError(err);
+			if (cls === 'unknown') {
+				const missing = await missingColumns(table);
+				if (missing) {
+					cls = 'schema';
+					error = new ApiError(500, 'DATASTORE_SCHEMA', 'The data model does not match the server configuration');
+					error.details = [{ message: `Table ${table} is missing column(s): ${missing.join(', ')}. Add them in the Data Store (see data/database-schema.md).` }];
+					if (logger) logger.warn('datastore_schema_mismatch', { op: kind, table, missing: missing.join('|') });
+					throw error;
+				}
+			}
 			// Schema and permission failures name tables/columns/privileges, never row values, so
 			// the platform's wording is kept (log + error details) to make misconfiguration fixable.
 			const diagnostic = cls === 'schema' || cls === 'permission' ? String((err && err.message) || '').slice(0, 300) : undefined;
@@ -86,30 +117,33 @@ function createDb(adminApp, { budget = 30, logger } = {}) {
 	return {
 		/** SELECT returning plain rows (table wrapper removed). */
 		async select(sql, table, bools) {
-			const result = await run('select', () => zcql.executeZCQLQuery(sql));
+			const result = await run('select', () => zcql.executeZCQLQuery(sql), table);
 			return result.map((r) => convertBooleans(r[table] || flattenRow(r), bools));
 		},
 		/** Aggregate / GROUP BY queries; returns flat rows keyed by alias or column. */
 		async aggregate(sql) {
-			const result = await run('aggregate', () => zcql.executeZCQLQuery(sql));
+			const from = /sFROMs+(w+)/i.exec(sql);
+			const result = await run('aggregate', () => zcql.executeZCQLQuery(sql), from && from[1]);
 			return normalizeAggregates(sql, result.map(flattenRow), logger);
 		},
 		async count(sql) {
 			const rows = await this.aggregate(sql);
 			return Number((rows[0] && rows[0].total) || 0);
 		},
-		insert: (table, row) => run('insert', () => datastore.table(table).insertRow(row)),
-		update: (table, row) => run('update', () => datastore.table(table).updateRow(row)),
+		/** Live column definitions of a table (one request); used only by the admin schema check. */
+		columns: (table) => run('columns', () => datastore.table(table).getAllColumns()),
+		insert: (table, row) => run('insert', () => datastore.table(table).insertRow(row), table),
+		update: (table, row) => run('update', () => datastore.table(table).updateRow(row), table),
 		/** One bulk request. Callers must keep batches bounded (<= 200 rows). */
 		insertMany(table, rows) {
 			if (rows.length === 0) return Promise.resolve([]);
 			if (rows.length > MAX_BULK) throw new Error('bulk insert exceeds 200 rows');
-			return run('insertMany', () => datastore.table(table).insertRows(rows));
+			return run('insertMany', () => datastore.table(table).insertRows(rows), table);
 		},
 		updateMany(table, rows) {
 			if (rows.length === 0) return Promise.resolve([]);
 			if (rows.length > MAX_BULK) throw new Error('bulk update exceeds 200 rows');
-			return run('updateMany', () => datastore.table(table).updateRows(rows));
+			return run('updateMany', () => datastore.table(table).updateRows(rows), table);
 		},
 		stats: () => ({ queries: used, budget }),
 	};

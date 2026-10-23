@@ -4,6 +4,7 @@ export const employeesConfig = defineModule({
 	title: 'Employees',
 	summary: 'employees',
 	singular: 'employee',
+	viewLabel: 'View profile',
 	description: 'Your people directory: who works here, in which team and role, and their employment status.',
 	resource: 'employees',
 	search: 'Search by name',

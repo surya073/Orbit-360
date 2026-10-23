@@ -33,7 +33,7 @@ export default function AssignmentsModal({ project, canWrite, onClose }) {
 	return (
 		<Modal title={`Assignments · ${project.project_name}`} onClose={onClose} size="lg">
 			{canWrite && template ? (
-				<div style={{ marginBottom: 12 }}>
+				<div className="u-mb-3">
 					<Button variant="primary" icon="plus" onClick={() => setSub({ type: 'form' })}>
 						Assign employee
 					</Button>

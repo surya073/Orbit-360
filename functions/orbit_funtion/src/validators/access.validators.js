@@ -44,7 +44,7 @@ function createRoleBody(raw = {}) {
 	if (scopeType !== SCOPE_TYPES.ALL_TEAMS && scopeType !== SCOPE_TYPES.OWN_TEAM) throw bad('scopeType', 'Choose which teams this role covers');
 	return {
 		name: text(raw.name, 'name', { min: 2, max: 60, required: true, re: NAME_RE }),
-		description: text(raw.description, 'description', { max: 300 }),
+		description: text(raw.description, 'description', { max: 255 }),
 		scopeType,
 		permissions: raw.permissions === undefined ? [] : permissionList(raw.permissions),
 	};
@@ -53,7 +53,7 @@ function createRoleBody(raw = {}) {
 function updateRoleBody(raw = {}) {
 	const out = {};
 	if (raw.name !== undefined) out.name = text(raw.name, 'name', { min: 2, max: 60, required: true, re: NAME_RE });
-	if (raw.description !== undefined) out.description = text(raw.description, 'description', { max: 300 }) || '';
+	if (raw.description !== undefined) out.description = text(raw.description, 'description', { max: 255 }) || '';
 	if (raw.isActive !== undefined) {
 		if (typeof raw.isActive !== 'boolean') throw bad('isActive', 'Must be true or false');
 		out.isActive = raw.isActive;

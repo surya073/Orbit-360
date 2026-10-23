@@ -1,7 +1,7 @@
 /* ---------- Settings layout ---------- */
 .settings-layout {
 	display: grid;
-	grid-template-columns: 210px minmax(0, 1fr);
+	grid-template-columns: var(--snav-w, 200px) minmax(0, 1fr);
 	gap: var(--space-5);
 	align-items: start;
 }
@@ -9,31 +9,48 @@
 	min-width: 0;
 	animation: fade-up var(--dur-slow) var(--ease) both;
 }
+/* Settings menu: a ruled list with an accent marker on the current section (no boxed card, no pills) */
+.settings-layout {
+	--snav-w: 200px;
+	--snav-marker: 3px;
+}
 .tabs--vertical {
 	flex-direction: column;
-	gap: 2px;
+	gap: 0;
 	position: sticky;
 	top: calc(var(--stick) + var(--space-4));
 	margin: 0;
-	padding: var(--space-2);
-	border: 1px solid var(--border);
-	border-radius: var(--radius-lg);
-	background: var(--surface);
-	box-shadow: var(--shadow-sm);
+	padding: 0;
+	border: 0;
+	border-left: 1px solid var(--border);
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
 	overflow: visible;
 }
 .tabs--vertical .tab {
+	justify-content: flex-start;
+	gap: 10px;
 	width: 100%;
-	margin: 0;
+	margin: 0 0 0 -1px;
+	padding: 11px 14px;
 	border: 0;
-	border-radius: var(--radius-md);
-	padding: var(--space-2) var(--space-3);
+	border-left: var(--snav-marker) solid transparent;
+	border-radius: 0 var(--radius-md) var(--radius-md) 0;
+	font-weight: 600;
+	color: var(--text-muted);
+	text-align: left;
 }
 .tabs--vertical .tab:hover {
 	background: var(--surface-2);
+	color: var(--text);
 }
 .tabs--vertical .tab[aria-selected='true'] {
-	background: var(--accent-soft);
+	border-left-color: var(--accent);
+	background: linear-gradient(90deg, var(--accent-soft), transparent 90%);
+	color: var(--text);
+}
+.tabs--vertical .tab[aria-selected='true'] svg {
 	color: var(--accent);
 }
 @media (max-width: 760px) {
@@ -41,13 +58,26 @@
 		grid-template-columns: minmax(0, 1fr);
 		gap: var(--space-3);
 	}
+	/* phones: the menu becomes one row of underlined tabs */
 	.tabs--vertical {
 		position: static;
 		flex-direction: row;
 		overflow-x: auto;
+		border-left: 0;
+		border-bottom: 1px solid var(--border);
 	}
 	.tabs--vertical .tab {
 		width: auto;
+		margin: 0 0 -1px;
+		padding: 10px 14px;
+		border-left: 0;
+		border-bottom: var(--snav-marker) solid transparent;
+		border-radius: 0;
+		white-space: nowrap;
+	}
+	.tabs--vertical .tab[aria-selected='true'] {
+		border-bottom-color: var(--accent);
+		background: none;
 	}
 }
 
@@ -318,4 +348,539 @@
 }
 .sortable-row .insight {
 	background: var(--surface-2);
+}
+
+/* ---------- Appearance studio: every choice on one screen ---------- */
+.astudio {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0 var(--space-5);
+	padding: var(--space-3) var(--space-5);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
+}
+.astudio__row {
+	display: grid;
+	grid-template-columns: 120px minmax(0, 1fr);
+	align-items: center;
+	gap: var(--space-3);
+	padding: 10px 0;
+	border-bottom: 1px solid var(--border);
+}
+.astudio__row--wide {
+	grid-column: 1 / -1;
+}
+.astudio__label {
+	display: grid;
+	gap: 1px;
+}
+.astudio__label b {
+	font-size: var(--fs-sm);
+}
+.astudio__label small {
+	color: var(--text-muted);
+	font-size: var(--fs-2xs);
+	line-height: 1.25;
+}
+.astudio__control {
+	min-width: 0;
+}
+.astudio__chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+.achip {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 5px 12px 5px 6px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface-2);
+	color: var(--text);
+	font: inherit;
+	font-size: var(--fs-xs);
+	font-weight: 600;
+	cursor: pointer;
+	transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+}
+.achip:hover {
+	border-color: var(--border-strong);
+	transform: translateY(-1px);
+}
+.achip[aria-checked='true'] {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+	box-shadow: 0 0 0 2px var(--ring);
+}
+.achip:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+.achip__dot {
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, var(--bg) 50%, var(--accent) 50%);
+	border: 1px solid var(--border-strong);
+}
+.achip--strip {
+	padding-left: 8px;
+}
+.achip__strip {
+	display: inline-flex;
+	overflow: hidden;
+	border-radius: 999px;
+}
+.achip__strip i {
+	display: block;
+	width: 9px;
+	height: 14px;
+}
+.astudio__themebar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+	margin-bottom: 8px;
+}
+.astudio__current {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 8px;
+	min-width: 0;
+}
+.astudio__current small {
+	color: var(--text-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.astudio__swatches {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+.tswatch {
+	display: grid;
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	border: 2px solid var(--border);
+	border-radius: 50%;
+	background: linear-gradient(135deg, var(--bg) 50%, var(--accent) 50%);
+	color: var(--on-accent, #fff);
+	cursor: pointer;
+	transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.tswatch:hover {
+	transform: scale(1.14);
+	border-color: var(--border-strong);
+}
+.tswatch[aria-checked='true'] {
+	border-color: var(--text);
+	box-shadow: 0 0 0 3px var(--ring);
+}
+.tswatch:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 3px;
+}
+.astudio__font {
+	display: grid;
+	gap: 6px;
+}
+.astudio__sample {
+	font-size: var(--fs-sm);
+	color: var(--text-muted);
+}
+.swatch--custom {
+	position: relative;
+	display: grid;
+	place-items: center;
+	cursor: pointer;
+}
+.swatch--custom input {
+	position: absolute;
+	inset: 0;
+	opacity: 0;
+	cursor: pointer;
+}
+/* the icon-style tiles shrink to a compact strip inside the studio */
+.astudio .theme-grid {
+	grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+	gap: 8px;
+}
+.astudio .icon-option__preview {
+	padding: 8px;
+	gap: 6px 2px;
+}
+.astudio .icon-option__preview .icon {
+	width: 18px;
+	height: 18px;
+}
+.astudio .theme-option__meta {
+	padding: 4px 8px;
+}
+.astudio .theme-option__meta small,
+.astudio .theme-option__meta .u-block {
+	display: none;
+}
+@media (max-width: 980px) {
+	.astudio {
+		grid-template-columns: minmax(0, 1fr);
+		padding: var(--space-3);
+	}
+	.astudio__row {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 6px;
+	}
+}
+
+/* denser: three small controls per row on wide windows, no hint lines, icon previews in one strip */
+.astudio {
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.astudio__row {
+	grid-column: span 3;
+	padding: 8px 0;
+}
+.astudio__row--wide {
+	grid-column: 1 / -1;
+}
+.astudio .optgroup__hint {
+	display: none;
+}
+.astudio .icon-option__preview {
+	grid-template-columns: repeat(6, 1fr);
+	padding: 8px 6px;
+}
+@media (min-width: 1200px) {
+	.astudio__row:not(.astudio__row--wide) {
+		grid-column: span 2;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 4px;
+		align-content: start;
+	}
+	.astudio__row:not(.astudio__row--wide) .astudio__label {
+		grid-auto-flow: column;
+		justify-content: start;
+		align-items: baseline;
+		gap: 8px;
+	}
+}
+@media (max-width: 980px) {
+	.astudio {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.astudio__row,
+	.astudio__row--wide {
+		grid-column: 1 / -1;
+	}
+}
+
+/* calmer: quiet chips instead of a wall of coloured circles; colour only appears where it carries meaning */
+.tswatch {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	width: auto;
+	height: auto;
+	padding: 4px 11px 4px 8px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface-2);
+	color: var(--text);
+	font: inherit;
+	font-size: var(--fs-xs);
+	font-weight: 600;
+	transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+.tswatch:hover {
+	transform: none;
+	border-color: var(--border-strong);
+}
+.tswatch[aria-checked='true'] {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+	box-shadow: none;
+}
+.tswatch__dot {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, var(--bg) 50%, var(--accent) 50%);
+	border: 1px solid var(--border-strong);
+}
+.astudio__swatches {
+	gap: 6px;
+}
+.astudio .swatch {
+	width: 20px;
+	height: 20px;
+}
+.astudio .achip {
+	padding-left: 12px;
+}
+
+/* lean layout: two always-visible choices, the rest behind "More options" */
+.astudio--lean {
+	grid-template-columns: minmax(0, 1fr);
+	padding-block: var(--space-2);
+}
+.astudio--lean .astudio__row {
+	grid-column: 1 / -1;
+}
+.astudio--inner {
+	padding: 0;
+	border: 0;
+	box-shadow: none;
+	background: transparent;
+}
+.astudio__more {
+	grid-column: 1 / -1;
+	padding: 10px 0 4px;
+}
+.astudio__more > summary {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: var(--fs-sm);
+	color: var(--text-muted);
+	list-style: none;
+}
+.astudio__more > summary::-webkit-details-marker {
+	display: none;
+}
+.astudio__more > summary::before {
+	content: '+';
+	display: inline-grid;
+	place-items: center;
+	width: 18px;
+	height: 18px;
+	border: 1px solid var(--border-strong);
+	border-radius: 50%;
+	font-size: 13px;
+	line-height: 1;
+}
+.astudio__more[open] > summary::before {
+	content: '–';
+}
+.astudio__more[open] > summary {
+	margin-bottom: 6px;
+}
+.tswatch--more {
+	border-style: dashed;
+	color: var(--text-muted);
+}
+
+/* icon styles: the original preview tiles, behind a toggle, in a box that scrolls */
+.icontoggle {
+	display: grid;
+	gap: 8px;
+}
+.icontoggle__bar {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.icontoggle__list {
+	max-height: 260px;
+	padding: 4px;
+	overflow-y: auto;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+}
+.icontoggle__list .theme-grid {
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.icontoggle__list .icon-option__preview {
+	grid-template-columns: repeat(3, 1fr);
+	padding: 12px;
+	gap: 10px 4px;
+}
+.icontoggle__list .icon-option__preview .icon {
+	width: 22px;
+	height: 22px;
+}
+.icontoggle__list .theme-option__meta small,
+.icontoggle__list .theme-option__meta .u-block {
+	display: block;
+}
+
+/* appearance as a list of toggles */
+.atoggles {
+	display: grid;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
+	overflow: hidden;
+}
+.atoggle + .atoggle {
+	border-top: 1px solid var(--border);
+}
+.atoggle__head {
+	margin: 0;
+}
+.atoggle__head button {
+	display: grid;
+	grid-template-columns: 150px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--space-3);
+	width: 100%;
+	padding: 12px var(--space-4);
+	border: 0;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+	transition: background-color var(--dur-fast) var(--ease);
+}
+.atoggle__head button:hover {
+	background: var(--surface-2);
+}
+.atoggle__head button:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: -2px;
+}
+.atoggle__title {
+	font-weight: 600;
+	font-size: var(--fs-sm);
+}
+.atoggle__value {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text-muted);
+	font-size: var(--fs-sm);
+}
+.atoggle__chev {
+	width: 8px;
+	height: 8px;
+	border-right: 2px solid var(--text-muted);
+	border-bottom: 2px solid var(--text-muted);
+	transform: rotate(45deg);
+	transition: transform var(--dur) var(--ease);
+}
+.atoggle.is-open .atoggle__chev {
+	transform: rotate(-135deg);
+}
+.atoggle__body {
+	padding: 4px var(--space-4) var(--space-4);
+	animation: fade-up var(--dur) var(--ease) both;
+}
+@media (max-width: 640px) {
+	.atoggle__head button {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+	.atoggle__value {
+		display: none;
+	}
+}
+
+/* the header already names the current choice and the options explain themselves */
+.atoggle .optgroup__hint,
+.atoggle .astudio__current {
+	display: none;
+}
+
+/* appearance as a horizontal strip of icon + text toggles */
+.atabs {
+	display: grid;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-4) var(--space-4);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-sm);
+}
+.atabs__strip {
+	display: flex;
+	gap: 6px;
+	padding-bottom: 2px;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.atabs__tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	flex: none;
+	padding: 8px 14px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: var(--surface-2);
+	color: var(--text-muted);
+	font: inherit;
+	font-size: var(--fs-sm);
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.atabs__tab:hover {
+	color: var(--text);
+	border-color: var(--border-strong);
+}
+.atabs__tab[aria-selected='true'] {
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+	color: var(--text);
+}
+.atabs__tab:focus-visible {
+	outline: 2px solid var(--focus);
+	outline-offset: 2px;
+}
+.atabs__panel {
+	min-height: 120px;
+	padding-top: var(--space-2);
+	animation: fade-up var(--dur) var(--ease) both;
+}
+.agroups {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+	gap: var(--space-4) var(--space-5);
+}
+.agroup {
+	display: grid;
+	gap: 6px;
+	align-content: start;
+}
+.agroup__title {
+	font-size: var(--fs-xs);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.atabs .optgroup__hint,
+.atabs .astudio__current {
+	display: none;
+}
+
+/* the colours panel: accent, sidebar and card finish together */
+.acolours {
+	display: grid;
+	gap: var(--space-5);
+}
+.acolours__sec {
+	display: grid;
+	gap: 8px;
+	align-content: start;
+}
+.acolours__title {
+	font-size: var(--fs-xs);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.atabs .astudio__current,
+.atabs .optgroup__hint {
+	display: revert;
 }

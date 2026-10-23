@@ -252,6 +252,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 	// Scroll the active cell into view (sticky header/gutter are accounted for by CSS scroll-padding).
 	useLayoutEffect(() => {
 		if (!activeId) return;
+		if (headerSelect.current) { headerSelect.current = false; return; } // a header click selects a whole column; the view must stay where it is
 		const r = sel.r1;
 		// A row outside the window is not in the DOM yet: bring it in, then scroll to it.
 		if (r < win.start || r >= win.end) {
@@ -266,6 +267,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [activeId]);
 
+	const headerSelect = useRef(false);
 	const focusGrid = useCallback(() => {
 		if (gridRef.current) gridRef.current.focus({ preventScroll: true });
 	}, []);
@@ -643,6 +645,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 	const { ra, rb, ca, cb } = bounds();
 	const selectColumn = (c, e) => {
 		if (e.target.closest('.sheet__sort') || e.target.closest('.sheet__resize')) return;
+		headerSelect.current = true;
 		setSel((s) => (e.shiftKey ? { ...s, r1: Math.max(rowCount - 1, 0), c1: c } : { r0: 0, c0: c, r1: Math.max(rowCount - 1, 0), c1: c }));
 		focusGrid();
 	};
@@ -674,7 +677,7 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 						const inSel = c >= ca && c <= cb;
 						const renamable = Boolean(onRenameColumn) && (col.custom || (col.placeholder && !col.locked));
 						return (
-							<div key={col.field} role="columnheader" aria-colindex={c + 2} aria-sort={dir ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={`sheet__col ${inSel ? 'is-selected' : ''} ${col.placeholder ? 'is-blank' : ''}`.trim()} style={{ width: `calc(var(--col-${c}) * var(--sheet-zoom, 1))` }} onMouseDown={(e) => selectColumn(c, e)}>
+							<div key={col.field} role="columnheader" aria-colindex={c + 2} aria-sort={dir ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'} className={`sheet__col ${inSel ? 'is-selected' : ''} ${col.placeholder ? 'is-blank' : ''}`.trim()} style={{ width: `calc(var(--col-${c}) * var(--sheet-zoom, 1))` }} onMouseDown={(e) => selectColumn(c, e)} onDoubleClick={renamable && renaming !== c ? () => setRenaming(c) : undefined}>
 								<span className="sheet__letter" aria-hidden="true">
 									{columnLetter(c)}
 								</span>
@@ -699,8 +702,8 @@ const SheetGrid = forwardRef(function SheetGrid({ columns, rows, labelOf, readOn
 										}}
 									/>
 								) : (
-									<span className="sheet__name" title={col.placeholder ? (renamable ? 'Double-click to name this column, or just type in it' : '') : col.label + (col.required ? ' (required)' : '')} onDoubleClick={renamable ? () => setRenaming(c) : undefined}>
-										{col.label}
+									<span className="sheet__name" title={col.placeholder ? (renamable ? 'Click to name this new column, or just type in it' : '') : col.label + (col.required ? ' (required)' : '')} onClick={col.placeholder && renamable ? () => setRenaming(c) : undefined}>
+										{col.placeholder && renamable ? <span className="sheet__add">+ Add column</span> : col.label}
 										{col.required ? <span className="sheet__req" aria-hidden="true"> *</span> : null}
 									</span>
 								)}

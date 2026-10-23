@@ -1,4 +1,4 @@
-source_record_id,item_type,title,project_code,status,priority,due_date,completed_date,estimated_hours
+source_record_id,item_type,title,project_code,status,item_priority,due_date,completed_date,estimated_hours
 PI-001,feature,Build item 1,PRJ-ORION,in_progress,medium,2026-09-04,,8
 PI-002,bug,Review item 2,PRJ-LYRA,done,high,2026-10-07,2026-10-07,12
 PI-003,task,Plan item 3,PRJ-HELIOS,open,critical,2026-09-10,,16

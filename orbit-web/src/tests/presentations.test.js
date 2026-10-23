@@ -122,9 +122,12 @@ describe('presentation player', () => {
 		const { unmount } = renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present?reporting=0' });
 		expect(await screen.findByText('This presentation has no slides.')).toBeInTheDocument();
 		unmount();
-		mockFetch(playerRoutes(deck({ slidesAvailable: false, config: null, slides: null })));
+		mockFetch(playerRoutes(deck({ slidesAvailable: false, config: null, slides: null, slidesProblem: 'The saved slides are damaged.' })));
 		renderWithProviders(<PlayerRoutes />, { route: '/presentations/5/present?reporting=0' });
-		expect(await screen.findByText('This presentation could not be read.')).toBeInTheDocument();
+		expect(await screen.findByRole('heading', { name: 'This presentation cannot be played' })).toBeInTheDocument();
+		expect(screen.getByText(/The saved slides are damaged./)).toBeInTheDocument(); // the reason, not a bare failure
+		expect(screen.getByRole('link', { name: 'Open in the editor' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: 'Back to presentations' })).toBeInTheDocument();
 	});
 });
 

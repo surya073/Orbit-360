@@ -13,7 +13,7 @@ export default function NotificationsMenu() {
 			label="Notifications"
 			trigger={({ toggle, props }) => <IconButton icon="bell" label="Notifications" onClick={toggle} {...props} />}
 		>
-			<div style={{ width: 280 }}>
+			<div className="notif-menu">
 				<div className="popover__head">
 					<strong>Notifications</strong>
 				</div>

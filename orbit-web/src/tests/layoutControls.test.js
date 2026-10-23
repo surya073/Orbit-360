@@ -96,26 +96,26 @@ describe('SortableList', () => {
 });
 
 describe('settings page', () => {
-	test('Layout category offers density and the dashboard widget editor, linkable by ?tab=layout', async () => {
+	test('the Dashboard tab offers the widget editor, linkable by ?tab=dashboard (and the older ?tab=layout)', async () => {
 		mockFetch([]);
 		renderWithProviders(<SettingsPage />, { route: '/settings?tab=layout' });
-		expect(await screen.findByRole('tab', { name: 'Layout' })).toHaveAttribute('aria-selected', 'true');
-		expect(screen.getByRole('radiogroup', { name: 'Density' })).toBeInTheDocument();
-		await userEvent.click(screen.getByRole('radio', { name: /Compact/ }));
-		expect(document.documentElement.dataset.density).toBe('compact');
+		expect(await screen.findByRole('tab', { name: 'Dashboard' })).toHaveAttribute('aria-selected', 'true');
 		expect(screen.getByRole('list', { name: 'Dashboard widgets' })).toBeInTheDocument();
 		expect(global.fetch).not.toHaveBeenCalled();
 	});
 
-	test('categories use a vertical tablist with Up/Down arrows', async () => {
+	test('three sections (Appearance, Dashboard, Account), and density is on the Appearance screen', async () => {
 		mockFetch([]);
 		renderWithProviders(<SettingsPage />);
 		const list = await screen.findByRole('tablist', { name: 'Settings sections' });
-		expect(list).toHaveAttribute('aria-orientation', 'vertical');
-		expect(within(list).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Appearance', 'Layout', 'Backup', 'Profile']);
+		expect(within(list).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Appearance', 'Dashboard', 'Account']);
+		await userEvent.click(screen.getByRole('tab', { name: 'Layout' })); // density is in the shared Layout toggle
+		expect(screen.getByRole('radiogroup', { name: 'Density' })).toBeInTheDocument();
+		await userEvent.click(screen.getByRole('radio', { name: 'Compact' }));
+		expect(document.documentElement.dataset.density).toBe('compact');
 		screen.getByRole('tab', { name: 'Appearance' }).focus();
-		await userEvent.keyboard('{ArrowDown}');
-		expect(screen.getByRole('tab', { name: 'Layout' })).toHaveAttribute('aria-selected', 'true');
+		await userEvent.keyboard('{ArrowRight}');
+		expect(screen.getByRole('tab', { name: 'Dashboard' })).toHaveAttribute('aria-selected', 'true');
 	});
 });
 

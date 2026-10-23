@@ -24,6 +24,8 @@ const ImportPage = lazy(() => import('../../features/imports/ImportPage'));
 const SpreadsheetPage = lazy(() => import('../../features/spreadsheet/SpreadsheetPage'));
 const PresentationsPage = lazy(() => import('../../features/presentations/PresentationsPage'));
 const PresentationEditor = lazy(() => import('../../features/presentations/PresentationEditor'));
+const StudioEditor = lazy(() => import('../../features/presentations/studio/StudioEditor'));
+const StudioStart = lazy(() => import('../../features/presentations/studio/StudioStart'));
 const PresentationPlayer = lazy(() => import('../../features/presentations/PresentationPlayer'));
 const SettingsPage = lazy(() => import('../../features/settings/SettingsPage'));
 const AccessPage = lazy(() => import('../../features/access/AccessPage'));
@@ -75,8 +77,10 @@ export default function AppRoutes() {
 						<Route path={ROUTES.imports} element={guard('imports.view', <ImportPage />)} />
 						<Route path={ROUTES.spreadsheet} element={guard('spreadsheet.view', <SpreadsheetPage />)} />
 						<Route path={ROUTES.presentations} element={guard('presentations.view', <PresentationsPage />)} />
-						<Route path={ROUTES.presentationNew} element={guard(['presentations.view', 'presentations.create'], <PresentationEditor />)} />
-						<Route path={ROUTES.presentationEdit()} element={guard(['presentations.view', 'presentations.edit'], <PresentationEditor />)} />
+						<Route path={ROUTES.presentationNew} element={guard(['presentations.view', 'presentations.create'], <StudioStart />)} />
+						<Route path={ROUTES.presentationStudio} element={guard(['presentations.view', 'presentations.create'], <StudioEditor />)} />
+						<Route path={ROUTES.presentationQuick} element={guard(['presentations.view', 'presentations.create'], <PresentationEditor />)} />
+						<Route path={ROUTES.presentationEdit()} element={guard(['presentations.view', 'presentations.edit'], <StudioEditor />)} />
 						<Route path={ROUTES.access} element={guard('access.view', <AccessPage />)} />
 						{/* Personal preferences (appearance, layout, profile): available to every signed-in user. */}
 						<Route path={ROUTES.settings} element={<SettingsPage />} />

@@ -898,3 +898,19 @@
 	align-items: center;
 	gap: 5px;
 }
+
+.toast__action {
+	margin-left: auto;
+	padding: 4px 10px;
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	font-size: var(--fs-xs);
+	font-weight: 700;
+	cursor: pointer;
+}
+.toast__action:hover {
+	background: color-mix(in srgb, currentColor 14%, transparent);
+}

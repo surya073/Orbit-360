@@ -127,6 +127,28 @@ function createDashboardRepository(db) {
 			return db.aggregate(`SELECT assignee_employee_id, item_type, status, COUNT(ROWID) AS items FROM product_items WHERE ${c} GROUP BY assignee_employee_id, item_type, status LIMIT 0, 300`);
 		},
 
+		// ---- highlights (people): grouped aggregates, then ONE lookup of the few names shown ------------
+		/** Approved minutes per person in the period (the caller keeps the top few). */
+		minutesByEmployee: (scope, f) =>
+			db.aggregate(`SELECT employee_id, SUM(duration_minutes) AS minutes, COUNT(ROWID) AS entries FROM time_entries WHERE ${timeWhere(scope, f, ["approval_status = 'approved'"])} GROUP BY employee_id LIMIT 0, 300`),
+		/** Days with a recorded on-time check-in per person in the period. */
+		onTimeByEmployee: (scope, f) =>
+			db.aggregate(`SELECT employee_id, COUNT(ROWID) AS days FROM attendance_records WHERE ${conditions(scope, f, { dateCol: 'attendance_date', teamCol: 'team_id', employeeCol: 'employee_id', extra: ["late_status = 'no'"] })} GROUP BY employee_id LIMIT 0, 300`),
+		/** The newest joiners (joining date on or after `since`), scoped to the team. */
+		newJoiners(scope, f, since, limit) {
+			assertScope(scope);
+			const team = scope.resolveTeam(f.teamId);
+			const c = join(['is_deleted = false', `joining_date >= ${lit('date', since)}`, team ? `primary_team_id = ${lit('id', team)}` : null]);
+			return db.select(`SELECT ROWID, full_name, job_role, joining_date FROM employees WHERE ${c} ORDER BY joining_date DESC LIMIT 0, ${Number(limit) || 5}`, 'employees');
+		},
+		/** Name and role for the few people shown (never the whole table). */
+		employeeNames(scope, ids) {
+			assertScope(scope);
+			if (ids.length === 0) return Promise.resolve([]);
+			const c = join(['is_deleted = false', inList('ROWID', ids), scope.condition('primary_team_id')]);
+			return db.select(`SELECT ROWID, full_name, job_role FROM employees WHERE ${c} LIMIT 0, 50`, 'employees');
+		},
+
 		// ---- data freshness: the newest business date/time seen per source ----------------------
 		async freshness(scope, f) {
 			assertScope(scope);

@@ -1,4 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import AiButton from '../../components/common/AiButton';
 import Button from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
 import StatusBadge from '../../components/common/StatusBadge';
@@ -13,7 +15,8 @@ import features from '../../config/features';
 import DataEntryModes from '../spreadsheet/DataEntryModes';
 import useTemplates from '../../hooks/useTemplates';
 import { importsService } from '../../services/importsService';
-import { autoMapHeaders, duplicateTargets, readCsv, recordsFromMapping, toCsv } from '../../utils/csv';
+import { duplicateTargets, readCsv, recordsFromMapping, toCsv } from '../../utils/csv';
+import { matchHeaders, rememberMapping, rememberedMapping } from '../../utils/headerMatch';
 import { humanize } from '../../utils/format';
 import Select from '../../components/forms/Select';
 
@@ -32,6 +35,8 @@ async function sha256Hex(buffer) {
 }
 
 const columnsOf = (template) => [...template.columns.map((c) => c.field), ...(template.importColumns || ['source_record_id'])];
+/** The same fields with their types, for the matcher (it reads the values to tell a date column from a name column). */
+const specsOf = (template) => [...template.columns, ...(template.importColumns || ['source_record_id']).map((field) => ({ field, type: 'str', required: false }))].filter((c) => c.field !== 'more_details'); // raw JSON: never a guess for a notes column
 
 function downloadTemplate(template) {
 	const blob = new Blob([toCsv([columnsOf(template)])], { type: 'text/csv' });
@@ -60,7 +65,9 @@ const missingRequired = (template, mapping) => template.columns.filter((c) => c.
  * Shown when a file's headers do not line up with the template: each header can be matched to a field or left out. Nothing
  * is sent anywhere until the user continues; the server still validates every row afterwards.
  */
-function MappingPanel({ template, pending, onChange, onContinue, onCancel, busy }) {
+function MappingPanel({ template, pending, onChange, onReset, onContinue, onCancel, busy }) {
+	const [dragField, setDragField] = useState(null);
+	const [overRow, setOverRow] = useState(-1);
 	const fields = columnsOf(template);
 	const { headers, cells, mapping } = pending;
 	const missing = missingRequired(template, mapping);
@@ -68,15 +75,53 @@ function MappingPanel({ template, pending, onChange, onContinue, onCancel, busy 
 	const blocked = missing.length > 0 || dupes.length > 0 || mapping.every((m) => !m);
 	const sample = recordsFromMapping(cells.slice(0, 3), mapping);
 	const used = mapping.filter(Boolean);
+	const confidence = pending.confidence || [];
+	const leftOver = fields.filter((f) => !used.includes(f));
+	const isRequired = (f) => template.columns.some((c) => c.field === f && c.required);
+	const drop = (i) => (e) => {
+		e.preventDefault();
+		const f = dragField || e.dataTransfer.getData('text/plain');
+		setDragField(null);
+		setOverRow(-1);
+		if (!f) return;
+		// a field sits on one column only: moving it frees the column it was on
+		const from = mapping.indexOf(f);
+		if (from >= 0 && from !== i) onChange(from, null);
+		onChange(i, f);
+	};
 	return (
-		<section className="isetup__card imap" aria-label="Match the columns" style={{ marginTop: 'var(--space-4)' }}>
+		<section className="isetup__card imap u-mt-4" aria-label="Match the columns">
 			<h2 className="isetup__title">
 				<span aria-hidden="true">
 					<Icon name="check" size={14} />
 				</span>{' '}
 				Match your columns
 			</h2>
-			<p className="small muted">Some column names in {pending.file.name} do not match the {humanize(template.module)} template. Choose the field each column belongs to, or leave a column out. {cells.length} data rows.</p>
+			<p className="small muted">Some column names in {pending.file.name} do not match the {humanize(template.module)} template. Check the suggested matches, then drag a field from the tray onto a column or use the list. {cells.length} data rows.</p>
+			{leftOver.length ? (
+				<div className="imap__tray" aria-label="Fields not matched yet">
+					<span className="small muted">Not matched yet:</span>
+					{leftOver.map((f) => (
+						<span key={f} className={`imap__chip ${isRequired(f) ? 'is-required' : ''}`.trim()} draggable onDragStart={(e) => { setDragField(f); e.dataTransfer.setData('text/plain', f); e.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => { setDragField(null); setOverRow(-1); }} title={isRequired(f) ? 'Required: drag onto a column' : 'Drag onto a column'}>
+							{f}
+							{isRequired(f) ? ' *' : ''}
+						</span>
+					))}
+					<Button size="sm" variant="ghost" onClick={onReset} disabled={busy}>
+						Reset to suggested
+					</Button>
+					<AiButton feature="Match the columns" disabled={busy}>
+						Match with AI
+					</AiButton>
+				</div>
+			) : (
+				<div className="imap__tray">
+					<span className="small muted">Every field has a column.</span>
+					<Button size="sm" variant="ghost" onClick={onReset} disabled={busy}>
+						Reset to suggested
+					</Button>
+				</div>
+			)}
 			<div className="imap__table" role="table" aria-label="Column mapping">
 				<div className="imap__row imap__row--head" role="row">
 					<span role="columnheader">Column in your file</span>
@@ -84,14 +129,15 @@ function MappingPanel({ template, pending, onChange, onContinue, onCancel, busy 
 					<span role="columnheader">Import as</span>
 				</div>
 				{headers.map((h, i) => (
-					<div className="imap__row" role="row" key={`${h}-${i}`}>
+					<div className={`imap__row ${overRow === i ? 'is-over' : ''}`.trim()} role="row" key={`${h}-${i}`} onDragOver={(e) => { if (dragField) { e.preventDefault(); setOverRow(i); } }} onDragLeave={() => setOverRow((r) => (r === i ? -1 : r))} onDrop={drop(i)}>
 						<span role="cell" className="imap__head">
 							{h || <em className="muted">(blank)</em>}
 						</span>
 						<span role="cell" className="small muted imap__sample">
-							{(cells[0] && cells[0][i]) || '—'}
+							{[0, 1, 2].map((r) => (cells[r] && cells[r][i]) || '').filter(Boolean).join(' · ') || '—'}
 						</span>
-						<span role="cell">
+						<span role="cell" className="imap__target">
+							{mapping[i] ? <span className={`imap__badge imap__badge--${confidence[i] || 'manual'}`}>{confidence[i] === 'high' ? 'Matched' : confidence[i] === 'medium' ? 'Check' : 'Chosen'}</span> : <span className="imap__badge imap__badge--none">Not imported</span>}
 							<Select aria-label={`Field for column ${h || i + 1}`} value={mapping[i] || ''} onChange={(e) => onChange(i, e.target.value || null)}>
 								<option value="">Don’t import</option>
 								{fields.map((f) => (
@@ -161,7 +207,9 @@ function MappingPanel({ template, pending, onChange, onContinue, onCancel, busy 
  */
 export default function ImportPage() {
 	const templates = useTemplates();
-	const [module, setModule] = useState('');
+	const [sp] = useSearchParams();
+	const wanted = sp.get('module') || ''; // set by the Import button on a module page, so the type is already chosen
+	const [module, setModule] = useState(wanted);
 	const [policy, setPolicy] = useState('ask');
 	const [team, setTeam] = useState(''); // admins only; managers are pinned by the server
 	const [phase, setPhase] = useState('idle'); // idle | working | previewed | committed | error
@@ -175,12 +223,16 @@ export default function ImportPage() {
 	const [pending, setPending] = useState(null); // a chosen file whose headers still need matching: { file, headers, cells, mapping }
 	const [final, setFinal] = useState(null);
 	const [fileName, setFileName] = useState('');
+	const [fileOver, setFileOver] = useState(false);
 	const running = useRef(false);
 	const hasPreview = useRef(false);
 
 	// Only record types this user may create (an import adds records; the backend checks again).
 	const importable = (templates.data || []).filter((t) => t.importable && (!t.permissions || t.permissions.create));
 	const template = importable.find((t) => t.module === module);
+	useEffect(() => {
+		if (wanted && !hasPreview.current) setModule(wanted);
+	}, [wanted]);
 	const list = useMemo(() => Object.values(results).sort((a, b) => a.rowNumber - b.rowNumber), [results]);
 	const counts = countBy(list);
 	const conflicts = list.filter((r) => r.status === 'conflict');
@@ -236,6 +288,10 @@ export default function ImportPage() {
 	const onFile = (e) => {
 		const file = e.target.files[0];
 		e.target.value = '';
+		loadFile(file);
+	};
+
+	const loadFile = (file) => {
 		if (!file || !template) return;
 		setFileName(file.name);
 		setPending(null);
@@ -244,15 +300,21 @@ export default function ImportPage() {
 			if (file.size > MAX_FILE_BYTES) throw new Error('File is larger than 2 MB.');
 			const { headers, cells } = readCsv(await file.text());
 			if (cells.length > MAX_ROWS) throw new Error(`The file has ${cells.length} rows; at most ${MAX_ROWS} can be imported at once.`);
-			const mapping = autoMapHeaders(headers, columnsOf(template));
-			// Straight to validation unless matching could matter: a required field has no column, or a column has no field while
-			// a template field is still uncovered (it may be a differently named version of it). A harmless extra column is just ignored.
+			// A mapping the user confirmed before for this exact header row is reused; otherwise the headers are matched by
+			// name, aliases, spelling and what the values look like.
+			const remembered = rememberedMapping(module, headers, specsOf(template));
+			const matches = remembered ? remembered.map((f) => (f ? { field: f, confidence: 'high' } : null)) : matchHeaders(headers, cells, specsOf(template));
+			const mapping = matches.map((m) => (m ? m.field : null));
+			// Straight to validation when nothing needs a second look: every required field is matched with confidence, and any
+			// column left out is a harmless extra (no template field is left uncovered because of it).
+			const sure = matches.every((m) => !m || m.confidence === 'high');
 			const uncovered = template.columns.filter((c) => !mapping.includes(c.field));
-			if (missingRequired(template, mapping).length === 0 && (uncovered.length === 0 || mapping.every(Boolean))) {
+			if (sure && missingRequired(template, mapping).length === 0 && (uncovered.length === 0 || mapping.every(Boolean) || remembered)) {
 				setPhase('idle');
 				return validate(file, headers, cells, mapping);
 			}
-			setPending({ file, headers, cells, mapping });
+			const confidence = matches.map((m) => (m ? m.confidence : null));
+			setPending({ file, headers, cells, mapping, auto: mapping, confidence, autoConfidence: confidence });
 			setPhase('idle');
 		});
 	};
@@ -280,6 +342,7 @@ export default function ImportPage() {
 		guard(async () => {
 			const { file, headers, cells, mapping } = pending;
 			await validate(file, headers, cells, mapping);
+			rememberMapping(module, headers, mapping);
 			setPending(null);
 		});
 	const cancelMapping = () => {
@@ -376,7 +439,7 @@ export default function ImportPage() {
 						<h2 className="isetup__title">
 							<span aria-hidden="true">2</span> Upload the CSV
 						</h2>
-						<div className={`idrop ${!template || locked ? 'is-disabled' : ''} ${fileName ? 'has-file' : ''}`.trim()}>
+						<div className={`idrop ${!template || locked ? 'is-disabled' : ''} ${fileName ? 'has-file' : ''} ${fileOver ? 'is-over' : ''}`.trim()} onDragEnter={() => setFileOver(true)} onDragLeave={() => setFileOver(false)} onDrop={() => setFileOver(false)}>
 							<Field label="CSV file">{(p) => <input {...p} type="file" accept=".csv,text/csv" disabled={!template || locked} onChange={onFile} />}</Field>
 							<span className="idrop__icon" aria-hidden="true">
 								<Icon name={fileName ? 'check' : 'upload'} size={26} />
@@ -392,7 +455,7 @@ export default function ImportPage() {
 				{!features.excelImport ? <p className="small muted">CSV files only. Excel (.xlsx) import needs a spreadsheet parser that has not been added yet. Rows can refer to people and projects by employee_code and project_code.</p> : null}
 			</StateView>
 
-			{pending && template ? <MappingPanel template={template} pending={pending} busy={busy} onChange={(i, field) => setPending((p) => ({ ...p, mapping: p.mapping.map((m, j) => (j === i ? field : m)) }))} onContinue={confirmMapping} onCancel={cancelMapping} /> : null}
+			{pending && template ? <MappingPanel template={template} pending={pending} busy={busy} onChange={(i, field) => setPending((p) => ({ ...p, mapping: p.mapping.map((m, j) => (j === i ? field : m)), confidence: (p.confidence || []).map((c, j) => (j === i ? (field ? 'manual' : null) : c)) }))} onReset={() => setPending((p) => ({ ...p, mapping: p.auto, confidence: p.autoConfidence || p.confidence }))} onContinue={confirmMapping} onCancel={cancelMapping} /> : null}
 
 			<div aria-live="polite">
 				{progress ? (
@@ -408,8 +471,8 @@ export default function ImportPage() {
 			</div>
 
 			{list.length ? (
-				<section aria-label="Validation result" className="stack" style={{ marginTop: 'var(--space-4)' }}>
-					<div className="legend" style={{ marginTop: 0 }}>
+				<section aria-label="Validation result" className="stack u-mt-4">
+					<div className="legend u-mt-0">
 						<span>{records.length} rows</span>
 						<StatusBadge tone="info" status="valid" label={`${(counts.valid || 0) + (counts.committed || 0)} ready or imported`} />
 						<StatusBadge tone="warning" status="conflict" label={`${counts.conflict || 0} already exist`} />
@@ -422,7 +485,7 @@ export default function ImportPage() {
 
 					{conflicts.length ? (
 						<div>
-							<h2 className="section-title" style={{ marginTop: 0 }}>Records that already exist</h2>
+							<h2 className="section-title u-mt-0">Records that already exist</h2>
 							<DataTable
 								caption="Conflicts"
 								rowKey="rowNumber"
@@ -432,7 +495,7 @@ export default function ImportPage() {
 										key: 'choice',
 										label: 'What to do',
 										render: (r) => (
-											<Select className="input" style={{ width: 'auto' }} aria-label={`Resolution for row ${r.rowNumber}`} value={choices[r.rowNumber] || (r.conflict && r.conflict.resolution) || ''} disabled={busy || phase !== 'previewed'} onChange={(e) => setChoices((c) => ({ ...c, [r.rowNumber]: e.target.value }))}>
+											<Select className="input u-w-auto" aria-label={`Resolution for row ${r.rowNumber}`} value={choices[r.rowNumber] || (r.conflict && r.conflict.resolution) || ''} disabled={busy || phase !== 'previewed'} onChange={(e) => setChoices((c) => ({ ...c, [r.rowNumber]: e.target.value }))}>
 												<option value="">Use the default above</option>
 												<option value="update">Update existing</option>
 												<option value="keep_existing">Keep existing</option>
@@ -444,7 +507,7 @@ export default function ImportPage() {
 								rows={conflictPage.rows}
 							/>
 							<Pagination {...conflictPage.pagination} />
-							<div style={{ marginTop: 8 }}>
+							<div className="u-mt-2">
 								<Button disabled={busy || phase !== 'previewed' || Object.keys(choices).length === 0} onClick={saveChoices}>
 									Save choices
 								</Button>
@@ -454,7 +517,7 @@ export default function ImportPage() {
 
 					{problems.length ? (
 						<div>
-							<h2 className="section-title" style={{ marginTop: 0 }}>Rows with problems</h2>
+							<h2 className="section-title u-mt-0">Rows with problems</h2>
 							<DataTable caption="Rows with problems" rowKey="rowNumber" columns={[{ key: 'rowNumber', label: 'Row' }, { key: 'errors', label: 'Problems', render: (r) => r.errors.map((e) => `${e.field ? `${e.field}: ` : ''}${e.message}`).join('; ') }]} rows={problemPage.rows} />
 							<Pagination {...problemPage.pagination} />
 						</div>

@@ -77,8 +77,10 @@ export const freshnessFixture = { asOf: '2026-10-13 10:00:00', timeEntries: { la
 
 /** Routes for every dashboard endpoint (override entries by prepending your own to mockFetch). */
 /** The one-request dashboard answer. `over` replaces a section's data, or fails it with `{ error: { status, code, message } }`. */
+export const highlightsFixture = { filters: {}, topPerformers: [{ id: '1', name: 'Asha Rao', role: 'Engineer', hours: 42.5 }, { id: '2', name: 'Bala Kumar', role: 'Designer', hours: 38 }], bestAttendance: [{ id: '2', name: 'Bala Kumar', role: 'Designer', days: 22 }], newJoiners: [{ id: '9', name: 'Pooja Menon', role: 'Designer', joinedOn: '2026-10-05' }], newJoinerDays: 30 };
+
 export const bundleOf = (over = {}) => {
-	const base = { overview: overviewFixture, trends: trendsFixture, projects: projectsFixture, product: productFixture, ai: aiFixture, freshness: freshnessFixture };
+	const base = { overview: overviewFixture, trends: trendsFixture, projects: projectsFixture, product: productFixture, ai: aiFixture, freshness: freshnessFixture, highlights: highlightsFixture };
 	return Object.fromEntries(Object.entries(base).map(([k, v]) => [k, over[k] && over[k].error ? { ok: false, error: over[k].error } : { ok: true, data: over[k] || v }]));
 };
 

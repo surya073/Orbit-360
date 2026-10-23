@@ -254,6 +254,66 @@ describe('presentation center landing page and launcher', () => {
 	});
 });
 
+describe('studio decks and damaged decks on the presentation center', () => {
+	const studioCover = { type: 'custom', bg: { kind: 'solid', color: '#101820' }, objects: [{ id: 'a', kind: 'text', x: 100, y: 100, w: 800, h: 120, text: 'Annual numbers', st: { fs: 80, color: '#ffffff' } }] };
+	const listRows = [
+		{ ...rows[0], studio: true, slideCount: 6, cover: studioCover },
+		{ ...rows[1], studio: false, slideCount: 2, cover: null },
+		{ ROWID: '8', title: 'Old deck', team_id: null, status: 'draft', MODIFIEDTIME: '2026-10-03 09:00:00', slideCount: null, cover: null, unreadable: true },
+	];
+	const routes = (extra = []) => [...extra, [/^GET \/presentations\/5$/, okBody(deckBody({ slides: [studioCover], config: { v: 2, period: { preset: 'this_month' }, filters: { teamId: '7', projectId: null }, slides: [studioCover] } }))], [/^POST \/presentations$/, { status: 201, body: okBody({ ROWID: '30' }) }], [/^DELETE \/presentations\/6/, okBody({ ROWID: '6', deleted: true })], [/^GET \/presentations/, okBody(listRows, meta(3))], [/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }], meta(1))]];
+
+	test('a studio deck is a card that looks like its first slide, with its status, team and slide count', async () => {
+		mockFetch(routes());
+		renderWithProviders(<CenterRoutes />, { route: '/presentations' });
+		const list = await screen.findByRole('list', { name: 'Your presentations' });
+		const card = within(list).getByRole('heading', { name: 'Board review' }).closest('li');
+		expect(within(card).getByText('Annual numbers')).toBeInTheDocument(); // the real first slide, scaled down
+		expect(within(card).getByText('Ready')).toBeInTheDocument();
+		expect(await within(card).findByText('Delivery')).toBeInTheDocument();
+		expect(within(card).getByText('6 slides')).toBeInTheDocument();
+		expect(within(list).getByRole('heading', { name: 'All hands' })).toBeInTheDocument(); // a report deck keeps the themed preview
+	});
+
+	test('a studio deck plays straight away (its design is its own), while a report deck opens the launcher', async () => {
+		mockFetch(routes());
+		renderWithProviders(<CenterRoutes />, { route: '/presentations' });
+		await userEvent.click(await screen.findByRole('button', { name: 'Present Board review' }));
+		expect(await screen.findByTestId('where')).toHaveTextContent('/presentations/5/present');
+		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+	});
+
+	test('a deck whose slides cannot be read says so on its card and cannot be presented or copied', async () => {
+		mockFetch(routes());
+		renderWithProviders(<CenterRoutes />, { route: '/presentations' });
+		const card = (await screen.findByRole('heading', { name: 'Old deck' })).closest('li');
+		expect(within(card).getByRole('alert')).toHaveTextContent(/damaged/i);
+		expect(within(card).getByRole('button', { name: 'Present Old deck' })).toBeDisabled();
+		expect(within(card).queryByRole('button', { name: 'Duplicate Old deck' })).not.toBeInTheDocument();
+		expect(within(card).getByRole('button', { name: 'Delete Old deck' })).toBeEnabled();
+	});
+
+	test('Duplicate saves a draft copy with the same slides', async () => {
+		mockFetch(routes());
+		renderWithProviders(<CenterRoutes />, { route: '/presentations' });
+		await userEvent.click(await screen.findByRole('button', { name: 'Duplicate Board review' }));
+		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'POST /presentations')).toBe(true));
+		const body = JSON.parse(global.fetch.calls.find((c) => c.line === 'POST /presentations').init.body);
+		expect(body).toMatchObject({ title: 'Copy of Board review', status: 'draft', team_id: '7' });
+		expect(body.slides[0].objects[0].text).toBe('Annual numbers');
+		expect(await screen.findByText('Copied as “Copy of Board review”')).toBeInTheDocument();
+	});
+
+	test('Delete asks first, then removes the deck', async () => {
+		mockFetch(routes());
+		renderWithProviders(<CenterRoutes />, { route: '/presentations' });
+		await userEvent.click(await screen.findByRole('button', { name: 'Delete All hands' }));
+		await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: /^Delete/ }));
+		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'DELETE /presentations/6')).toBe(true));
+	});
+
+});
+
 // ---- viewer -----------------------------------------------------------------------------------
 function PlayerRoutes() {
 	return (

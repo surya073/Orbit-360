@@ -34,7 +34,7 @@ function Summary() {
 	const range = valid ? resolvePeriod(period) : null;
 	const res = useApiResource((signal) => dashboardService.aiUsage(range, { signal }), `aiu|${JSON.stringify(range)}`, { enabled: valid, isEmpty: () => false });
 	return (
-		<div style={{ marginBottom: 'var(--space-4)' }}>
+		<div className="u-mb-4">
 			<div className="filter-bar">
 				<DateRangeFilter label="Summary period" value={period} onChange={setPeriod} />
 			</div>

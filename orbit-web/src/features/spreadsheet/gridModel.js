@@ -11,7 +11,7 @@ import { humanize } from '../../utils/format';
 
 // Fields that are not editable as a plain cell (structured JSON) or are import-only.
 const SKIPPED_FIELDS = new Set(['more_details', 'source_record_id']);
-const LABELS = { email_normalized: 'Email', work_description: 'Description', is_billable: 'Billable', late_status: 'Late status' };
+const LABELS = { email_normalized: 'Email', work_description: 'Description', is_billable: 'Billable', late_status: 'Late status', item_priority: 'Priority' };
 
 export const MODULE_ROUTE_KEYS = { id: 'ROWID' };
 

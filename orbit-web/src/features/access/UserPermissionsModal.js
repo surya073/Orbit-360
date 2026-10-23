@@ -34,6 +34,20 @@ export default function UserPermissionsModal({ person, catalog, onClose, onSaved
 	const effectOf = (key) => (state && state[key]) || 'inherit';
 	const dirty = info && state && (JSON.stringify([...info.allow].sort()) !== JSON.stringify(Object.keys(state).filter((k) => state[k] === 'allow').sort()) || JSON.stringify([...info.deny].sort()) !== JSON.stringify(Object.keys(state).filter((k) => state[k] === 'deny').sort()));
 
+	const count = (effect) => (state ? Object.values(state).filter((v) => v === effect).length : 0);
+	const summary = [count('allow') ? `${count('allow')} added to the role` : '', count('deny') ? `${count('deny')} taken away` : ''].filter(Boolean).join(', ');
+	// every box of one module (a row) or one action (a column) at once: follow the role again, or allow / deny the whole line
+	const setMany = (keys, effect) =>
+		setState((s) => {
+			const out = { ...s };
+			keys.forEach((k) => {
+				if (effect === 'inherit') delete out[k];
+				else out[k] = effect;
+			});
+			return out;
+		});
+	const moduleKeys = (m) => m.actions.map((a) => keyOf(m.key, a));
+
 	const cycle = (key) =>
 		setState((s) => {
 			const next = NEXT[(s && s[key]) || 'inherit'];
@@ -94,6 +108,14 @@ export default function UserPermissionsModal({ person, catalog, onClose, onSaved
 							Role: <b>{info.role ? info.role.name : 'none'}</b>.{' '}
 							{info.locked ? 'Administrators always hold every permission, so individual changes do not apply.' : editable ? 'Click a box to cycle: follows the role, allowed, denied.' : 'You can see these but not change them.'}
 						</p>
+						<div className="up-summary" role="status" aria-live="polite">
+							<span>{summary || 'No individual changes: this person follows the role.'}</span>
+							{editable && !info.locked && state && Object.keys(state).length ? (
+								<Button size="sm" variant="ghost" icon="refresh" onClick={() => setState({})}>
+									Reset to the role
+								</Button>
+							) : null}
+						</div>
 						<div className="up-legend" aria-hidden="true">
 							<span className="up-cell up-cell--role">✓ role</span>
 							<span className="up-cell up-cell--allow">+ allow</span>
@@ -124,7 +146,17 @@ export default function UserPermissionsModal({ person, catalog, onClose, onSaved
 										{g.modules.map((m) => (
 											<tr key={m.key}>
 												<th scope="row" className="pm__module">
-													<span>{m.label}</span>
+<span>{m.label}</span>
+													{editable && !info.locked ? (
+														<span className="pm__row-tools">
+															<button type="button" className="pm__tool" aria-label={`Allow everything in ${m.label}`} title="Allow everything in this module" onClick={() => setMany(moduleKeys(m), 'allow')}>
+																+
+															</button>
+															<button type="button" className="pm__tool" aria-label={`Follow the role for ${m.label}`} title="Follow the role for this module" onClick={() => setMany(moduleKeys(m), 'inherit')}>
+																↺
+															</button>
+														</span>
+													) : null}
 												</th>
 												{catalog.actions.map((a) => {
 													if (!m.actions.includes(a.key)) {

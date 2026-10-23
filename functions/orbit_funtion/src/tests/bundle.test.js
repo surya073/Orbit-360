@@ -14,7 +14,7 @@ test('the bundle returns the same sections as the separate endpoints, in one req
 	const r = await w.api(w.ids.admin, 'GET', `/dashboard/bundle?${Q}`);
 	assert.equal(r.status, 200);
 	const b = r.body.data;
-	for (const k of ['overview', 'trends', 'projects', 'product', 'ai', 'freshness']) assert.equal(b[k].ok, true, `${k} should be ok`);
+	for (const k of ['overview', 'trends', 'projects', 'product', 'ai', 'freshness', 'highlights']) assert.equal(b[k].ok, true, `${k} should be ok`);
 	const single = (await w.api(w.ids.admin, 'GET', '/dashboard/overview?from=2026-10-01&to=2026-10-31')).body.data;
 	assert.deepEqual(b.overview.data, single);
 	assert.equal(b.overview.data.time.billableMinutes, 120);

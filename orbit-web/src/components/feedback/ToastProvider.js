@@ -15,7 +15,8 @@ const LEAVE_MS = 220;
 const MAX_VISIBLE = 4;
 
 function Toast({ item, onDone }) {
-	const t = TONES[item.tone] || TONES.success;
+	const t = { ...(TONES[item.tone] || TONES.success) };
+	if (item.action) t.ms = Math.max(t.ms, 8000); // long enough to reach Undo
 	const [leaving, setLeaving] = useState(false);
 	const timer = useRef(null);
 	const left = useRef(t.ms);
@@ -50,6 +51,18 @@ function Toast({ item, onDone }) {
 				<div className="toast__title">{item.title || t.title}</div>
 				<div className="toast__msg">{item.message}</div>
 			</div>
+			{item.action ? (
+				<button
+					type="button"
+					className="toast__action"
+					onClick={() => {
+						item.action.onClick();
+						dismiss();
+					}}
+				>
+					{item.action.label}
+				</button>
+			) : null}
 			<button type="button" className="toast__close" aria-label="Dismiss notification" onClick={dismiss}>
 				<Icon name="x" size={14} />
 			</button>
@@ -58,7 +71,7 @@ function Toast({ item, onDone }) {
 }
 
 /**
- * Notifications for completed actions and problems. `notify(message, tone = 'success', { title })`.
+ * Notifications for completed actions and problems. `notify(message, tone = 'success', { title, action: { label, onClick } })`.
  * Toasts pause while hovered or focused, can be dismissed, and respect reduced motion.
  */
 export function ToastProvider({ children }) {
@@ -67,7 +80,7 @@ export function ToastProvider({ children }) {
 	const notify = useCallback((message, tone = 'success', opts = {}) => {
 		const id = ++seq.current;
 		const known = TONES[tone] ? tone : 'info';
-		setItems((l) => [...l.slice(-(MAX_VISIBLE - 1)), { id, message, tone: known, title: opts.title }]);
+		setItems((l) => [...l.slice(-(MAX_VISIBLE - 1)), { id, message, tone: known, title: opts.title, action: opts.action }]);
 	}, []);
 	const remove = useCallback((id) => setItems((l) => l.filter((x) => x.id !== id)), []);
 	const value = useMemo(() => ({ notify }), [notify]);

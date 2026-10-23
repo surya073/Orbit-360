@@ -67,21 +67,26 @@ const overview = {
 	leave: { completeness: 'complete', approvedDays: 3, approvedHours: 0, byStatus: { approved: 2 }, records: 2 },
 	headcount: { completeness: 'complete', total: people.length, byStatus: people.reduce((m, e) => ({ ...m, [e.employment_status]: (m[e.employment_status] || 0) + 1 }), {}) },
 };
-const field = (f, type, extra = {}) => ({ field: f, type, required: false, ...extra });
-const templateOf = (module, columns, write = ROLE === 'admin' || module !== 'teams') => ({
-	module,
-	importable: module !== 'teams',
-	adminOnly: !write,
-	permissions: { view: true, create: write, edit: write, delete: write && module !== 'teams' },
-	immutable: [],
-	importColumns: ['source_record_id'],
-	columns,
-});
-const templates = [
-	templateOf('employees', [field('full_name', 'str', { required: true, maxLength: 200 }), field('job_role', 'str', { maxLength: 120 }), field('joining_date', 'date'), field('employment_status', 'enum', { values: ['active', 'inactive', 'on_leave'] }), field('primary_team_id', 'id'), field('more_details', 'json')]),
-	templateOf('teams', [field('team_code', 'str', { required: true }), field('name', 'str', { required: true })]),
-	templateOf('projects', [field('project_name', 'str', { required: true }), field('current_status', 'str')]),
-];
+// Field contracts come straight from the backend's resource definitions, so the local preview offers exactly the record types
+// (and required fields, allowed values and permissions) the real app does; only the data behind the lists is sample data.
+const { resources } = require(path.join(__dirname, '../../functions/orbit_funtion/src/config/resources.js'));
+const { importableModules } = require(path.join(__dirname, '../../functions/orbit_funtion/src/validators/imports.validators.js'));
+const holds = (key) => ROLE === 'admin' || perm.MANAGER_DEFAULT_KEYS.includes(key);
+const templates = Object.values(resources)
+	.filter((r) => r.fields && !r.internal)
+	.map((r) => {
+		const mod = perm.moduleOfResource(r.name);
+		const can = (a) => holds(perm.KEY(mod, a));
+		return {
+			module: r.name,
+			importable: importableModules().includes(r.name),
+			adminOnly: !can('create'),
+			permissions: { view: can('view'), create: can('create'), edit: can('edit'), delete: can('delete') },
+			immutable: [],
+			importColumns: r.importColumns || ['source_record_id'],
+			columns: Object.entries(r.fields).map(([f, spec]) => ({ field: f, type: spec.t, required: Boolean(spec.req), ...(spec.max ? { maxLength: spec.max } : {}), ...(spec.values ? { values: spec.values } : {}) })),
+		};
+	});
 
 const roles = () => {
 	const mk = (id, key, name, desc, scope, perms, extra = {}) => ({ id, key, name, description: desc, scopeType: scope, isSystem: Boolean(extra.system), isProtected: key === 'admin', isActive: true, permissions: perms, revoked: extra.revoked || [], source: extra.source || 'database', userCount: extra.users || 0 });
@@ -97,7 +102,9 @@ const accessUsers = [
 	{ id: '3', email: 'sam.lee@example.com', displayName: 'Sam Lee', teamId: null, isActive: true, roleId: '21', roleKey: 'hr_viewer', roleName: 'HR viewer', roleSource: 'assigned' },
 ];
 const deckSlides = [{ type: 'section', section: 'executive_summary' }, { type: 'section', section: 'employee_overview' }, { type: 'section', section: 'ai_usage' }];
+const decks = [];
 const deck = { ROWID: '5', title: 'Board review', team_id: '7', status: 'ready', slidesAvailable: true, last_presented_at: null, MODIFIEDTIME: '2026-10-10 09:00:00', slides: deckSlides, config: { v: 2, period: { preset: 'this_month' }, filters: { teamId: null, projectId: null }, slides: deckSlides } };
+decks.push(deck);
 const profile = {
 	time: { completeness: 'complete', totalMinutes: 8280, billableMinutes: 6240, nonBillableMinutes: 2040, billablePercent: 75.4 },
 	attendance: { completeness: 'complete', lateCount: 3, onTimeCount: 17, records: 20, lateRatePercent: 15 },
@@ -158,7 +165,7 @@ const productItems = [
 	['feature', 'API rate limiting', '3', 'open', 'high', '5', day(30)], ['bug', 'Fix search pagination bug', '1', 'open', 'critical', '1', day(10)], ['feature', 'Dark mode theme', '5', 'done', 'medium', '7', null],
 	['task', 'Dashboard performance tuning', '1', 'open', 'high', '2', day(9)], ['release', 'Release v2.0', '5', 'open', 'high', '8', day(31)], ['milestone', 'Beta launch', '3', 'open', 'medium', '8', day(25)],
 	['bug', 'Login redirect loop', '6', 'done', 'critical', '12', null], ['task', 'Write onboarding guide', '2', 'open', 'low', '9', day(28)],
-].map(([type, title, proj, status, priority, assignee, due], i) => ({ ROWID: String(i + 1), item_type: type, title, project_id: proj, status, priority, assignee_employee_id: assignee, due_date: due, completed_date: status === 'done' ? day(3) : null }));
+].map(([type, title, proj, status, priority, assignee, due], i) => ({ ROWID: String(i + 1), item_type: type, title, project_id: proj, status, item_priority: priority, assignee_employee_id: assignee, due_date: due, completed_date: status === 'done' ? day(3) : null }));
 const assignments = [
 	['1', '1', 'Tech lead', 60], ['1', '2', 'Delivery manager', 40], ['3', '4', 'QA engineer', 100], ['3', '5', 'Backend engineer', 80], ['5', '7', 'Frontend engineer', 100], ['6', '12', 'Security engineer', 50], ['2', '9', 'Campaign owner', 30],
 ].map(([proj, emp, role, alloc], i) => ({ ROWID: String(i + 1), project_id: proj, employee_id: emp, role_in_project: role, allocation_percent: alloc, is_active: true, start_date: '2026-09-01', end_date: null, _emp: nameOf(emp), _project: projectName(proj) }));
@@ -250,6 +257,28 @@ function route(method, p, url, body) {
 		if (i >= 0) customFields.splice(i, 1);
 		return { body: ok({ deleted: true }) };
 	}
+	// Presentations are kept in memory so the studio can be tried end to end (create, edit, present, duplicate, delete) without Catalyst.
+	if (p === '/presentations' && method === 'POST') {
+		const id = String(100 + decks.length + 1);
+		const row = { ROWID: id, title: body.title, team_id: body.team_id || null, status: body.status || 'draft', last_presented_at: null, MODIFIEDTIME: '2026-10-22 09:00:00', slidesAvailable: true, slides: body.slides, config: { v: 2, period: body.period || { preset: 'this_month' }, filters: { teamId: body.team_id || null, projectId: (body.filters || {}).project_id || null }, slides: body.slides } };
+		decks.push(row);
+		return { status: 201, body: ok({ ROWID: id }) };
+	}
+	const deckMatch = /^\/presentations\/(\d+)(\/presented)?$/.exec(p);
+	if (deckMatch && method !== 'GET') {
+		const d = decks.find((x) => x.ROWID === deckMatch[1]);
+		if (!d) return { status: 404, body: { ok: false, error: { code: 'NOT_FOUND', message: 'Not found' } } };
+		if (method === 'DELETE') decks.splice(decks.indexOf(d), 1);
+		else if (method === 'PATCH') {
+			if (body.title) d.title = body.title;
+			if (body.status) d.status = body.status;
+			if (body.slides) {
+				d.slides = body.slides;
+				d.config = { ...d.config, slides: body.slides, period: body.period || d.config.period };
+			}
+		}
+		return { body: ok({ ROWID: d.ROWID, deleted: method === 'DELETE' || undefined }) };
+	}
 	if (method !== 'GET') return { status: method === 'POST' ? 201 : 200, body: ok({ ROWID: '999', id: '999', key: 'new_role', granted: 0, revoked: 0 }) };
 	const sp = url.searchParams;
 	const page = Math.max(1, Number(sp.get('page')) || 1);
@@ -277,13 +306,14 @@ function route(method, p, url, body) {
 		case p === '/dashboard/bundle': {
 			// the whole dashboard in one request, composed from the single-section answers above
 			const part = (path) => ({ ok: true, data: route(method, path, url).body.data });
-			return { body: ok({ overview: part('/dashboard/overview'), trends: part('/dashboard/trends'), projects: part('/dashboard/projects'), product: part('/dashboard/product'), ai: part('/dashboard/ai-usage'), freshness: part('/dashboard/freshness') }) };
+			return { body: ok({ overview: part('/dashboard/overview'), trends: part('/dashboard/trends'), projects: part('/dashboard/projects'), product: part('/dashboard/product'), ai: part('/dashboard/ai-usage'), freshness: part('/dashboard/freshness'), highlights: part('/dashboard/highlights') }) };
 		}
 		case p === '/dashboard/overview': return { body: ok(overview) };
 		case p === '/dashboard/trends': return { body: ok({ filters: { granularity: 'week' }, truncated: false, time: trendTime, attendance: trendAttendance }) };
 		case p === '/dashboard/projects': return { body: ok({ filters: {}, status: { completeness: 'complete', total: 7, byStatus: { active: 5, on_hold: 1, completed: 1 } }, workload: { completeness: 'complete', projectsWithTime: workload.length, truncated: false, projects: workload } }) };
 		case p === '/dashboard/product': return { body: ok({ asOf: '2026-10-13', product: { completeness: 'complete', total: 9, byStatus: { open: 4, done: 5 }, byType: { bug: { open: 2, done: 1 }, feature: { open: 2, done: 4 } }, overdue: 2 } }) };
 		case p === '/dashboard/ai-usage': return { body: ok({ usage: { completeness: 'complete', totalRecords: 20, toolCount: 5, byCategory: { ai: 12, other: 4, github: 4 }, missingPeriod: 0, tools } }) };
+		case p === '/dashboard/highlights': return { body: ok({ filters: {}, topPerformers: [{ id: '1', name: 'Asha Rao', role: 'Engineer', hours: 42.5 }, { id: '2', name: 'Bala Kumar', role: 'Designer', hours: 38 }, { id: '3', name: 'Chitra Nair', role: 'QA Lead', hours: 31.5 }], bestAttendance: [{ id: '2', name: 'Bala Kumar', role: 'Designer', days: 22 }, { id: '1', name: 'Asha Rao', role: 'Engineer', days: 21 }], newJoiners: [{ id: '9', name: 'Pooja Menon', role: 'Designer', joinedOn: '2026-10-05' }, { id: '10', name: 'Ravi Kumar', role: 'Engineer', joinedOn: '2026-10-06' }], newJoinerDays: 30 }) };
 		case p === '/dashboard/freshness': return { body: ok({ asOf: '2026-10-13 10:00:00', timeEntries: { latestDate: '2026-10-12' }, attendance: { latestDate: '2026-10-12' }, imports: { lastCompletedAt: '2026-10-10 09:00:00' } }) };
 		case p === '/dashboard/people-profiles': {
 			const ids = (url.searchParams.get('employee_ids') || '').split(',').filter(Boolean);
@@ -302,8 +332,8 @@ function route(method, p, url, body) {
 		case p === '/performance': return list(query(performanceRecords, ['_emp', 'review_cycle']));
 		case p === '/ai-usage': return list(query(aiUsageRecords, ['tool_name', 'tool_category', '_emp']));
 		case p === '/product-items': return list(query(productItems, ['title', 'item_type']));
-		case p === '/presentations': return list([deck]);
-		case p === '/presentations/5': return { body: ok(deck) };
+		case p === '/presentations': return list(decks.map(({ slides, config, ...row }) => { const first = slides.find((x) => x.type === 'custom'); return { ...row, slideCount: slides.length, studio: Boolean(first), cover: first ? { type: 'custom', bg: first.bg, objects: first.objects.slice(0, 10) } : null }; }));
+		case /^\/presentations\/\d+$/.test(p): { const d = decks.find((x) => `/presentations/${x.ROWID}` === p); return d ? { body: ok(d) } : { status: 404, body: { ok: false, error: { code: 'NOT_FOUND', message: 'This presentation does not exist.' } } }; }
 		case p === '/reporting-structure': return { body: ok({ team: { id: '7', name: 'Delivery' }, employees: people.filter((e) => e.primary_team_id === '7').map((e) => ({ id: e.ROWID, name: e.full_name, jobRole: e.job_role, code: e.employee_code, sheetManagerId: e.reports_to_employee_id || null })), nodes: [{ employeeId: '2', parentId: null, roleLabel: 'Delivery Lead' }, { employeeId: '1', parentId: '2', roleLabel: null }] }) };
 		case p === '/access/catalog': return { body: ok(perm.catalog()) };
 		case p === '/access/roles': return { body: ok({ tablesReady: TABLES_READY, you: { roleKey: me.roleKey, canManageRoles: true, canManageUsers: true }, roles: roles() }) };

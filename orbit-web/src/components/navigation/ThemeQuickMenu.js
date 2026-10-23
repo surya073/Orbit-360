@@ -13,7 +13,7 @@ export default function ThemeQuickMenu({ showSettingsLink = true }) {
 	return (
 		<Popover label="Appearance" trigger={({ toggle, props }) => <IconButton icon="palette" label="Appearance" data-tour="appearance" onClick={toggle} {...props} />}>
 			{({ close }) => (
-				<div style={{ minWidth: 220, maxHeight: 'min(60vh, 420px)', overflowY: 'auto' }} role="radiogroup" aria-label="Theme">
+				<div className="theme-quick-menu" role="radiogroup" aria-label="Theme">
 					{[...THEMES, SYSTEM_THEME].map((t) => (
 						<button
 							key={t.id}

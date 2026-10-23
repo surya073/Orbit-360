@@ -9,7 +9,7 @@ import { ROUTES } from '../../config/routes';
  */
 export default function DataEntryModes({ current, resource }) {
 	const options = [
-		{ id: 'import', label: 'Sheet import', icon: 'upload', hint: 'Upload a CSV file', to: ROUTES.imports },
+		{ id: 'import', label: 'Sheet import', icon: 'upload', hint: 'Upload a CSV file', to: `${ROUTES.imports}${resource ? `?module=${resource}` : ''}` },
 		{ id: 'sheet', label: 'Spreadsheet editor', icon: 'dashboard', hint: 'Edit many records in a grid', to: `${ROUTES.spreadsheet}${resource ? `?module=${resource}` : ''}` },
 	];
 	return (

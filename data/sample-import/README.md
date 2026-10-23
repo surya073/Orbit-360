@@ -21,6 +21,7 @@ Files are numbered in the order they must be imported, because later files refer
 | 7-ai-usage.csv | AI usage | 21 | Tools across Sep/Oct; one record with no reporting period |
 | 8-product-items.csv | Product items | 24 | Tasks/features/bugs, some past due |
 | 9-employees-conflicts-and-errors.csv | Employees | 6 | See below |
+| 10-employees-renamed-headers.csv | Employees | 2 | Headers that differ from the template (`Name`, `Mail`, `Position`, `Joined On`): exercises the column-matching step. Check the rows, then Cancel import so nothing is created |
 
 3. **Dashboard**: set the period to *Custom* `2026-09-14` → `2026-10-31` (or "Last 30 days").
    Expect: partial badges (pending time entries, unknown late status, leave without units), Atlas Platform

@@ -136,7 +136,7 @@ function Palette({ onClose }) {
 							</React.Fragment>
 						);
 					})}
-					<div aria-live="polite" className="small muted" style={{ padding: 'var(--space-2)' }}>
+					<div aria-live="polite" className="small muted u-pad-2">
 						{q.trim() && q.trim().length < SEARCH_MIN_CHARS ? `Type at least ${SEARCH_MIN_CHARS} characters to search records.` : null}
 						{active && res.status === 'loading' && !res.data ? 'Searching…' : null}
 						{active && res.status === 'error' ? `Search is unavailable: ${res.error.message}` : null}

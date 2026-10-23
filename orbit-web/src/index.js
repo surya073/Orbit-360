@@ -31,6 +31,11 @@ import './styles/tour.css';
 import './styles/presentations.css';
 import './styles/reportingSlide.css';
 import './styles/dashboard.css';
+import './styles/presentationBackdrop.css';
+import './styles/presentationCenter.css';
+import './styles/studio.css';
+import './styles/cards.css'; // the card system overrides every older card look
+import './styles/utilities.css'; // last: spacing helpers and the classes that replaced inline styles
 import App from './app/App';
 
 ReactDOM.createRoot(document.getElementById('root')).render(

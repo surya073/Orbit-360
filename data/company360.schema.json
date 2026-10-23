@@ -1874,7 +1874,7 @@
           "note": ""
         },
         {
-          "name": "priority",
+          "name": "item_priority",
           "type": "varchar(20)",
           "required": false,
           "unique": false,

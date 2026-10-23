@@ -62,6 +62,7 @@ export default function useDashboardData(params, { enabled = true, sections } = 
 		product: useApiResource((s) => dashboardService.product(base, { signal: s }), `pd|${key}`, { enabled: legacy && want('product'), isEmpty: never }),
 		ai: useApiResource((s) => dashboardService.aiUsage(base, { signal: s }), `ai|${key}`, { enabled: legacy && want('ai'), isEmpty: never }),
 		freshness: useApiResource((s) => dashboardService.freshness(base, { signal: s }), `fr|${key}`, { enabled: legacy && want('freshness'), isEmpty: never }),
+		highlights: useApiResource((s) => dashboardService.highlights(base, { signal: s }), `hl|${key}`, { enabled: legacy && want('highlights'), isEmpty: never }), // studio leaderboards
 	};
 
 	return {
@@ -71,6 +72,7 @@ export default function useDashboardData(params, { enabled = true, sections } = 
 		product: legacy ? own.product : part('product'),
 		ai: legacy ? own.ai : part('ai'),
 		freshness: legacy ? own.freshness : part('freshness'),
+		highlights: legacy ? own.highlights : part('highlights'),
 		trendClamped: Boolean(clamped),
 	};
 }

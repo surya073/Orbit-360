@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import KpiCard from '../components/cards/KpiCard';
 import ProgressBar from '../components/charts/ProgressBar';
 import RingGauge from '../components/charts/RingGauge';
@@ -82,8 +83,14 @@ describe('detailed dashboard', () => {
 		expect(await within(chart).findByText('66.7% billable')).toBeInTheDocument();
 		expect(within(chart).getByRole('button', { name: 'This month' })).toHaveAttribute('aria-pressed', 'true');
 		expect(await within(chart).findByRole('group', { name: 'Billable vs non-billable per week' })).toBeInTheDocument();
-		const attention = screen.getByRole('region', { name: 'Needs attention' });
-		expect(await within(attention).findByRole('link', { name: 'Review now' })).toHaveAttribute('href', '/time-entries');
+		// the highlights card: people worth a mention, sliding by themselves, with no button
+		const hl = screen.getByRole('region', { name: 'Highlights' });
+		expect(await within(hl).findByRole('heading', { name: 'Top performers' })).toBeInTheDocument();
+		expect(within(hl).getByText('Asha Rao')).toBeInTheDocument();
+		expect(within(hl).getByText('42.5 h')).toBeInTheDocument();
+		expect(within(hl).queryByRole('link')).not.toBeInTheDocument();
+		await userEvent.click(within(hl).getByRole('tab', { name: 'New joiners' }));
+		expect(await within(hl).findByText('Pooja Menon')).toBeInTheDocument();
 		const side = screen.getByRole('region', { name: 'Team snapshot' });
 		const rows = await within(side).findByRole('list', { name: 'Busiest projects' });
 		expect(within(rows).getByText('No estimate')).toBeInTheDocument();

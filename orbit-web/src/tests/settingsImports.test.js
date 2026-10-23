@@ -43,11 +43,11 @@ describe('settings', () => {
 
 	test('tabs are linkable (?tab=) and keyboard operable', async () => {
 		mockFetch([[/^GET \/teams/, okBody([{ ROWID: '7', name: 'Delivery' }], { page: 1, pageSize: 100, total: 1, totalPages: 1 })]]);
-		renderWithProviders(<SettingsPage />, { route: '/settings?tab=profile' });
+renderWithProviders(<SettingsPage />, { route: '/settings?tab=profile' }); // an older link still lands on the Account tab
 		expect(await screen.findByText('Maya Rao')).toBeInTheDocument();
 		expect(screen.getByText('maya@example.com')).toBeInTheDocument();
 		expect(await screen.findByText('Delivery')).toBeInTheDocument();
-		expect(screen.getByRole('tab', { name: 'Profile' })).toHaveAttribute('aria-selected', 'true');
+expect(screen.getByRole('tab', { name: 'Account' })).toHaveAttribute('aria-selected', 'true');
 	});
 });
 
@@ -76,6 +76,14 @@ describe('import flow', () => {
 		renderWithProviders(<ImportPage />);
 		await pickOption(await screen.findByLabelText('Data type'), 'attendance_records');
 	}
+
+	test('opened from a module page (?module=), the data type is already chosen and the file can be uploaded', async () => {
+		mockFetch(happyRoutes());
+		renderWithProviders(<ImportPage />, { route: '/imports?module=attendance_records' });
+		const file = await screen.findByLabelText('CSV file');
+		await waitFor(() => expect(file).toBeEnabled());
+		expect(screen.getByLabelText('Data type')).toHaveTextContent(/attendance/i);
+	});
 
 	test('validate in bounded batches, review problems, nothing is written until the user imports', async () => {
 		mockFetch(happyRoutes());
@@ -145,18 +153,32 @@ describe('import flow', () => {
 		expect(screen.queryByRole('button', { name: 'Import valid rows' })).not.toBeInTheDocument();
 	});
 
+	test('differently named headers are matched automatically and shown for a quick check, with the values as hints', async () => {
+		mockFetch(happyRoutes());
+		await choose();
+		await userEvent.upload(screen.getByLabelText('CSV file'), upload('smart.csv', 'Employee,Date,status\n1,2026-10-01,no\n2,2026-10-02,yes\n'));
+		expect(await screen.findByRole('region', { name: 'Match the columns' })).toBeInTheDocument();
+		expect(screen.getByLabelText('Field for column Employee')).toHaveTextContent('employee_id');
+		expect(screen.getByLabelText('Field for column Date')).toHaveTextContent('attendance_date');
+		expect(screen.getByLabelText('Field for column status')).toHaveTextContent('late_status');
+		expect(screen.getByRole('button', { name: 'Check the rows' })).toBeEnabled();
+		expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(false);
+		await userEvent.click(screen.getByRole('button', { name: 'Check the rows' }));
+		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(true));
+		// the confirmed mapping is remembered: the same file shape goes straight to checking next time
+		expect(window.localStorage.getItem('company360.importMaps')).toContain('attendance_records');
+	});
+
 	test('headers that differ from the template are matched by the user before anything is sent; required fields must be covered', async () => {
 		mockFetch(happyRoutes());
 		await choose();
-		const renamed = 'Employee,Date,status\n1,2026-10-01,no\n2,2026-10-02,yes\n';
+		const renamed = 'who,seen,flag\n1,2026-10-01,no\n2,2026-10-02,yes\n';
 		await userEvent.upload(screen.getByLabelText('CSV file'), upload('renamed.csv', renamed));
 		expect(await screen.findByRole('region', { name: 'Match the columns' })).toBeInTheDocument();
 		expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(false); // nothing is sent while matching
-		expect(screen.getByRole('alert')).toHaveTextContent(/Required fields not matched: employee_id, attendance_date, late_status/);
+		expect(screen.getByRole('alert')).toHaveTextContent(/Required field not matched: employee_id/); // the date and status columns were recognised from their values
 		expect(screen.getByRole('button', { name: 'Check the rows' })).toBeDisabled();
-		await pickOption(screen.getByLabelText('Field for column Employee'), 'employee_id');
-		await pickOption(screen.getByLabelText('Field for column Date'), 'attendance_date');
-		await pickOption(screen.getByLabelText('Field for column status'), 'late_status');
+		await pickOption(screen.getByLabelText('Field for column who'), 'employee_id');
 		expect(screen.getByText(/What will be sent for checking/)).toBeInTheDocument();
 		await userEvent.click(screen.getByRole('button', { name: 'Check the rows' }));
 		await waitFor(() => expect(global.fetch.calls.some((c) => c.line === 'POST /imports/jobs')).toBe(true));

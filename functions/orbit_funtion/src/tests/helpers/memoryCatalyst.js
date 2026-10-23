@@ -153,6 +153,8 @@ function createMemoryCatalyst(store, { latencyMs = 0, hooks = {}, aggregateKeys 
 		}),
 		datastore: () => ({
 			table: (name) => ({
+				// live column definitions; tests set store.columns[table] to describe a table (unset = no columns)
+				getAllColumns: async () => ((store.columns && store.columns[name]) || []).map((c) => ({ column_name: c })),
 				insertRow: async (row) => (gone(name), store.insert(name, row)),
 				insertRows: async (rows) => {
 					gone(name);

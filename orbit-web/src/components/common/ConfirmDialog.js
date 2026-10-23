@@ -34,7 +34,7 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Delete',
 		>
 			<p>{message}</p>
 			{error ? (
-				<p role="alert" className="banner banner--error" style={{ marginTop: 12 }}>
+				<p role="alert" className="banner banner--error u-mt-3">
 					{error}
 				</p>
 			) : null}

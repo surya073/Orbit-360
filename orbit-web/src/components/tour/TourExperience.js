@@ -117,7 +117,6 @@ function Welcome({ user, onBegin, onClose }) {
 }
 
 const TIPS = [
-	{ icon: 'search', text: 'Press Ctrl K (⌘K on Mac) to search from anywhere.' },
 	{ icon: 'palette', text: 'Change the theme and icon style from the palette button.' },
 	{ icon: 'user', text: 'Replay this tour from your account menu whenever you like.' },
 ];

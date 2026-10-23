@@ -17,6 +17,8 @@ export const ROUTES = {
 	spreadsheet: '/spreadsheet',
 	presentations: '/presentations',
 	presentationNew: '/presentations/new',
+	presentationStudio: '/presentations/studio',
+	presentationQuick: '/presentations/quick',
 	presentationEdit: (id = ':id') => `/presentations/${id}/edit`,
 	present: (id = ':id') => `/presentations/${id}/present`,
 	settings: '/settings',

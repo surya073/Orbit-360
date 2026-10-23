@@ -38,7 +38,7 @@ export default function KpiCard({ label, value, unit, sub, icon, metric, loading
 				{label}
 			</div>
 			{loading ? (
-				<div className="skeleton" style={{ height: 30, width: '60%', marginTop: 6 }} />
+				<div className="skeleton kpi__skeleton" />
 			) : error ? (
 				<div className="kpi__value kpi__value--empty" title={error.message}>
 					—

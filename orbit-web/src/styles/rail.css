@@ -1,5 +1,6 @@
-/* Sidebar rail: a vertical accent-gradient rail of round icons. The active page curves out of the rail into
-   the content (inverted corners drawn with radial gradients in the page background colour). Theme tokens only. */
+/* Sidebar rail: a full-height accent-gradient rail of round icons. The active page curves out of the rail into
+   the content (inverted corners drawn with radial gradients in the page background colour). Icons stack from the top
+   with one even gap. Theme tokens only. Tune live in DevTools: --rail-w, --rail-gap, --rail-curve. */
 
 :root {
 	--rail-w: 76px;
@@ -7,6 +8,7 @@
 }
 
 .rail {
+	--rail-gap: 10px; /* the one space between every item in the rail, from the top down */
 	position: sticky;
 	top: 0;
 	align-self: start;
@@ -20,7 +22,7 @@
 	background: var(--gradient-accent);
 	color: var(--on-accent);
 	border-radius: 0 30px 30px 0;
-	box-shadow: 10px 0 34px -22px color-mix(in srgb, var(--accent) 70%, transparent);
+	box-shadow: 4px 0 14px -10px color-mix(in srgb, var(--accent) 55%, transparent); /* tight, so no tinted strip shows beside the active neck */
 	transition: width 280ms var(--ease);
 }
 
@@ -65,18 +67,20 @@
 	display: inline-flex;
 }
 
-/* navigation */
+/* navigation: everything stacks from the top with the same gap (no empty band in the middle) */
 .rail__nav {
-	flex: 1;
+	flex: none;
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
-	padding: 18px 0 8px;
+	gap: var(--rail-gap);
+	padding: var(--rail-gap) 0 0;
 }
+/* only the profile sits at the foot of the rail; every page link (Settings included) stacks from the top */
 .rail__bottom {
 	display: grid;
-	gap: 12px;
-	padding-top: 8px;
+	gap: var(--rail-gap);
+	margin-top: auto;
+	padding-top: var(--rail-gap);
 }
 /* short windows: the rail scrolls instead of crushing its icons */
 @media (max-height: 700px) {
@@ -96,7 +100,7 @@
 .rail-account {
 	display: grid;
 	margin: 0 14px 0 12px;
-	padding-top: 12px;
+	padding-top: var(--rail-gap);
 	border-top: 1px solid color-mix(in srgb, var(--on-accent) 24%, transparent);
 }
 .rail-account .rail-item {
@@ -228,14 +232,18 @@
 	width: var(--rail-curve);
 	height: var(--rail-curve);
 	pointer-events: none;
+	clip-path: inset(0); /* keep the corner fill inside its own box */
 }
 .rail-item.active::before {
 	top: calc(var(--rail-curve) * -1);
-	background: radial-gradient(circle at 0 0, transparent calc(var(--rail-curve) - 0.5px), var(--bg) var(--rail-curve));
+	/* the corner is a shadow around a rounded box, so there is no anti-aliased gradient edge (a visible seam) */
+	border-bottom-right-radius: var(--rail-curve);
+	box-shadow: calc(var(--rail-curve) / 2) calc(var(--rail-curve) / 2) 0 calc(var(--rail-curve) / 2) var(--bg);
 }
 .rail-item.active::after {
 	bottom: calc(var(--rail-curve) * -1);
-	background: radial-gradient(circle at 0 100%, transparent calc(var(--rail-curve) - 0.5px), var(--bg) var(--rail-curve));
+	border-top-right-radius: var(--rail-curve);
+	box-shadow: calc(var(--rail-curve) / 2) calc(var(--rail-curve) / -2) 0 calc(var(--rail-curve) / 2) var(--bg);
 }
 
 /* tooltips for the icon-only rail */
@@ -518,57 +526,16 @@
 	}
 }
 
-/* ---------- Sidebar docked on the right (Move to the right / left button in the rail) ---------- */
+/* back-to-top is centred on the page area, not the whole window: the rail takes its width on the left */
 @media (min-width: 901px) {
-	.shell--rail-right {
-		grid-template-columns: minmax(0, 1fr) calc(var(--rail-w, 76px) / var(--text-zoom, 1));
-	}
-	.shell--rail-right .shell__body {
-		grid-column: 1;
-		grid-row: 1;
-	}
-	.shell--rail-right .rail {
-		grid-column: 2;
-		grid-row: 1;
-		border-radius: 30px 0 0 30px;
-		box-shadow: -10px 0 34px -22px color-mix(in srgb, var(--accent) 70%, transparent);
-	}
-	.shell--rail-right .rail-item {
-		margin-left: 0;
-		margin-right: 12px;
-		border-radius: 0 28px 28px 0;
-	}
-	.shell--rail-right .rail-account {
-		margin: 0 12px 0 14px;
-	}
-	.shell--rail-right .rail-account .rail-item {
-		margin-right: 0;
-	}
-	/* the active page's neck joins the page on the rail's left edge */
-	.shell--rail-right .rail-item.active::before,
-	.shell--rail-right .rail-item.active::after {
-		right: auto;
-		left: 0;
-	}
-	.shell--rail-right .rail-item.active::before {
-		background: radial-gradient(circle at 100% 0, transparent calc(var(--rail-curve) - 0.5px), var(--bg) var(--rail-curve));
-	}
-	.shell--rail-right .rail-item.active::after {
-		background: radial-gradient(circle at 100% 100%, transparent calc(var(--rail-curve) - 0.5px), var(--bg) var(--rail-curve));
-	}
-	.shell--rail-right .rail:not(.is-expanded) .rail-item__icon::after {
-		left: auto;
-		right: calc(100% + 22px);
-		translate: 6px -50%;
-	}
-	/* centre on the page area, not the whole window: the rail takes its width on one side */
 	.to-top {
 		left: calc(50% + var(--rail-w, 76px) / 2);
 	}
-	.to-top--clear-rail {
-		left: calc(50% - var(--rail-w, 76px) / 2);
-	}
 }
-.rail-side .rail-item__icon {
-	background: color-mix(in srgb, var(--on-accent) 10%, transparent);
+
+/* a colour chosen in Settings -> Appearance -> Sidebar replaces the gradient */
+html[data-rail='custom'] .rail {
+	background: var(--rail-custom);
+	color: var(--rail-on);
+	--on-accent: var(--rail-on);
 }

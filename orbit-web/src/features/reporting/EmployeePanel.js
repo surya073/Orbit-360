@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import Button from '../../components/common/Button';
+import SearchBox from '../../components/forms/SearchBox';
 import Field from '../../components/forms/Field';
 import { Checkbox } from '../../components/forms/Choice';
 import EmployeeAvatar from './EmployeeAvatar';
@@ -52,7 +53,7 @@ export default function EmployeePanel({ employees, tree, query, onQuery, role, o
 					{unmapped === 0 ? 'All placed' : `${unmapped} not placed`}
 				</span>
 			</div>
-			<Field label="Search employees">{(p) => <input {...p} type="search" value={query} placeholder="Name, role, department or ID" onChange={(e) => onQuery(e.target.value)} />}</Field>
+<Field label="Search employees">{(p) => <SearchBox {...p} value={query} placeholder="Name, role, department or ID" onChange={onQuery} />}</Field>
 			<div className="rs-panel__filters">
 				<Field label="Role">
 					{(p) => (

@@ -5,6 +5,7 @@ import ConfirmDialog from '../../components/common/ConfirmDialog';
 import Modal from '../../components/common/Modal';
 import { useToast } from '../../components/feedback/ToastProvider';
 import { Radio } from '../../components/forms/Choice';
+import SearchBox from '../../components/forms/SearchBox';
 import Field from '../../components/forms/Field';
 import { accessService } from '../../services/accessService';
 import { describeKey, diff, setAll, touchesAccessControl } from './accessModel';
@@ -223,7 +224,7 @@ export default function RolesTab({ catalog, data, reload }) {
 		<div className="access-split">
 			<aside className="access-list" aria-label="Roles">
 				<div className="access-list__head">
-					<input type="search" className="input" aria-label="Search roles" placeholder="Search roles" value={query} onChange={(e) => setQuery(e.target.value)} />
+<SearchBox aria-label="Search roles" placeholder="Search roles" value={query} onChange={setQuery} />
 					{can('access.manage_roles') ? (
 						<Button size="sm" icon="plus" onClick={() => setCreating(true)} disabled={!data.tablesReady} title={data.tablesReady ? undefined : 'Create the access tables first'}>
 							New role

@@ -247,24 +247,6 @@ a.flag--warning:hover {
 	opacity: 0.55;
 }
 
-/* ---- Card header chip + links ---- */
-.card__icon,
-.kpi__icon {
-	display: inline-grid;
-	place-items: center;
-	flex: none;
-	width: 28px;
-	height: 28px;
-	border-radius: var(--radius-md);
-	color: var(--card-accent, var(--kpi-accent, var(--accent)));
-	background: color-mix(in srgb, var(--card-accent, var(--kpi-accent, var(--accent))) 14%, var(--surface));
-	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--card-accent, var(--kpi-accent, var(--accent))) 22%, transparent);
-}
-.kpi__icon {
-	width: 24px;
-	height: 24px;
-	border-radius: 7px;
-}
 .card__link {
 	display: inline-flex;
 	align-items: center;
@@ -283,25 +265,6 @@ a.flag--warning:hover {
 	transform: translateX(3px);
 }
 
-/* ---- Rich KPI cards ---- */
-.kpi--rich {
-	display: flex;
-	flex-direction: column;
-	padding: var(--space-4);
-	transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
-}
-.kpi--rich::before {
-	background: linear-gradient(180deg, var(--kpi-accent), transparent);
-}
-.kpi--rich:hover {
-	transform: translateY(-2px);
-	box-shadow: var(--shadow-md);
-	border-color: color-mix(in srgb, var(--kpi-accent) 40%, var(--border));
-}
-.kpi--rich .kpi__value {
-	font-size: calc(var(--fs-kpi) + 4px);
-	margin-top: var(--space-2);
-}
 .kpi__bar {
 	margin-top: var(--space-2);
 }
@@ -347,16 +310,10 @@ a.flag--warning:hover {
 	transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
 .dash .widget .card:hover {
-	box-shadow: var(--shadow-md);
-	border-color: var(--border-strong);
-}
-.dash .card__head {
-	align-items: center;
-	padding-bottom: var(--space-3);
-	border-bottom: 1px solid var(--border);
+	box-shadow: var(--card-shadow-hover);
 }
 .dash .card__body {
-	padding-top: var(--space-4);
+	padding-top: var(--space-3);
 }
 
 /* ---- Detail building blocks ---- */

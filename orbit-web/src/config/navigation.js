@@ -33,15 +33,14 @@ export const NAV = [
 	// The spreadsheet editor is one of the data-entry modes inside Imports, so Imports stays marked while it is open.
 	{ type: 'link', to: ROUTES.imports, label: 'Imports', icon: 'upload', permission: 'imports.view', alsoActive: [ROUTES.spreadsheet] },
 	{ type: 'link', to: ROUTES.presentations, label: 'Presentations', icon: 'present', permission: 'presentations.view' },
-	// Settings is the last module and sits at the foot of the sidebar; Access & Permissions lives inside it.
+	// User management (overview, roles and permissions, users) is a module of its own: one click from anywhere.
+	{ type: 'link', to: ROUTES.access, label: 'User management', icon: 'lock', permission: 'access.view' },
+	// Settings is the last module and sits at the foot of the sidebar.
 	{
 		type: 'group',
 		label: 'Settings',
 		icon: 'settings',
-		items: [
-			{ to: ROUTES.settings, label: 'Settings', description: 'Themes, layout, backup and profile', icon: 'settings', permission: null },
-			{ to: ROUTES.access, label: 'Access & Permissions', description: 'Roles and who can do what', icon: 'lock', permission: 'access.view' },
-		],
+		items: [{ to: ROUTES.settings, label: 'Settings', description: 'Appearance, dashboard and account', icon: 'settings', permission: null }],
 	},
 ];
 
@@ -60,7 +59,8 @@ export const isLinkActive = (item, pathname) => (item.end ? pathname === item.to
 export const isGroupActive = (group, pathname) => group.items.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`));
 
 /** The visible group the current page belongs to, or undefined on a page that is not inside a group. */
-export const activeGroup = (can, pathname) => visibleNav(can).find((n) => n.type === 'group' && isGroupActive(n, pathname));
+// A group with a single page (Settings) has nothing to switch between, so the top bar shows no section name for it.
+export const activeGroup = (can, pathname) => visibleNav(can).find((n) => n.type === 'group' && n.items.length > 1 && isGroupActive(n, pathname));
 
 /** The first page this user may open (where "home" goes when the Dashboard is not allowed). */
 export const firstDestination = (can) => {

@@ -332,7 +332,7 @@ Tasks/features/bugs/releases/milestones. Type-specific fields nullable.
 | `project_id` | fk → projects (on delete null) |  |  |  |
 | `team_id` | fk → teams (on delete null) |  |  |  |
 | `status` | varchar(40) |  |  |  |
-| `priority` | varchar(20) |  |  |  |
+| `item_priority` | varchar(20) |  |  |  |
 | `assignee_employee_id` | fk → employees (on delete null) |  |  |  |
 | `reporter_employee_id` | fk → employees (on delete null) |  |  |  |
 | `parent_item_id` | fk → product_items (on delete null) |  |  |  |

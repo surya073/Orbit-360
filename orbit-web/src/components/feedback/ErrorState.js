@@ -11,6 +11,12 @@ function describe(error) {
 	return { title: 'This could not be loaded', message: error.message };
 }
 
+/**
+ * A data-model or permission problem on the server comes with a detail that names the table or column at fault (never
+ * a row value), so it is shown: that is what lets an administrator fix the Data Store.
+ */
+const setupDetail = (error) => (error && /^DATASTORE_/.test(String(error.code || '')) && Array.isArray(error.details) && error.details[0] && error.details[0].message ? String(error.details[0].message) : null);
+
 /** Consistent unavailable/unauthorized/error state with retry. Shows a short reference for support. */
 export default function ErrorState({ error, onRetry, compact }) {
 	const { title, message } = describe(error);
@@ -21,6 +27,7 @@ export default function ErrorState({ error, onRetry, compact }) {
 			</span>
 			<div className="state__title">{title}</div>
 			<p>{message}</p>
+			{setupDetail(error) ? <p className="small">{setupDetail(error)}</p> : null}
 			{error && error.requestId ? <p className="small">Reference {String(error.requestId).slice(0, 8)}</p> : null}
 			{onRetry && error && error.status !== 403 ? (
 				<Button size="sm" icon="refresh" onClick={onRetry}>

@@ -14,13 +14,12 @@ import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { accessService } from '../../services/accessService';
 import { resourceService } from '../../services/resourceService';
 import { SCOPE_LABEL } from './RolesTab';
-import InviteModal from './InviteModal';
-import UserPermissionsModal from './UserPermissionsModal';
 import Select from '../../components/forms/Select';
+import SearchBox from '../../components/forms/SearchBox';
 
 /**
- * One user's access: role, team and whether they can sign in. Two steps (edit, then review) so a
- * sensitive change is never one click. The server applies the same rules and explains any refusal.
+ * One user's access: role, team and whether they can sign in. Saving is one step; blocking someone from signing in
+ * adds a review step so that is never an accident. The server applies the same rules and explains any refusal.
  */
 function EditAccessModal({ person, roles, teams, canPickTeam, onClose, onSaved }) {
 	const { notify } = useToast();
@@ -81,9 +80,9 @@ function EditAccessModal({ person, roles, teams, canPickTeam, onClose, onSaved }
 				) : (
 					<>
 						<Button onClick={onClose}>Cancel</Button>
-						<Button variant="primary" onClick={() => setReviewing(true)} disabled={!changed || (needsTeam && !teamId && !person.teamId)}>
-							Review
-						</Button>
+							<Button variant={body.isActive === false ? 'danger' : 'primary'} onClick={() => (body.isActive === false ? setReviewing(true) : confirm())} disabled={!changed || (needsTeam && !teamId && !person.teamId)} loading={saving}>
+								{body.isActive === false ? 'Review' : 'Save'}
+							</Button>
 					</>
 				)
 			}
@@ -141,6 +140,51 @@ function EditAccessModal({ person, roles, teams, canPickTeam, onClose, onSaved }
 	);
 }
 
+/**
+ * The role, changeable right in the table row: pick another role and it is applied at once, with an Undo in the
+ * toast. A role that works with one team needs a team, so that case opens the full edit dialog instead.
+ */
+function RoleCell({ person, roles, onChanged, onNeedMore }) {
+	const { notify } = useToast();
+	const [busy, setBusy] = useState(false);
+	const current = roles.find((r) => r.key === person.roleKey);
+	const choices = roles.filter((r) => r.isActive || r.key === person.roleKey);
+	const apply = async (role, undo) => {
+		setBusy(true);
+		try {
+			await accessService.updateUser(person.id, { roleId: role.id || role.key });
+			notify(undo ? `Role restored to ${role.name}` : `${person.displayName} is now ${role.name}`, 'success', undo ? {} : { action: { label: 'Undo', onClick: () => current && apply(current, true) } });
+			onChanged();
+		} catch (err) {
+			notify(err.message || 'The role could not be changed', 'error');
+		} finally {
+			setBusy(false);
+		}
+	};
+	const change = (e) => {
+		const next = roles.find((r) => r.key === e.target.value);
+		if (!next || next.key === person.roleKey) return;
+		if (next.scopeType === 'own_team' && !person.teamId) return onNeedMore(next.key);
+		apply(next);
+	};
+	return (
+		<span className="access-user">
+			<Select aria-label={`Role of ${person.displayName}`} value={person.roleKey || ''} onChange={change} disabled={busy}>
+				{!current ? <option value="">{person.roleName || '—'}</option> : null}
+				{choices.map((r) => (
+					<option key={r.key} value={r.key}>
+						{r.name}
+					</option>
+				))}
+			</Select>
+			<small>
+				{current ? SCOPE_LABEL[current.scopeType] : ''}
+				{person.roleSource === 'default' ? ' · built-in' : ''}
+			</small>
+		</span>
+	);
+}
+
 const personInitials = (name = '') =>
 	name
 		.split(/[\s@.]+/)
@@ -150,17 +194,15 @@ const personInitials = (name = '') =>
 		.join('') || '?';
 
 /** People who can sign in, with the role each holds. Managers of a team only ever see their own team. */
-export default function UsersTab({ data, catalog, reload: reloadRoles }) {
+export default function UsersTab({ data, reload: reloadRoles, version = 0, onPermissions }) {
 	const { can, user } = useAuth();
 	const canManage = can('access.manage_users') && data.tablesReady;
 	const [q, setQ] = useState('');
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(20);
 	const [editing, setEditing] = useState(null);
-	const [permsFor, setPermsFor] = useState(null);
-	const [inviting, setInviting] = useState(false);
-	const dq = useDebouncedValue(q, 300).trim();
-	const res = useApiResource((signal) => accessService.users({ q: dq || undefined, page, pageSize }, { signal }), `access-users|${dq}|${page}|${pageSize}`, { isEmpty: () => false });
+const dq = useDebouncedValue(q, 300).trim();
+	const res = useApiResource((signal) => accessService.users({ q: dq || undefined, page, pageSize }, { signal }), `access-users|${dq}|${page}|${pageSize}|${version}`, { isEmpty: () => false });
 	const teams = useApiResource((signal) => resourceService.list('teams', { pageSize: 100 }, { signal }), 'access-teams', { enabled: can('teams.view'), isEmpty: () => false });
 	const teamList = teams.data || [];
 	const nameOfTeam = (id) => (id ? (teamList.find((t) => String(t.ROWID) === String(id)) || {}).name || `Team ${id}` : '—');
@@ -175,24 +217,17 @@ export default function UsersTab({ data, catalog, reload: reloadRoles }) {
 				</p>
 			) : null}
 			<div className="access-toolbar">
-				<input
-					type="search"
-					className="input"
+<SearchBox
 					aria-label="Search users"
 					placeholder="Search by name or email"
 					value={q}
-					onChange={(e) => {
-						setQ(e.target.value);
+					onChange={(v) => {
+						setQ(v);
 						setPage(1);
 					}}
 				/>
 				<span className="access-toolbar__spacer" />
-				{canManage ? (
-					<Button variant="primary" size="sm" icon="plus" onClick={() => setInviting(true)}>
-						Invite user
-					</Button>
-				) : null}
-				{res.meta ? (
+{res.meta ? (
 					<span className="muted small" role="status" aria-live="polite">
 						{res.meta.total} {res.meta.total === 1 ? 'person' : 'people'}
 						{dq ? ` match “${dq}”` : ''}
@@ -225,15 +260,28 @@ export default function UsersTab({ data, catalog, reload: reloadRoles }) {
 								{
 									key: 'roleName',
 									label: 'Role',
-									render: (r) => {
-										const role = roleByKey.get(r.roleKey);
-										return (
-											<span className="access-user">
-												<b>{r.roleName || '—'}</b>
-												<small>{role ? SCOPE_LABEL[role.scopeType] : ''}{r.roleSource === 'default' ? ' · built-in' : ''}</small>
-											</span>
-										);
-									},
+render: (r) => {
+											const role = roleByKey.get(r.roleKey);
+											if (!canManage || r.id === user.userId || !role) {
+												return (
+													<span className="access-user">
+														<b>{r.roleName || '—'}</b>
+														<small>{role ? SCOPE_LABEL[role.scopeType] : ''}{r.roleSource === 'default' ? ' · built-in' : ''}</small>
+													</span>
+												);
+											}
+											return (
+												<RoleCell
+													person={r}
+													roles={data.roles}
+													onChanged={() => {
+														res.reload();
+														reloadRoles();
+													}}
+													onNeedMore={() => setEditing(r)}
+												/>
+											);
+										},
 								},
 								{ key: 'teamId', label: 'Team', render: (r) => nameOfTeam(r.teamId) },
 								{ key: 'isActive', label: 'Status', render: (r) => <span className={`badge badge--${r.isActive ? 'success' : 'neutral'}`}>{r.isActive ? 'Active' : 'Inactive'}</span> },
@@ -250,7 +298,7 @@ export default function UsersTab({ data, catalog, reload: reloadRoles }) {
 													<Button size="sm" icon="edit" aria-label={`Edit access for ${r.displayName}`} onClick={() => setEditing(r)}>
 														Edit access
 													</Button>
-													<Button size="sm" icon="lock" aria-label={`Individual permissions for ${r.displayName}`} onClick={() => setPermsFor(r)}>
+													<Button size="sm" icon="lock" aria-label={`Individual permissions for ${r.displayName}`} onClick={() => onPermissions(r)}>
 														Permissions
 													</Button>
 												</span>
@@ -262,31 +310,6 @@ export default function UsersTab({ data, catalog, reload: reloadRoles }) {
 					</>
 				)}
 			</StateView>
-			{inviting ? (
-				<InviteModal
-					roles={data.roles}
-					teams={teamList}
-					canPickTeam={user.scopeType === 'all_teams' && can('teams.view')}
-					ownTeamId={user.scopeType === 'all_teams' ? '' : user.teamId}
-					onClose={() => setInviting(false)}
-					onInvited={() => {
-						setInviting(false);
-						res.reload();
-						reloadRoles();
-					}}
-				/>
-			) : null}
-			{permsFor ? (
-				<UserPermissionsModal
-					person={permsFor}
-					catalog={catalog}
-					onClose={() => setPermsFor(null)}
-					onSaved={() => {
-						setPermsFor(null);
-						res.reload();
-					}}
-				/>
-			) : null}
 			{editing ? (
 				<EditAccessModal
 					person={editing}

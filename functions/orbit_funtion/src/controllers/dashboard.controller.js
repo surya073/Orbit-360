@@ -26,7 +26,9 @@ module.exports = {
 			section(ctx, () => dashboard.aiUsage(ctx, base)),
 			section(ctx, () => dashboard.freshness(ctx, base)),
 		]);
-		return ok({ overview, trends, projects, product, ai, freshness });
+		// After the six, not alongside them: the Data Store throttles a burst of parallel queries (503), and the highlights are the extra.
+		const highlights = await section(ctx, () => dashboard.highlights(ctx, base));
+		return ok({ overview, trends, projects, product, ai, freshness, highlights });
 	},
 	overview: async (ctx) => ok(await dashboard.overview(ctx, ctx.input.query)),
 	trends: async (ctx) => ok(await dashboard.trends(ctx, ctx.input.query)),
@@ -34,6 +36,7 @@ module.exports = {
 	product: async (ctx) => ok(await dashboard.product(ctx, ctx.input.query)),
 	aiUsage: async (ctx) => ok(await dashboard.aiUsage(ctx, ctx.input.query)),
 	freshness: async (ctx) => ok(await dashboard.freshness(ctx, ctx.input.query)),
+	highlights: async (ctx) => ok(await dashboard.highlights(ctx, ctx.input.query)),
 	peopleProfiles: async (ctx) => ok(await dashboard.peopleProfiles(ctx, ctx.input.query, ctx.input.query.employeeIds)),
 	createSnapshot: async (ctx) => ({ status: 201, body: ok(await dashboard.createSnapshot(ctx, ctx.input.body)) }),
 	listSnapshots: async (ctx) => {

@@ -8,7 +8,7 @@ export default function LoadingState({ lines = 3, height, label = 'Loading' }) {
 			{height ? (
 				<div className="skeleton" style={{ height }} />
 			) : (
-				<div style={{ display: 'grid', gap: 8 }}>
+				<div className="loading-lines">
 					{Array.from({ length: lines }, (_, i) => (
 						<div key={i} className="skeleton" style={{ height: 14, width: `${100 - i * 12}%` }} />
 					))}

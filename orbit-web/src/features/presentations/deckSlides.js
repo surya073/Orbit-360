@@ -62,7 +62,9 @@ function reportingSlides(reporting) {
 }
 
 export function buildSlides(deckSlides, { people = null, records = null, wantPeople = false, wantRecords = false, reporting = null, profiles = null, addReporting = false } = {}) {
-	const out = [{ kind: 'opening' }];
+	// A deck with free-form studio slides brings its own cover and closing: no generated opening or "Thank you" slide.
+	const studio = (deckSlides || []).some((s) => s.type === 'custom');
+	const out = studio ? [] : [{ kind: 'opening' }];
 	// A deck without the Team reporting structure section can still be shown with it (launcher option):
 	// it goes after the employee section (and its detail slides), else just before the closing slide.
 	const hasSection = (deckSlides || []).some((s) => s.type === 'section' && s.section === 'reporting_structure');
@@ -72,7 +74,7 @@ export function buildSlides(deckSlides, { people = null, records = null, wantPeo
 			out.push(...reportingSlides(reporting));
 			continue;
 		}
-		out.push({ kind: 'deck', slide: s });
+		out.push(s.type === 'custom' ? { kind: 'custom', slide: s } : { kind: 'deck', slide: s });
 		if (s.type === 'section' && s.section === 'employee_overview' && wantPeople) out.push(...peopleSlides(people, profiles));
 		if (s.type === 'section' && s.section === 'project_performance' && wantRecords) out.push(...recordSlides(records));
 		if (pendingReporting && s.type === 'section' && s.section === 'employee_overview') {
@@ -81,7 +83,7 @@ export function buildSlides(deckSlides, { people = null, records = null, wantPeo
 		}
 	}
 	if (pendingReporting) out.push(...reportingSlides(reporting));
-	out.push({ kind: 'closing' });
+	if (!studio) out.push({ kind: 'closing' });
 	return out;
 }
 

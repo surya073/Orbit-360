@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import Button from '../../components/common/Button';
-import Icon from '../../components/common/Icon';
+import SearchBox from '../../components/forms/SearchBox';
 import Modal from '../../components/common/Modal';
 import SortableList from '../../components/common/SortableList';
 import { Checkbox } from '../../components/forms/Choice';
@@ -84,8 +84,7 @@ export default function ColumnConfigDialog({ title = 'Export columns', columns, 
 			<div className="cc">
 				<div className="cc-tools">
 					<div className="cc-search">
-						<Icon name="search" size={15} />
-						<input className="input" type="search" aria-label="Search columns" placeholder="Search columns or field names" value={query} onChange={(e) => setQuery(e.target.value)} />
+<SearchBox aria-label="Search columns" placeholder="Search columns or field names" value={query} onChange={setQuery} />
 					</div>
 					<Button size="sm" onClick={() => setAll(true)}>
 						Select all

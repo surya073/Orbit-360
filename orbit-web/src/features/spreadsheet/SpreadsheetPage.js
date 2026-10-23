@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import Button from '../../components/common/Button';
@@ -28,7 +29,7 @@ import SheetGrid from './SheetGrid';
 import SheetShortcuts from './SheetShortcuts';
 import SheetToolbar from './SheetToolbar';
 import { SHEET_MODULES, sheetModule } from './spreadsheetModules';
-import useSheetData from './useSheetData';
+import useSheetData, { useAutosaveSetting } from './useSheetData';
 import useSheetView from './useSheetView';
 
 const FK_COLUMNS = ['employee_id', 'reports_to_employee_id', 'assignee_employee_id', 'project_id', 'team_id', 'primary_team_id'];
@@ -73,7 +74,7 @@ const permsOf = (template, user) => {
 };
 
 /** The sheet for one record type. Remounted per module so each starts clean. */
-function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZoom, onDirty }) {
+function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZoom, onDirty, active, statusSlot }) {
 	const { notify } = useToast();
 	const { user } = useAuth();
 	const [exportOpen, setExportOpen] = useState(false);
@@ -102,7 +103,8 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 	// Device-local cell formatting (never part of a record, never sent to the API). Its changes join the
 	// same undo/redo history as cell edits, so Ctrl+Z / Ctrl+Y and the toolbar undo colour and style changes too.
 	const fmt = useSheetFormat(mod.resource);
-	const data = useSheetData({ resource: mod.resource, template, canWrite, search: dsearch, page, pageSize, applyFormat: fmt.restore });
+	const [autosave, setAutosave] = useAutosaveSetting();
+	const data = useSheetData({ resource: mod.resource, template, canWrite, search: dsearch, page, pageSize, applyFormat: fmt.restore, autosave });
 	const { res, rows, columns, state } = data;
 	const labelOf = useLookupLabels(rows, FK_COLUMNS);
 	// Typing filters the loaded rows at once (the server answer for the whole table follows after the
@@ -298,10 +300,10 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 	const hasRowErrors = Object.keys(state.errors).length > 0;
 
 	let saveStatus = { kind: 'saved', text: data.saveState.at ? `Saved ${data.saveState.at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Saved' };
-	if (status === 'saving') saveStatus = { kind: 'saving', text: 'Saving…' };
+	if (status === 'saving') saveStatus = { kind: 'saving', text: autosave ? 'Autosaving…' : 'Saving…' };
 	else if (status === 'error') saveStatus = { kind: 'failed', text: 'Save failed' };
 	else if (status === 'partial' || hasRowErrors) saveStatus = { kind: 'partial', text: 'Some changes failed' };
-	else if (data.dirtyCount) saveStatus = { kind: 'dirty', text: `${data.dirtyCount} unsaved change${data.dirtyCount > 1 ? 's' : ''}` };
+else if (data.dirtyCount) saveStatus = { kind: 'dirty', text: `${data.dirtyCount} unsaved change${data.dirtyCount > 1 ? 's' : ''}${autosave ? ' · autosave on' : ''}` };
 
 	// Workspace shortcuts. Only active while focus is inside the sheet (never page-wide), and never
 	// while a cell editor, dialog or popover input has the keyboard.
@@ -331,6 +333,19 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 
 	return (
 		<div className="sheet-workspace" onKeyDown={onWorkspaceKeyDown}>
+			{data.draft && canWrite ? (
+				<div className="sheet-draft" role="status">
+					<span>
+						Unsaved edits from earlier in this tab: <b>{data.draft.count}</b> {data.draft.count === 1 ? 'change' : 'changes'}.
+					</span>
+					<Button size="sm" variant="primary" onClick={data.restoreDraft}>
+						Restore
+					</Button>
+					<Button size="sm" variant="ghost" onClick={data.dropDraft}>
+						Discard
+					</Button>
+				</div>
+			) : null}
 			{exportOpen ? <ColumnConfigDialog columns={dataColumns} initial={loadConfig(colKey, dataColumns)} previewRows={exportRows} getValue={(r, f) => r.values[f]} rowCount={exportRows.length} onConfirm={downloadExport} onClose={() => setExportOpen(false)} /> : null}
 			<SheetToolbar
 				ref={searchRef}
@@ -340,6 +355,8 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 				dirtyCount={data.dirtyCount}
 				saving={status === 'saving'}
 				onSave={save}
+				autosave={autosave}
+				onAutosave={setAutosave}
 				onDiscard={data.discard}
 				onCut={() => gridRef.current && gridRef.current.cut()}
 				onCopy={() => gridRef.current && gridRef.current.copy()}
@@ -467,22 +484,31 @@ function Sheet({ tabId, mod, template, canWrite, perms, canExport, zoomPct, onZo
 							/>
 						</div>
 					)}
-					<div className="sheet-foot">
-						<span className="sheet-foot__sel" aria-live="off">
-							{selInfo ? (selInfo.cells > 1 ? `${selInfo.cells} cells selected` : '') : 'No selection'}
-						</span>
-						{calc ? (
-							<span className="sheet-foot__calc" role="status">
-								<b>{calc.label}</b> {calc.text}
-							</span>
-						) : null}
-						<span className="muted">
-							{view.filter((r) => !r.pristine).length} row{view.filter((r) => !r.pristine).length === 1 ? '' : 's'} shown{res.meta ? ` of ${res.meta.total}` : ''}
-							{search.trim() && !serverSearch ? ' · searching loaded rows only' : ''}
-						</span>
-						<span className="muted sheet-foot__hint">Type or Enter edits · Tab moves · {`Shift+Arrows`} select · Right-click for more</span>
-						<Pagination meta={res.meta} onPage={setPage} pageSize={pageSize} onPageSize={setPageSize} />
-					</div>
+					{/* the status line lives in the tab bar (one row with the tabs); only the sheet on show fills it */}
+					{active && statusSlot
+						? createPortal(
+						<div className="sheet-foot">
+							{selInfo && selInfo.cells > 1 ? (
+								<span className="sheet-foot__sel" aria-live="off">
+									{selInfo.cells} cells selected
+								</span>
+							) : null}
+							{calc ? (
+								<span className="sheet-foot__calc" role="status">
+									<b>{calc.label}</b> {calc.text}
+								</span>
+							) : null}
+							{searching ? (
+								<span className="muted">
+									{view.filter((r) => !r.pristine).length} row{view.filter((r) => !r.pristine).length === 1 ? '' : 's'} shown{res.meta ? ` of ${res.meta.total}` : ''}
+									{search.trim() && !serverSearch ? ' · searching loaded rows only' : ''}
+								</span>
+							) : null}
+							<Pagination meta={res.meta} onPage={setPage} pageSize={pageSize} onPageSize={setPageSize} />
+						</div>,
+						statusSlot
+					  )
+					: null}
 				</>
 			)}
 			{confirmDelete ? (
@@ -544,6 +570,7 @@ export default function SpreadsheetPage() {
 		if (activeId) setVisited((v) => (v.has(activeId) ? v : new Set(v).add(activeId)));
 	}, [activeId]);
 
+	const [statusSlot, setStatusSlot] = useState(null); // the status area inside the tab bar
 	const [dirty, setDirty] = useState({});
 	const onDirty = useCallback((id, n) => setDirty((d) => (d[id] === n ? d : { ...d, [id]: n })), []);
 	useUnsavedGuard(Object.values(dirty).reduce((a, b) => a + b, 0) > 0);
@@ -606,7 +633,7 @@ export default function SpreadsheetPage() {
 						</button>
 					)}
 				>
-					<div className="sheet-filter" style={{ maxWidth: 340 }}>
+					<div className="sheet-filter sheet-filter--narrow">
 						<p className="small">Edit existing records and add new ones in a grid. Changes are saved to the same records as the Add form and Sheet import.</p>
 						<p className="small muted">
 							Columns are the fields this record type supports, plus any extra columns an administrator adds (type a name in a blank column header). Saved values of built-in fields cannot be cleared, and fields that identify a record cannot be changed after it is created. Use the + tabs below to open more sheets.
@@ -630,12 +657,12 @@ export default function SpreadsheetPage() {
 							const canWrite = perms.create || perms.edit;
 							return (
 								<div key={t.id} id={`sheet-pane-${t.id}`} role="tabpanel" aria-labelledby={`sheet-tab-${t.id}`} className="sheet-pane" hidden={t.id !== activeId}>
-									<Sheet tabId={t.id} mod={sheetModule(t.resource)} template={template} canWrite={canWrite} perms={perms} canExport={can('spreadsheet.export')} zoomPct={zoomPct} onZoom={onZoom} onDirty={onDirty} />
+									<Sheet tabId={t.id} active={t.id === activeId} statusSlot={statusSlot} mod={sheetModule(t.resource)} template={template} canWrite={canWrite} perms={perms} canExport={can('spreadsheet.export')} zoomPct={zoomPct} onZoom={onZoom} onDirty={onDirty} />
 								</div>
 							);
 						})}
 					</div>
-					<SheetTabBar tabs={tabs} activeId={activeId} dirty={dirty} modules={available} onSelect={select} onAdd={add} onRename={(id, name) => setStore((s) => renameTab(s, id, name))} onClose={requestClose} />
+					<SheetTabBar tabs={tabs} activeId={activeId} dirty={dirty} modules={available} onSelect={select} onAdd={add} onRename={(id, name) => setStore((s) => renameTab(s, id, name))} onClose={requestClose} statusRef={setStatusSlot} />
 				</>
 			) : templates.status === 'loading' ? (
 				<LoadingState lines={6} label="Loading spreadsheet" />

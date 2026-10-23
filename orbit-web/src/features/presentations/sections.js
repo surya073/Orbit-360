@@ -12,6 +12,7 @@ import KpiRow from '../dashboard/widgets/KpiRow';
 import ProductStatusCard from '../dashboard/widgets/ProductStatusCard';
 import ProjectHealthCard from '../dashboard/widgets/ProjectHealthCard';
 import { AttendanceTrendCard, BillableTrendCard } from '../dashboard/widgets/TrendCards';
+import { widgetSections } from './studio/widgetData';
 
 /** Which backend datasets each section needs, so a deck only fetches what its slides use. */
 export const SECTION_NEEDS = {
@@ -32,7 +33,7 @@ function EmployeeOverview({ d }) {
 	const h = d.overview.data && d.overview.data.headcount;
 	const segments = h && h.byStatus ? Object.entries(h.byStatus).map(([k, v], i) => ({ label: humanize(k), value: v, color: colorAt(i) })) : [];
 	return (
-		<div className="grid grid--2" style={{ alignItems: 'start' }}>
+		<div className="grid grid--2 u-items-start">
 			<KpiCard label="Employees" icon="users" {...st(d.overview)} value={h && h.total !== undefined && h.total !== null ? formatNumber(h.total) : null} metric={h} />
 			<Card title="By employment status">
 				<StateView res={d.overview} loadingHeight={120}>
@@ -83,4 +84,4 @@ export const SECTION_RENDERERS = {
 };
 
 /** Union of datasets needed by a deck's section slides. */
-export const sectionsNeeded = (slides) => [...new Set(slides.filter((s) => s.type === 'section').flatMap((s) => SECTION_NEEDS[s.section] || []).concat(['freshness']))];
+export const sectionsNeeded = (slides) => [...new Set(slides.filter((s) => s.type === 'section').flatMap((s) => SECTION_NEEDS[s.section] || []).concat(['freshness'], widgetSections(slides)))];

@@ -106,6 +106,7 @@ test('accent colour, corner style, text size and motion apply to the document an
 		</ThemeProvider>,
 		{ wrapper: MemoryRouter }
 	);
+	await userEvent.click(screen.getByRole('tab', { name: 'Layout' })); // corners, text size and motion share one toggle
 	await userEvent.click(screen.getByRole('radio', { name: 'Round' }));
 	await userEvent.click(screen.getByRole('radio', { name: 'Large' }));
 	await userEvent.click(screen.getByRole('radio', { name: 'Reduce motion' }));
@@ -113,6 +114,7 @@ test('accent colour, corner style, text size and motion apply to the document an
 	expect([root.dataset.radius, root.dataset.text, root.dataset.motion]).toEqual(['round', 'large', 'reduced']);
 	const stored = JSON.parse(localStorage.getItem(APPEARANCE_KEY));
 	expect(stored).toMatchObject({ radius: 'round', textSize: 'large', motion: 'reduced' });
+	await userEvent.click(screen.getByRole('tab', { name: 'Colours' })); // accent, sidebar and card finish
 	await userEvent.type(screen.getByRole('textbox', { name: 'Accent colour as hex' }), '#12a594');
 	expect(JSON.parse(localStorage.getItem(APPEARANCE_KEY)).accent).toBe('#12a594');
 	expect(readAppearance().accent).toBe('#12a594');
@@ -124,9 +126,9 @@ test('a stored theme is restored on startup; invalid stored data falls back safe
 	expect(document.documentElement.dataset.theme).toBe('volcano');
 	expect(document.documentElement.dataset.density).toBe('compact');
 	localStorage.setItem(APPEARANCE_KEY, '{not json');
-	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme' });
+	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme', sidebar: '', cards: 'raised' });
 	localStorage.setItem(APPEARANCE_KEY, JSON.stringify({ theme: 'neon', density: 'huge' }));
-	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme' });
+	expect(readAppearance()).toEqual({ theme: 'ember', density: 'comfortable', iconStyle: 'tabler', accent: '', radius: 'default', textSize: 'default', motion: 'auto', width: 'standard', font: 'default', palette: 'theme', sidebar: '', cards: 'raised' });
 });
 
 test('System follows the device preference only when selected', async () => {
@@ -182,4 +184,27 @@ test('theme switches ease colors briefly unless reduced motion is requested', as
 	await user.click(screen.getByRole('radio', { name: /forest/i }));
 	expect(document.documentElement.classList.contains('theme-transition')).toBe(false);
 	jest.useRealTimers();
+});
+
+test('a chosen sidebar colour is applied with readable ink, stored, and can be cleared', async () => {
+	render(
+		<ThemeProvider>
+			<SettingsPage />
+		</ThemeProvider>,
+		{ wrapper: MemoryRouter }
+	);
+	await userEvent.click(screen.getByRole('tab', { name: 'Colours' }));
+	await userEvent.click(screen.getByRole('radio', { name: '#0f172a' }));
+	const root = document.documentElement;
+	expect(root.dataset.rail).toBe('custom');
+	expect(root.style.getPropertyValue('--rail-custom')).toBe('#0f172a');
+	expect(root.style.getPropertyValue('--rail-on')).toBe('#ffffff'); // dark sidebar, light icons
+	await userEvent.click(screen.getByRole('radio', { name: '#f5f5f4' }));
+	expect(root.style.getPropertyValue('--rail-on')).toBe('#14161c'); // light sidebar, dark icons
+	expect(JSON.parse(localStorage.getItem(APPEARANCE_KEY)).sidebar).toBe('#f5f5f4');
+	await userEvent.click(within(screen.getByRole('region', { name: 'Sidebar colour' })).getByRole('radio', { name: 'Theme default' }));
+	expect(root.dataset.rail).toBeUndefined();
+	await userEvent.click(screen.getByRole('radio', { name: 'Outlined' }));
+	expect(root.dataset.cards).toBe('outlined');
+	expect(JSON.parse(localStorage.getItem(APPEARANCE_KEY)).cards).toBe('outlined');
 });

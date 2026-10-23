@@ -1,49 +1,49 @@
 import React from 'react';
-import StatusBadge from '../../components/common/StatusBadge';
+import Icon from '../../components/common/Icon';
 import { formatDate } from '../../utils/dates';
-import { EMPTY } from '../../utils/format';
+import { EMPTY, humanize } from '../../utils/format';
+import { initials, tenure } from './employeeFacts';
 
-const initials = (name) =>
-	String(name || '?')
-		.split(/\s+/)
-		.filter(Boolean)
-		.slice(0, 2)
-		.map((w) => w[0].toUpperCase())
-		.join('');
-
-/** One employee as a directory card: who, where they sit, the facts people look up, and the row actions. */
+/**
+ * One employee as a directory profile card: status and code on top, a large avatar, who they are, a few chips and
+ * the row actions along the bottom (the first one, View profile, spans the card). Every line is real
+ * data from the record; a missing value is simply left out rather than invented.
+ */
 export default function EmployeeGridCard({ row, labelOf, actions }) {
 	const team = labelOf('primary_team_id', row.primary_team_id);
-	const facts = [
-		['Code', row.employee_code],
-		['Joined', row.joining_date ? formatDate(row.joining_date) : null],
-	];
+	const status = row.employment_status || 'unknown';
+	const joined = row.joining_date ? formatDate(row.joining_date) : null;
+	const served = tenure(row.joining_date);
+	const email = row.email_normalized;
 	return (
-		<article className="hcard" aria-label={row.full_name || 'Employee'}>
-			<div className="hcard__top">
-				<span className="hcard__avatar" aria-hidden="true">
-					{initials(row.full_name)}
-					<i className={`hcard__dot hcard__dot--${row.employment_status || 'unknown'}`} />
-				</span>
-				<div className="hcard__who">
-					<h3>{row.full_name || 'Unnamed employee'}</h3>
-					<p>{row.job_role || 'No role recorded'}</p>
-					<small>{team || 'No team'}</small>
-				</div>
-				<StatusBadge status={row.employment_status} />
-			</div>
-			<dl className="hcard__facts">
-				{facts.map(([label, value]) => (
-					<div key={label}>
-						<dt>{label}</dt>
-						<dd>{value || EMPTY}</dd>
-					</div>
-				))}
-				<div className="hcard__wide">
-					<dt>Mail</dt>
-					<dd>{row.email_normalized ? <a href={`mailto:${row.email_normalized}`}>{row.email_normalized}</a> : EMPTY}</dd>
-				</div>
-			</dl>
+		<article className="hcard" data-status={status} aria-label={row.full_name || 'Employee'}>
+			<header className="hcard__head">
+				<span className="hcard__pill">{humanize(status)}</span>
+				<span className="hcard__code">{row.employee_code || EMPTY}</span>
+			</header>
+			<span className="hcard__avatar" aria-hidden="true">
+				{initials(row.full_name)}
+			</span>
+			<h3 className="hcard__name">{row.full_name || 'Unnamed employee'}</h3>
+			<p className="hcard__role">{row.job_role || 'No role recorded'}</p>
+			<p className="hcard__team">
+				<Icon name="team" size={14} /> {team || 'No team'}
+			</p>
+			<ul className="hcard__chips" aria-label="Details">
+				{joined ? (
+					<li className="hcard__chip">
+						<Icon name="calendar" size={12} /> {joined}
+					</li>
+				) : null}
+				{served ? <li className="hcard__chip">{served.replace(' with us', '')}</li> : null}
+				{email ? (
+					<li>
+						<a className="hcard__chip" href={`mailto:${email}`}>
+							<Icon name="bell" size={12} /> Email
+						</a>
+					</li>
+				) : null}
+			</ul>
 			{actions ? <div className="hcard__actions">{actions}</div> : null}
 		</article>
 	);

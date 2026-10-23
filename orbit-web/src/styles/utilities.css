@@ -1,0 +1,189 @@
+/*
+ * UTILITIES and small component classes that used to be inline `style={{ ... }}` in the JavaScript.
+ * Everything here can be edited live in Chrome DevTools (Elements > Styles) without touching the components.
+ *
+ * What is still inline on purpose: values computed at run time (chart sizes and positions, colours that come from
+ * data or the theme picker, the tour spotlight rectangle, the spreadsheet's virtual-scroll heights).
+ *
+ * Spacing helpers use the --space-* tokens from tokens.css: 1=4px 2=8px 3=12px 4=16px 5=24px 6=32px.
+ */
+
+/* margins */
+.u-m-0 {
+	margin: 0;
+}
+.u-mt-0 {
+	margin-top: 0;
+}
+.u-mt-2 {
+	margin-top: var(--space-2);
+}
+.u-mt-3 {
+	margin-top: var(--space-3);
+}
+.u-mt-4 {
+	margin-top: var(--space-4);
+}
+.u-mt-6px {
+	margin-top: 6px;
+}
+.u-mb-0 {
+	margin-bottom: 0;
+}
+.u-mb-3 {
+	margin-bottom: var(--space-3);
+}
+.u-mb-4 {
+	margin-bottom: var(--space-4);
+}
+
+/* layout */
+.u-pad-2 {
+	padding: var(--space-2);
+}
+.u-block {
+	display: block;
+}
+.u-grow {
+	flex: 1;
+}
+.u-w-auto {
+	width: auto;
+}
+.u-items-start {
+	align-items: start;
+}
+.u-capitalize {
+	text-transform: capitalize;
+}
+
+/* sign-in and access notices */
+.auth-card__title {
+	font-size: var(--fs-lg);
+}
+.login-error {
+	display: grid;
+	gap: 8px;
+}
+.login-frame {
+	height: 100%;
+}
+.skeleton--field {
+	height: 42px;
+}
+.skeleton--field + .skeleton--field {
+	margin-top: 6px;
+}
+
+/* loading skeletons */
+.loading-lines {
+	display: grid;
+	gap: 8px;
+}
+.kpi__skeleton {
+	width: 60%;
+	height: 30px;
+	margin-top: 6px;
+}
+
+/* charts */
+.chart-swatch {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 5px;
+	border-radius: 2px;
+}
+.stackbar__value {
+	color: var(--text);
+}
+
+/* menus */
+.notif-menu {
+	width: 280px;
+}
+.theme-quick-menu {
+	min-width: 220px;
+	max-height: min(60vh, 420px);
+	overflow-y: auto;
+}
+
+/* settings: profile */
+.profile-facts {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 8px 24px;
+	margin: 0;
+}
+.profile-facts dd {
+	margin: 0;
+}
+
+/* spreadsheet filter menu */
+.sheet-filter--narrow {
+	max-width: 340px;
+}
+.sheet-filter__row--inline {
+	grid-auto-flow: column;
+	justify-content: start;
+	align-items: center;
+	gap: 8px;
+}
+
+/* module pages: dim the list while it reloads */
+.mod-body {
+	transition: opacity var(--dur) var(--ease);
+}
+.mod-body.is-loading {
+	opacity: 0.6;
+}
+
+/* presentation editor */
+.slide-row {
+	align-items: center;
+}
+.slide-row__num {
+	width: 20px;
+}
+.slide-row__name {
+	flex: 1 1 120px;
+	min-width: 0;
+}
+.editor-subhead {
+	margin: var(--space-4) 0 var(--space-2);
+}
+.legend--tight {
+	gap: 8px;
+}
+
+/* the little decorative bars inside theme previews (fixed shapes, not data) */
+.pprev__bars i:nth-child(1) {
+	height: 45%;
+}
+.pprev__bars i:nth-child(2) {
+	height: 70%;
+}
+.pprev__bars i:nth-child(3) {
+	height: 55%;
+}
+.pprev__bars i:nth-child(4) {
+	height: 88%;
+}
+.pprev__bars i:nth-child(5) {
+	height: 64%;
+}
+.theme-preview__chart span:nth-child(1) {
+	height: 38%;
+}
+.theme-preview__chart span:nth-child(2) {
+	height: 62%;
+}
+.theme-preview__chart span:nth-child(3) {
+	height: 48%;
+}
+.theme-preview__chart span:nth-child(4) {
+	height: 82%;
+}
+.theme-preview__chart span:nth-child(5) {
+	height: 58%;
+}

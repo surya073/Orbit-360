@@ -4,6 +4,7 @@ const { assertScope } = require('../services/scope.service');
 const { lit } = require('./queryBuilder');
 
 const COLS = 'ROWID, title, team_id, created_by_user_id, status, last_presented_at, is_deleted, CREATEDTIME, MODIFIEDTIME';
+const LIST_COLS = `${COLS}, slides_config`; // the list derives a small cover from it and never returns the config itself
 const SCOPED = Symbol('scopedBy');
 
 /** saved_presentations: visible to managers of team_id; admins see all (incl. team-less decks). */
@@ -15,7 +16,7 @@ function createPresentationRepository(db) {
 			const where = base(scope);
 			const [total, rows] = await Promise.all([
 				db.count(`SELECT COUNT(ROWID) AS total FROM saved_presentations WHERE ${where}`),
-				db.select(`SELECT ${COLS} FROM saved_presentations WHERE ${where} ORDER BY MODIFIEDTIME desc, ROWID desc LIMIT ${offset}, ${pageSize}`, 'saved_presentations'),
+				db.select(`SELECT ${LIST_COLS} FROM saved_presentations WHERE ${where} ORDER BY MODIFIEDTIME desc, ROWID desc LIMIT ${offset}, ${pageSize}`, 'saved_presentations'),
 			]);
 			return { rows: rows.map(({ is_deleted, ...r }) => r), total, page, pageSize };
 		},

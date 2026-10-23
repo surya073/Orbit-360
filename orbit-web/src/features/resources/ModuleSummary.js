@@ -31,11 +31,11 @@ function MixCard({ title, hint, segments, metric }) {
  * none is set), and each card keeps the dashboard look: icon, value, plain-language meaning, a hatched
  * progress bar where there is a share, and a link to the related page.
  */
-export default function ModuleSummary({ kind, from, to }) {
+export default function ModuleSummary({ kind, from, to, version = 0 }) {
 	const range = from && to && to >= from ? { from, to } : resolvePeriod({ preset: 'this_month' });
 	const wantsProjects = kind === 'projects';
-	const overview = useApiResource((signal) => dashboardService.overview(range, { signal }), `sum|${range.from}|${range.to}`, { enabled: !wantsProjects, isEmpty: () => false });
-	const projects = useApiResource((signal) => dashboardService.projects(range, { signal }), `sump|${range.from}|${range.to}`, { enabled: wantsProjects, isEmpty: () => false });
+	const overview = useApiResource((signal) => dashboardService.overview(range, { signal }), `sum|${range.from}|${range.to}|${version}`, { enabled: !wantsProjects, isEmpty: () => false });
+	const projects = useApiResource((signal) => dashboardService.projects(range, { signal }), `sump|${range.from}|${range.to}|${version}`, { enabled: wantsProjects, isEmpty: () => false });
 	const res = wantsProjects ? projects : overview;
 	const o = overview.data;
 	const st = { loading: res.status === 'loading' && !res.data, error: res.status === 'error' ? res.error : null };

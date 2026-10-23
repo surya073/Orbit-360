@@ -15,7 +15,7 @@ export default function Pagination({ meta, onPage, pageSize, onPageSize, sizes =
 	const from = total === 0 ? 0 : (page - 1) * per + 1;
 	const to = Math.min(page * per, total);
 	return (
-		<nav className="pager" aria-label="Pagination">
+		<nav className={`pager ${totalPages <= 1 ? 'pager--single' : ''}`.trim()} aria-label="Pagination">
 			{onPageSize ? (
 				<label className="pager__size">
 					<span>Rows per page</span>

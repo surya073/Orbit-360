@@ -81,7 +81,7 @@ function createAccessResolver(ttlSeconds = 0) {
 		if (!fresh(missing)) {
 			try {
 				const assignment = await repo.assignmentFor(user.ROWID);
-				if (assignment) {
+				if (assignment && assignment.role_id) {
 					role = await roleById(repo, assignment.role_id);
 					if (!role) throw errors.forbidden('Your assigned role no longer exists', 'ROLE_MISSING');
 				} else {

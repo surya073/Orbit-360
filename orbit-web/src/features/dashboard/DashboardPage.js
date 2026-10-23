@@ -15,7 +15,8 @@ import { EntranceContext, useDashboardEntrance } from './entrance';
 import CustomRange from './CustomRange';
 import AiAssistant from './AiAssistant';
 import ScopeTimeline, { MONTH_NAMES, fmtDay, monthRange } from './ScopeTimeline';
-import { AttentionCard, BillableCard, SidePanel, WorkloadCard } from './signature/Signature';
+import { BillableCard, SidePanel, WorkloadCard } from './signature/Signature';
+import Highlights from './signature/Highlights';
 import useDashboardData from './useDashboardData';
 import AiUsageCard from './widgets/AiUsageCard';
 import InsightsCard from './widgets/InsightsCard';
@@ -176,7 +177,7 @@ export default function DashboardPage() {
 						<div className="sig-grid">
 							<BillableCard overview={data.overview} trends={data.trends} clamped={data.trendClamped} preset={f.period.preset} onPreset={setPreset} />
 							<SidePanel overview={data.overview} projects={data.projects} onCustomize={() => setCustomizing(true)} />
-							<AttentionCard overview={data.overview} projects={data.projects} product={data.product} freshness={data.freshness} />
+							<Highlights highlights={data.highlights} overview={data.overview} projects={data.projects} product={data.product} freshness={data.freshness} preset={f.period.preset} />
 							<WorkloadCard projects={data.projects} preset={f.period.preset} onPreset={setPreset} />
 						</div>
 						{layout.visible.includes('kpis') ? <KpiRow overview={data.overview} projects={data.projects} trends={data.trends} /> : null}
@@ -206,7 +207,7 @@ export default function DashboardPage() {
 							</Button>
 						}
 					>
-						<p className="small muted" style={{ marginBottom: 'var(--space-3)' }}>
+						<p className="small muted u-mb-3">
 							Drag the handle (or use the arrows) to reorder the widgets below the overview. Switch a widget off to hide it. Saved on this device only; your data access is unchanged.
 						</p>
 						<DashboardLayoutEditor layout={layout} />

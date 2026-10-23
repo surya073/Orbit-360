@@ -231,7 +231,7 @@ Optional function environment variables:
 
 | Variable | Meaning |
 |---|---|
-| `CATALYST_APP_ROLE_ID` | The Catalyst Authentication role (Console → Authentication → Roles, e.g. "App User") given to invited people. |
+| `INVITE_ROLE_ID` (`CATALYST_APP_ROLE_ID` is rejected by the Console as reserved) | The Catalyst Authentication role (Console → Authentication → Roles, e.g. "App User") given to invited people. |
 | `INVITE_REDIRECT_URL` | Where the person lands after setting their password. Defaults to Catalyst's own. |
 | `INVITE_SENDER_EMAIL` | When set, the invitation uses our own subject and wording from this sender (the sender must be allowed in Catalyst Mail settings). Otherwise Catalyst's default template is used. |
 

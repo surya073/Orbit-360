@@ -18,15 +18,15 @@ export default function ProfilePanel() {
 	];
 	return (
 		<Card title="Profile" subtitle="Managed by your administrator and Catalyst sign-in">
-			<dl style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '8px 24px', margin: 0 }}>
+			<dl className="profile-facts">
 				{rows.map(([k, v]) => (
 					<React.Fragment key={k}>
 						<dt className="muted small">{k}</dt>
-						<dd style={{ margin: 0 }}>{v}</dd>
+						<dd>{v}</dd>
 					</React.Fragment>
 				))}
 			</dl>
-			<p style={{ marginTop: 12 }}>
+			<p className="u-mt-3">
 				<StatusBadge tone="success" status="verified" label="Signed in via Catalyst" />
 			</p>
 		</Card>

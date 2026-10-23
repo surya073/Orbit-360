@@ -11,6 +11,7 @@ export const dashboardService = {
 	aiUsage: (params, o) => api.get('/dashboard/ai-usage', { ...o, params }),
 	peopleProfiles: (params, o) => api.get('/dashboard/people-profiles', { ...o, params }),
 	freshness: (params, o) => api.get('/dashboard/freshness', { ...o, params }),
+	highlights: (params, o) => api.get('/dashboard/highlights', { ...o, params }),
 	createSnapshot: (filters) => api.post('/dashboard/snapshots', filters),
 	listSnapshots: (params, o) => api.get('/dashboard/snapshots', { ...o, params }),
 	getSnapshot: (id, o) => api.get(`/dashboard/snapshots/${id}`, o),

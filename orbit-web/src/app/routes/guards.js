@@ -10,11 +10,11 @@ function Notice({ title, children, action }) {
 	return (
 		<main className="auth-page">
 			<div className="card auth-card">
-				<div style={{ marginBottom: 'var(--space-4)' }}>
+				<div className="u-mb-4">
 					<Logo link={false} />
 				</div>
-				<h1 style={{ fontSize: 'var(--fs-lg)' }}>{title}</h1>
-				<p className="banner banner--warning" role="alert" style={{ marginTop: 'var(--space-3)' }}>
+				<h1 className="auth-card__title">{title}</h1>
+				<p className="banner banner--warning u-mt-3" role="alert">
 					{children}
 				</p>
 				{action}

@@ -5,6 +5,8 @@ import Popover from '../../components/common/Popover';
 import { humanize } from '../../utils/format';
 import { FILTER_OPS } from './gridModel';
 import Select from '../../components/forms/Select';
+import SearchBox from '../../components/forms/SearchBox';
+import { Switch } from '../../components/forms/Choice';
 
 export function FilterPanel({ columns, filters, onChange }) {
 	const [field, setField] = useState(columns[0] ? columns[0].field : '');
@@ -105,7 +107,7 @@ const STATUS_ICON = { saved: 'check', dirty: 'edit', saving: 'refresh', failed: 
  * works; unavailable ones are disabled (and the editing group is hidden for read-only roles).
  */
 const SheetToolbar = forwardRef(function SheetToolbar(
-	{ title, canWrite, status, dirtyCount, saving, onSave, onDiscard, onCut, onCopy, onPaste, canDelete, onDelete, search, onSearch, searchLabel, searchScope, onSearchScope, canServerSearch, sortLabel, onClearSort, onExport, canExport, onReload, loading, density, onDensity, onShortcuts },
+	{ title, canWrite, status, dirtyCount, saving, onSave, onDiscard, onCut, onCopy, onPaste, canDelete, onDelete, search, onSearch, searchLabel, searchScope, onSearchScope, canServerSearch, sortLabel, onClearSort, onExport, canExport, onReload, loading, density, onDensity, onShortcuts, autosave = false, onAutosave = () => {} },
 	searchRef
 ) {
 	return (
@@ -142,25 +144,7 @@ const SheetToolbar = forwardRef(function SheetToolbar(
 			<div className="sheet-toolbar__spacer" />
 
 			<div className="sheet-toolbar__group" role="group" aria-label="Data tools">
-				<div className="search-input sheet-search">
-					<Icon name="search" size={14} />
-					<input
-						ref={searchRef}
-						type="search"
-						className="input"
-						aria-label={searchLabel}
-						placeholder={`Search…  ${MOD}F`}
-						value={search}
-						onChange={(e) => onSearch(e.target.value)}
-						onKeyDown={(e) => {
-							if (e.key === 'Escape' && search) {
-								e.preventDefault();
-								e.stopPropagation();
-								onSearch('');
-							}
-						}}
-					/>
-				</div>
+<SearchBox ref={searchRef} className="sheet-search" aria-label={searchLabel} placeholder={`Search…  ${MOD}F`} value={search} onChange={onSearch} />
 				{canServerSearch ? (
 					<Select className="sheet-scope" aria-label="Where to search" value={searchScope} onChange={(e) => onSearchScope(e.target.value)} title="Search all records on the server (by name), or only the rows loaded in the grid (every column)">
 						<option value="server">All records</option>
@@ -189,7 +173,7 @@ const SheetToolbar = forwardRef(function SheetToolbar(
 						<div className="sheet-filter">
 							<span className="small muted">Row density</span>
 							{['compact', 'comfortable'].map((d) => (
-								<label key={d} className="sheet-filter__row" style={{ gridAutoFlow: 'column', justifyContent: 'start', alignItems: 'center', gap: 8 }}>
+								<label key={d} className="sheet-filter__row sheet-filter__row--inline">
 									<input
 										type="radio"
 										name="sheet-density"
@@ -199,9 +183,15 @@ const SheetToolbar = forwardRef(function SheetToolbar(
 											close();
 										}}
 									/>
-									<span style={{ textTransform: 'capitalize' }}>{d}</span>
+									<span className="u-capitalize">{d}</span>
 								</label>
 							))}
+							{canWrite ? (
+								<>
+									<span className="small muted">Saving</span>
+									<Switch label="Autosave edits" hint="Saves changes to existing records a few seconds after you stop typing. New rows are saved with Save." checked={autosave} onChange={(e) => onAutosave(e.target.checked)} />
+								</>
+							) : null}
 							<p className="small muted">Column widths are remembered per record type on this device.</p>
 						</div>
 					)}

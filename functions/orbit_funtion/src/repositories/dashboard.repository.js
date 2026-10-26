@@ -31,11 +31,12 @@ function createDashboardRepository(db) {
 	const timeWhere = (scope, f, extra = []) => conditions(scope, f, { dateCol: 'work_date', teamCol: 'team_id', projectCol: 'project_id', employeeCol: 'employee_id', extra });
 
 	return {
-		/** Approved entries grouped by billable flag. */
-		timeApproved: (scope, f) =>
-			db.aggregate(`SELECT is_billable, SUM(duration_minutes) AS minutes, COUNT(ROWID) AS entries FROM time_entries WHERE ${timeWhere(scope, f, ["approval_status = 'approved'"])} GROUP BY is_billable`),
-		/** Entry counts by approval status (to report what was excluded). */
-		timeByStatus: (scope, f) => db.aggregate(`SELECT approval_status, COUNT(ROWID) AS entries FROM time_entries WHERE ${timeWhere(scope, f)} GROUP BY approval_status`),
+		/**
+		 * One query for both the approved totals (by billable flag) and the pending/rejected counts that were excluded.
+		 * At most statuses x 2 rows; the service splits it.
+		 */
+		timeByStatusBillable: (scope, f) =>
+			db.aggregate(`SELECT approval_status, is_billable, SUM(duration_minutes) AS minutes, COUNT(ROWID) AS entries FROM time_entries WHERE ${timeWhere(scope, f)} GROUP BY approval_status, is_billable`),
 		attendanceByLate: (scope, f) =>
 			db.aggregate(`SELECT late_status, COUNT(ROWID) AS records FROM attendance_records WHERE ${conditions(scope, f, { dateCol: 'attendance_date', teamCol: 'team_id', employeeCol: 'employee_id' })} GROUP BY late_status`),
 		leaveByStatus: (scope, f) =>

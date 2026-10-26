@@ -43,7 +43,7 @@ export function RequireAuth() {
 	if (status === 'denied') {
 		return (
 			<Notice title="Access not available" action={<Button onClick={signOut}>Sign out</Button>}>
-				{error.message} Ask an administrator to add you to Meeting 360.
+				{error.message} Ask an administrator to add you to Orbit 360.
 			</Notice>
 		);
 	}

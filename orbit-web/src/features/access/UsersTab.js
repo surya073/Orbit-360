@@ -236,7 +236,7 @@ const dq = useDebouncedValue(q, 300).trim();
 			</div>
 			<StateView res={res} loadingLines={6} emptyTitle="No users">
 				{rows.length === 0 ? (
-					<EmptyState icon="search" title={dq ? 'No one matches your search' : 'No users yet'} message={dq ? 'Try a different name or email.' : 'People appear here once they are added to Meeting 360.'} />
+					<EmptyState icon="search" title={dq ? 'No one matches your search' : 'No users yet'} message={dq ? 'Try a different name or email.' : 'People appear here once they are added to Orbit 360.'} />
 				) : (
 					<>
 						<DataTable

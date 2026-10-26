@@ -28,11 +28,11 @@ export function parseSettingsFile(text) {
 	} catch {
 		throw new Error('That file is not valid JSON.');
 	}
-	if (!data || data.app !== 'company360' || typeof data.settings !== 'object' || data.settings === null) throw new Error('That is not a Meeting 360 settings file.');
+	if (!data || data.app !== 'company360' || typeof data.settings !== 'object' || data.settings === null) throw new Error('That is not a Orbit 360 settings file.');
 	const entries = Object.entries(data.settings);
 	if (entries.length === 0) throw new Error('The file holds no settings.');
 	for (const [k, v] of entries) {
-		if (!k.startsWith(PREFIX) || typeof v !== 'string' || v.length > 50000) throw new Error('The file contains entries that are not Meeting 360 settings.');
+		if (!k.startsWith(PREFIX) || typeof v !== 'string' || v.length > 50000) throw new Error('The file contains entries that are not Orbit 360 settings.');
 	}
 	return Object.fromEntries(entries);
 }

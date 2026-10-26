@@ -27,7 +27,7 @@ export default function AiAssistant() {
 							<Icon name="sparkles" size={18} />
 						</span>
 						<div>
-							<h2>Meeting 360 AI</h2>
+							<h2>Orbit 360 AI</h2>
 							<p>Planned features. Not connected yet, so nothing you type here is sent anywhere.</p>
 						</div>
 						<span className="assist__tag">Coming soon</span>

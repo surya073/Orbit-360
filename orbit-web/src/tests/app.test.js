@@ -37,7 +37,7 @@ describe('authentication', () => {
 	});
 	test('an unprovisioned user is told so and gets no data', async () => {
 		authService.isSignedIn.mockResolvedValue(true);
-		mockFetch([[/^GET \/me/, { status: 403, body: errBody(403, 'NOT_PROVISIONED', 'Your account has not been provisioned for Meeting 360') }]]);
+		mockFetch([[/^GET \/me/, { status: 403, body: errBody(403, 'NOT_PROVISIONED', 'Your account has not been provisioned for Orbit 360') }]]);
 		render(<App />);
 		expect(await screen.findByText('Access not available')).toBeInTheDocument();
 		expect(screen.getByText(/has not been provisioned/)).toBeInTheDocument();

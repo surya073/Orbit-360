@@ -79,7 +79,7 @@ describe('sign-in page', () => {
 		expect(document.querySelector('.login__art')).toHaveAttribute('aria-hidden', 'true');
 		const img = document.querySelector('.login__art img');
 		expect(img).toHaveAttribute('alt', '');
-		expect(img.getAttribute('src')).toMatch(/login-meeting/);
+		expect(img.getAttribute('src')).toMatch(/login-orbit/);
 		expect(document.querySelectorAll('.reveal').length).toBeGreaterThanOrEqual(5);
 	});
 });

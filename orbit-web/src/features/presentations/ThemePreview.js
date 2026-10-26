@@ -18,7 +18,7 @@ export default function ThemePreview({ theme, title = 'Executive briefing', subt
 				{kind === 'cover' ? (
 					<>
 						<span className="pprev__brand">
-							<i /> Meeting 360
+							<i /> Orbit 360
 						</span>
 						<span className="pprev__kicker">Executive briefing</span>
 						<b className="pprev__title">{title}</b>

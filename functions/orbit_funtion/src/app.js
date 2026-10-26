@@ -11,6 +11,7 @@ const { runValidators } = require('./middleware/validation');
 const { toErrorResponse } = require('./middleware/errorHandler');
 const { createRepositories } = require('./repositories');
 const { createAccessResolver } = require('./services/accessResolver');
+const { createDashboardCache } = require('./services/dashboardCache');
 const { match } = require('./routes');
 const { errors } = require('./utils/errors');
 
@@ -31,7 +32,8 @@ function createApp({ catalyst, env = defaultEnv, logger = createLogger({}, env.l
 	const userCache = createUserCache(env.userCacheSeconds ?? 0);
 	const accessResolver = createAccessResolver(env.userCacheSeconds ?? 0);
 	// Role, assignment or user changes made through the Access API take effect at once on this instance.
-	const caches = { clear: () => (userCache.clear(), accessResolver.clear()), tablesAvailable: () => accessResolver.tablesAvailable() };
+	const dashboardCache = createDashboardCache(env.dashboardCacheSeconds ?? 0);
+	const caches = { clear: () => (userCache.clear(), accessResolver.clear(), dashboardCache.clear()), tablesAvailable: () => accessResolver.tablesAvailable(), dashboard: dashboardCache };
 	async function pipeline(ctx, req, res) {
 		const { route, params } = match(ctx.method, ctx.path);
 		ctx.params = params;
@@ -66,7 +68,12 @@ function createApp({ catalyst, env = defaultEnv, logger = createLogger({}, env.l
 		const body = BODY_METHODS.has(ctx.method) ? await readJson(req) : {};
 		runValidators(ctx, route.validate, body);
 
-		const result = await route.handler(ctx);
+		let result;
+		try {
+			result = await route.handler(ctx);
+		} finally {
+			if (ctx.method !== 'GET') dashboardCache.clear(); // data may have changed (even on a partial failure): do not serve older aggregates from this instance
+		}
 		const status = (result && result.status) || 200;
 		send(res, status, { ...((result && result.body) || result), requestId: ctx.requestId });
 		return status;

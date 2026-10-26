@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import illustration from '../../assets/images/login-meeting.png';
+import illustration from '../../assets/images/login-orbit.svg';
 import Button from '../../components/common/Button';
 import Icon from '../../components/common/Icon';
 import Logo from '../../components/common/Logo';
@@ -18,7 +18,7 @@ export const forgotCssPath = (skin = LOGIN_SKIN) => new URL(`auth/forgot-iframe-
 const delay = (ms) => ({ '--d': `${ms}ms` });
 
 /**
- * Sign-in: a white page with one card. The left panel shows the meeting illustration (src/assets/images/login-meeting.png,
+ * Sign-in: a white page with one card. The left panel shows the Orbit illustration (src/assets/images/login-orbit.svg,
  * from UI_Design/login page.png) and a short line about the product; the right holds the form. The form and the
  * forgot-password flow are Catalyst's hosted pages (we never handle credentials). The card grows/shrinks with the hosted
  * content, so the page never needs an inner scrollbar. The login page keeps its own light colours whatever theme the app
@@ -50,7 +50,7 @@ export default function LoginPage() {
 					<div className="login__art" aria-hidden="true">
 						<img className="login__img" src={illustration} alt="" width="360" height="360" draggable="false" />
 						<div className="login__pitch">
-							<b>Every meeting, one clear view.</b>
+							<b>Every metric, one clear orbit.</b>
 							<span>Hours, attendance, leave and delivery for your team, from approved data.</span>
 						</div>
 					</div>
@@ -89,12 +89,12 @@ export default function LoginPage() {
 
 						<p className="login__help reveal" style={delay(300)}>
 							<Icon name="lock" size={13} />
-							<span>Access is by invitation. If you can sign in but see “Access not available”, ask an administrator to add you to Meeting 360.</span>
+							<span>Access is by invitation. If you can sign in but see “Access not available”, ask an administrator to add you to Orbit 360.</span>
 						</p>
 					</div>
 				</section>
 				<p className="login__foot reveal" style={delay(380)}>
-					© Meeting 360 · Internal use only
+					© Orbit 360 · Internal use only
 				</p>
 			</main>
 		</div>

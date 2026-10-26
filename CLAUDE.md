@@ -1,6 +1,6 @@
-# Meeting 360 (orbit360)
+# Orbit 360 (orbit360)
 
-Internal analytics/reporting app on Zoho Catalyst. The product is shown to users as **Meeting 360** (renamed from Company 360; the code keeps the `company360.*` localStorage keys and the settings-export tag `company360` so saved preferences and backups keep working). Project `orbit360` (id 46135000000311001), Development env, timezone Asia/Kolkata.
+Internal analytics/reporting app on Zoho Catalyst. The product is shown to users as **Orbit 360** (renamed from Company 360, then Meeting 360; the code keeps the `company360.*` localStorage keys and the settings-export tag `company360` so saved preferences and backups keep working). Project `orbit360` (id 46135000000311001), Development env, timezone Asia/Kolkata.
 
 ## Layout
 - `functions/orbit_funtion/` - the only backend: Advanced I/O function, `node22`, raw `(req, res)` handler (no Express, no listening server). The folder name is intentionally spelled `orbit_funtion`; do not rename it or add another function.
@@ -68,4 +68,4 @@ Request flow (`src/app.js`): context -> route match -> authenticate -> authorize
 - An admin row in `users` is required before anyone can sign in (done for karthickbala112@gmail.com). Function Security Rules (authentication required) are not configured; the backend itself returns 401 without a session.
 - Import is CSV only (no Excel parser).
 - Employee create/import does not maintain `team_memberships`.
-- No shared response cache (deliberate: team-scoped data makes it an access-control risk). Request savers that are safe: the `users` row is cached per function instance for `USER_CACHE_SECONDS` (60) keyed by the verified Catalyst id; lists skip the count query on a short page; the frontend `apiClient` keeps a 60s in-memory GET cache cleared by any write, Reload or sign-in.
+- No shared (cross-instance) response cache (deliberate: team-scoped data makes it an access-control risk). The one exception is `services/dashboardCache.js`: dashboard aggregates are reused per function instance for `DASHBOARD_CACHE_SECONDS` (120; 0 disables), keyed by the caller's effective team scope + route + filters, consulted only after the permission check, cleared by any non-GET request on that instance. Data Store free tier is 10,000 fetches, and one uncached dashboard load costs about 23. Request savers that are safe: the `users` row is cached per function instance for `USER_CACHE_SECONDS` (60) keyed by the verified Catalyst id; lists skip the count query on a short page; the frontend `apiClient` keeps a 60s in-memory GET cache cleared by any write, Reload or sign-in.

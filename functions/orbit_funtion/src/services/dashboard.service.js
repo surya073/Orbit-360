@@ -11,24 +11,26 @@ const PROFILE_PROJECTS = 5; // projects listed per person
 const PROJECT_FILTER_REASON = 'Not available when filtering by project';
 
 /**
- * Overview KPIs. Six grouped queries at most (2 time, 1 attendance, 2 leave, 1 headcount),
+ * Overview KPIs. Five grouped queries at most (1 time, 1 attendance, 2 leave, 1 headcount),
  * regardless of table size. Attendance, leave and headcount are not attributable to a single
  * project, so with a project filter they return not_applicable and cost no queries.
  */
-async function overview(ctx, filters) {
+async function overviewUncached(ctx, filters) {
 	const { scope, repos } = ctx;
 	const team = scope.resolveTeam(filters.teamId); // throws 403 for managers asking for another team
 	const byProject = Boolean(filters.projectId);
 	const d = repos.dashboard;
 
-	const [approved, byStatus, att, leave, leaveMissing, headcount] = await Promise.all([
-		d.timeApproved(scope, filters),
-		d.timeByStatus(scope, filters),
+	const [timeRows, att, leave, leaveMissing, headcount] = await Promise.all([
+		d.timeByStatusBillable(scope, filters),
 		byProject ? null : d.attendanceByLate(scope, filters),
 		byProject ? null : d.leaveByStatus(scope, filters),
 		byProject ? null : d.leaveMissingUnits(scope, filters),
 		byProject ? null : d.headcount(scope, filters),
 	]);
+
+	const approved = timeRows.filter((r) => r.approval_status === 'approved');
+	const byStatus = [...timeRows.reduce((acc, r) => acc.set(r.approval_status, (acc.get(r.approval_status) || 0) + (m.toNum(r.entries) ?? 0)), new Map())].map(([approval_status, entries]) => ({ approval_status, entries }));
 
 	return {
 		filters: { from: filters.from, to: filters.to, teamId: team, projectId: filters.projectId || null, employeeId: filters.employeeId || null, timezone: 'Asia/Kolkata' },
@@ -40,7 +42,7 @@ async function overview(ctx, filters) {
 }
 
 /** Trends: three grouped-by-day queries over <= 90 days, bucketed in memory. */
-async function trends(ctx, filters) {
+async function trendsUncached(ctx, filters) {
 	const { scope, repos } = ctx;
 	const team = scope.resolveTeam(filters.teamId);
 	const byProject = Boolean(filters.projectId);
@@ -63,7 +65,7 @@ async function trends(ctx, filters) {
 /** Freezes one overview result (computed once) into report_snapshots. */
 async function createSnapshot(ctx, filters) {
 	const { scope, repos } = ctx;
-	const data = await overview(ctx, filters);
+	const data = await overviewUncached(ctx, filters);
 	const summary = JSON.stringify(data);
 	if (summary.length > LIMITS.maxTextConfig) throw errors.badRequest('Snapshot is too large to store');
 	const now = new Date();
@@ -107,7 +109,7 @@ const echoFilters = (ctx, f) => ({ from: f.from, to: f.to, teamId: ctx.scope.res
  * Queries: status groups (1), workload groups (1), then ONE lookup each for names and lifetime
  * hours of only the top projects - independent of how many projects exist.
  */
-async function projects(ctx, f) {
+async function projectsUncached(ctx, f) {
 	const { scope, repos } = ctx;
 	const d = repos.dashboard;
 	const [statusRows, workload] = await Promise.all([d.projectsByStatus(scope, f), d.workloadByProject(scope, f)]);
@@ -125,7 +127,7 @@ async function projects(ctx, f) {
 }
 
 /** Product development status: current state (not date-filtered) by type and status, plus overdue open items. */
-async function product(ctx, f) {
+async function productUncached(ctx, f) {
 	const { scope, repos } = ctx;
 	const yesterday = addDays(businessToday(), -1);
 	const [rows, overdue] = await Promise.all([repos.dashboard.productByTypeStatus(scope, f), repos.dashboard.productOverdue(scope, f, yesterday)]);
@@ -142,7 +144,7 @@ const NEW_JOINER_MAX = 5;
  * few names shown, so the cost does not grow with the number of people. A list is simply empty when there is no data
  * (never padded with zeros).
  */
-async function highlights(ctx, f) {
+async function highlightsUncached(ctx, f) {
 	const { scope, repos } = ctx;
 	const d = repos.dashboard;
 	const since = addDays(f.to, -NEW_JOINER_DAYS);
@@ -170,7 +172,7 @@ async function highlights(ctx, f) {
 }
 
 /** Reported AI/tool usage for the reporting months covered by the range. */
-async function aiUsage(ctx, f) {
+async function aiUsageUncached(ctx, f) {
 	const { scope, repos } = ctx;
 	const [rows, missingPeriod] = await Promise.all([repos.dashboard.aiUsageByTool(scope, f), repos.dashboard.aiUsageMissingPeriod(scope, f)]);
 	return { filters: echoFilters(ctx, f), usage: m.aiUsageMetrics(rows, missingPeriod, { truncated: rows.length >= 300 }) };
@@ -193,7 +195,7 @@ const byEmployee = (rows, key = 'employee_id') => {
  * one project-name lookup regardless of how many people; every figure reuses the shared metric
  * rules, so a person with no records reads insufficient_data (never 0).
  */
-async function peopleProfiles(ctx, f, ids) {
+async function peopleProfilesUncached(ctx, f, ids) {
 	const { scope, repos } = ctx;
 	const d = repos.dashboard;
 	scope.resolveTeam(f.teamId); // 403 for a manager asking for another team
@@ -243,7 +245,7 @@ async function peopleProfiles(ctx, f, ids) {
 }
 
 /** Newest business date per source so users can judge how current the numbers are. */
-async function freshness(ctx, f) {
+async function freshnessUncached(ctx, f) {
 	const [time, attendance, imported] = await ctx.repos.dashboard.freshness(ctx.scope, f);
 	return {
 		asOf: businessNow(),
@@ -252,5 +254,16 @@ async function freshness(ctx, f) {
 		imports: { lastCompletedAt: imported },
 	};
 }
+
+/** Dashboard aggregates are reused briefly per team scope + filters (see dashboardCache.js); a missing cache just computes. */
+const cached = (name, fn) => (ctx, f, ...rest) => (ctx.caches && ctx.caches.dashboard ? ctx.caches.dashboard.wrap(ctx.scope, name, [f, ...rest], () => fn(ctx, f, ...rest)) : fn(ctx, f, ...rest));
+const overview = cached('overview', overviewUncached);
+const trends = cached('trends', trendsUncached);
+const projects = cached('projects', projectsUncached);
+const product = cached('product', productUncached);
+const highlights = cached('highlights', highlightsUncached);
+const aiUsage = cached('aiUsage', aiUsageUncached);
+const peopleProfiles = cached('peopleProfiles', peopleProfilesUncached);
+const freshness = cached('freshness', freshnessUncached);
 
 module.exports = { highlights, overview, trends, createSnapshot, getSnapshot, listSnapshots, projects, product, aiUsage, freshness, peopleProfiles };
